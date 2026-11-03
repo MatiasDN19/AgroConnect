@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * Extiende la tabla `users` que trae Breeze con los campos propios
+     * del modelo de AgroConnect: el rol (productor | admin) y el teléfono
+     * de contacto del productor.
+     */
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('rol')->default('productor')->after('password');
+            $table->string('telefono')->nullable()->after('rol');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn(['rol', 'telefono']);
+        });
+    }
+};
