@@ -1,27 +1,47 @@
 version: 2
 updates:
+  # Actualizaciones de versión mensuales, agrupadas en una sola PR y sin
+  # saltos de versión mayor (los más propensos a romper algo). Las alertas
+  # de seguridad son independientes de este archivo: se configuran en
+  # Settings > Code security and analysis del repo en GitHub, y siguen
+  # avisando apenas aparece una vulnerabilidad real, sin esperar al mes.
   - package-ecosystem: "composer"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     groups:
       composer-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     groups:
       npm-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
     groups:
       github-actions:
         patterns:
