@@ -20,6 +20,8 @@ class User extends Authenticatable
 
     public const ROL_PRODUCTOR = 'productor';
 
+    public const ROL_COMPRADOR = 'comprador';
+
     public const ROL_ADMIN = 'admin';
 
     /**
@@ -43,6 +45,11 @@ class User extends Authenticatable
     public function esProductor(): bool
     {
         return $this->rol === self::ROL_PRODUCTOR;
+    }
+
+    public function esComprador(): bool
+    {
+        return $this->rol === self::ROL_COMPRADOR;
     }
 
     /** @return HasMany<Publicacion, $this> */
