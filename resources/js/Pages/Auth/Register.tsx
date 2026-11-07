@@ -6,12 +6,20 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
+// Roles que se pueden elegir en el registro público (nunca "admin").
+// Los valores tienen que coincidir con User::ROL_PRODUCTOR y User::ROL_COMPRADOR.
+const roles = [
+    { value: 'productor', label: 'Productor' },
+    { value: 'comprador', label: 'Comprador' },
+];
+
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
+        rol: '',
     });
 
     const submit: FormEventHandler = (e) => {
@@ -102,6 +110,34 @@ export default function Register() {
                         className="mt-2"
                     />
                 </div>
+
+                <fieldset className="mt-4">
+                    <legend className="block text-sm font-medium text-gray-700">
+                        Quiero registrarme como
+                    </legend>
+
+                    <div className="mt-2 flex gap-6">
+                        {roles.map((rol) => (
+                            <label
+                                key={rol.value}
+                                className="flex items-center gap-2 text-sm text-gray-700"
+                            >
+                                <input
+                                    type="radio"
+                                    name="rol"
+                                    value={rol.value}
+                                    checked={data.rol === rol.value}
+                                    onChange={() => setData('rol', rol.value)}
+                                    className="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                    required
+                                />
+                                {rol.label}
+                            </label>
+                        ))}
+                    </div>
+
+                    <InputError message={errors.rol} className="mt-2" />
+                </fieldset>
 
                 <div className="mt-4 flex items-center justify-end">
                     <Link
