@@ -21,6 +21,7 @@ export default function UpdateProfileInformation({
         useForm({
             name: user.name,
             email: user.email,
+            telefono: user.telefono ?? '',
         });
 
     const submit: FormEventHandler = (e) => {
@@ -72,6 +73,22 @@ export default function UpdateProfileInformation({
                     />
 
                     <InputError className="mt-2" message={errors.email} />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor="telefono" value="Teléfono" />
+
+                    <TextInput
+                        id="telefono"
+                        type="tel"
+                        className="mt-1 block w-full"
+                        value={data.telefono}
+                        onChange={(e) => setData('telefono', e.target.value)}
+                        autoComplete="tel"
+                        placeholder="Ej: +54 9 3718 123456"
+                    />
+
+                    <InputError className="mt-2" message={errors.telefono} />
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (
