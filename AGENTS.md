@@ -8,22 +8,25 @@ AgroConnect: marketplace agro para el Consorcio Productivo de Laguna Naineck. TF
 
 ## Stack
 
-- Backend: Laravel 13 (PHP 8.3+), Inertia.js v2, Laravel Breeze (scaffold de auth).
-- Frontend: React + TypeScript, Tailwind CSS, Vite.
-- Testing: Pest 4.7 (`tests/Feature/`), `RefreshDatabase` aplicado globalmente a Feature tests vía `tests/Pest.php`.
+AgroConnect tiene DOS frontends que consumen el mismo backend Laravel — no son alternativos, son complementarios: la web (Inertia) cubre tanto el panel de administración como todas las funciones de productor/comprador, y la app Flutter cubre las mismas funciones de productor/comprador para mobile. Si tu tarea es de "Frontend" fijate en la Subtask de Jira si dice "(Web)" o "(Flutter)" — son implementaciones separadas de la misma funcionalidad, no te bases en una para hacer la otra sin leer su propia guía.
+
+- Backend: Laravel 13 (PHP 8.3+), Inertia.js v2, Laravel Breeze (scaffold de auth), Laravel Sanctum (autenticación por token para la API que consume Flutter — Epic KAN-82, todavía no instalado, es tarea pendiente).
+- Frontend Web: React + TypeScript, Tailwind CSS, Vite (vía Inertia).
+- Frontend Mobile: Flutter (Android). El proyecto Flutter todavía NO existe en este repo — la primera tarea que lo toque tiene que crear la estructura base (`lib/screens/`, `lib/services/`, `lib/models/`, etc.) antes de la pantalla puntual.
+- Testing: Pest 4.7 (`tests/Feature/`), `RefreshDatabase` aplicado globalmente a Feature tests vía `tests/Pest.php`. Flutter no tiene convención de testing definida todavía.
 - Lint/format: Laravel Pint (PHP), ESLint + Prettier (JS/TS).
 - Entorno local: Docker vía Laravel Sail.
 
 ## Qué ya está construido (no lo reinventes)
 
-El modelo de datos completo, las migraciones, los factories, las Policies y los Form Requests YA EXISTEN. Lo que falta en la gran mayoría de las tareas es controlador + rutas + frontend. Antes de crear algo, fijate si ya existe:
+El modelo de datos base, las migraciones, los factories, las Policies y los Form Requests del MVP original YA EXISTEN. Lo que falta en la gran mayoría de las tareas es controlador + rutas + frontend (Web y/o Flutter). Antes de crear algo, fijate si ya existe:
 
 - **Modelos** (`app/Models/`): `User`, `Categoria`, `Publicacion`, `Resena`, `Denuncia`, `Alerta`. Todos con `protected $table` explícito (Eloquent pluraliza mal nombres en español — ej. `Publicacion` → `publicacions` si no se lo fijás a mano, por eso está puesto en todos).
 - **Policies** (`app/Policies/`): `PublicacionPolicy`, `DenunciaPolicy`, `ResenaPolicy` — tienen las reglas de negocio reales (quién puede editar/pausar/denunciar/reseñar qué). Usalas en los controladores vía `$this->authorize()` o el middleware `can:`, no reimplementes la lógica a mano.
-- **Form Requests** (`app/Http/Requests/`): `StorePublicacionRequest`, `UpdatePublicacionRequest`, `StoreResenaRequest`, `StoreDenunciaRequest` — ya traen las validaciones, incluyendo reglas de negocio en `withValidator` (ej. no podés reseñar o denunciar tu propia publicación). Usalas como type-hint en el método del controlador, no valides a mano.
+- **Form Requests** (`app/Http/Requests/`): `StorePublicacionRequest`, `UpdatePublicacionRequest`, `StoreResenaRequest`, `StoreDenunciaRequest` — ya traen las validaciones, incluyendo reglas de negocio en `withValidator` (ej. no podés reseñar o denunciar tu propia publicación). Usalas como type-hint en el método del controlador, no valides a mano. Si tu tarea agrega un modelo nuevo (socios, favoritos, solicitudes de compra, etc.) seguí el mismo patrón: Form Request con la validación + regla de negocio, Policy si hace falta autorización fina.
 - **Middleware**: `EnsureUserIsAdmin` (alias `admin`, registrado en `bootstrap/app.php`).
 
-Lo que falta (y es el contenido real del backlog): controladores, rutas (`routes/web.php`, más allá de las de auth que trae Breeze), y las páginas/componentes Inertia en `resources/js/Pages/`.
+Lo que falta (y es el contenido real del backlog, ampliado después del MVP original con geolocalización, socios del Consorcio, compra directa/WhatsApp, panel de administración extendido e inteligencia/notificaciones): controladores, rutas (`routes/web.php` para Inertia y `routes/api.php` para lo que consume Flutter), las páginas/componentes Inertia en `resources/js/Pages/`, y las pantallas Flutter.
 
 ## Convenciones de nombres
 
