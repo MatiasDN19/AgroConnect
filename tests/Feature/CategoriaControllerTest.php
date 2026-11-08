@@ -163,3 +163,50 @@ test('no se puede eliminar una categoría si tiene publicaciones asociadas', fun
         'id' => $categoria->id,
     ]);
 });
+
+// --- Listado de Categorías Disponibles para Navegación y Filtros (KAN-39) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar acceder al listado de categorías disponibles', function () {
+    $this->get(route('categorias.disponibles'))
+        ->assertRedirect(route('login'));
+});
+
+test('el listado de categorías disponibles es accesible para cualquier usuario autenticado', function (string $rol) {
+    $user = User::factory()->create(['rol' => $rol]);
+
+    $response = $this->actingAs($user)->get(route('categorias.disponibles'));
+
+    $response->assertOk();
+})->with([
+    'productor' => User::ROL_PRODUCTOR,
+    'comprador' => User::ROL_COMPRADOR,
+    'admin' => User::ROL_ADMIN,
+]);
+
+test('el endpoint de listado devuelve todas las categorías existentes ordenadas alfabéticamente por nombre', function () {
+    $user = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $catC = Categoria::factory()->create(['nombre' => 'Zanahorias', 'descripcion' => 'Hortalizas']);
+    $catA = Categoria::factory()->create(['nombre' => 'Acelga', 'descripcion' => 'Verduras de hoja']);
+    $catB = Categoria::factory()->create(['nombre' => 'Bananas', 'descripcion' => 'Frutas']);
+
+    $response = $this->actingAs($user)->getJson(route('categorias.disponibles'));
+
+    $response->assertOk()
+        ->assertJsonCount(3)
+        ->assertJsonPath('0.id', $catA->id)
+        ->assertJsonPath('0.nombre', 'Acelga')
+        ->assertJsonPath('1.id', $catB->id)
+        ->assertJsonPath('1.nombre', 'Bananas')
+        ->assertJsonPath('2.id', $catC->id)
+        ->assertJsonPath('2.nombre', 'Zanahorias');
+});
+
+test('el endpoint de listado devuelve un arreglo vacío cuando no existen categorías', function () {
+    $user = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+
+    $response = $this->actingAs($user)->getJson(route('categorias.disponibles'));
+
+    $response->assertOk()
+        ->assertJsonCount(0);
+});
