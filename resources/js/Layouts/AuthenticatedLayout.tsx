@@ -42,6 +42,17 @@ export default function Authenticated({
                                         Categorías
                                     </NavLink>
                                 )}
+
+                                {user.rol === 'productor' && (
+                                    <NavLink
+                                        href={route('publicaciones.create')}
+                                        active={route().current(
+                                            'publicaciones.create',
+                                        )}
+                                    >
+                                        Publicar
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
@@ -153,6 +164,15 @@ export default function Authenticated({
                                 active={route().current('categorias.*')}
                             >
                                 Categorías
+                            </ResponsiveNavLink>
+                        )}
+
+                        {user.rol === 'productor' && (
+                            <ResponsiveNavLink
+                                href={route('publicaciones.create')}
+                                active={route().current('publicaciones.create')}
+                            >
+                                Publicar
                             </ResponsiveNavLink>
                         )}
                     </div>
