@@ -4,6 +4,14 @@ export interface User {
     email: string;
     email_verified_at?: string;
     telefono?: string | null;
+    rol: 'productor' | 'comprador' | 'admin';
+}
+
+export interface Categoria {
+    id: number;
+    nombre: string;
+    descripcion: string | null;
+    publicaciones_count?: number;
 }
 
 export type PageProps<
@@ -11,5 +19,9 @@ export type PageProps<
 > = T & {
     auth: {
         user: User;
+    };
+    flash: {
+        success?: string | null;
+        error?: string | null;
     };
 };

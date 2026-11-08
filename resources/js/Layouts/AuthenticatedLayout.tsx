@@ -33,6 +33,15 @@ export default function Authenticated({
                                 >
                                     Dashboard
                                 </NavLink>
+
+                                {user.rol === 'admin' && (
+                                    <NavLink
+                                        href={route('categorias.index')}
+                                        active={route().current('categorias.*')}
+                                    >
+                                        Categorías
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
@@ -137,6 +146,15 @@ export default function Authenticated({
                         >
                             Dashboard
                         </ResponsiveNavLink>
+
+                        {user.rol === 'admin' && (
+                            <ResponsiveNavLink
+                                href={route('categorias.index')}
+                                active={route().current('categorias.*')}
+                            >
+                                Categorías
+                            </ResponsiveNavLink>
+                        )}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
