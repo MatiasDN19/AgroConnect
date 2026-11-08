@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePublicacionRequest;
+use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
@@ -44,5 +45,16 @@ class PublicacionController extends Controller
     {
         // El detalle completo con Inertia se implementa en KAN-55.
         return response()->noContent();
+    }
+
+    /**
+     * Update the specified publication in storage.
+     */
+    public function update(UpdatePublicacionRequest $request, Publicacion $publicacion): RedirectResponse
+    {
+        $publicacion->update($request->validated());
+
+        return redirect()->route('publicaciones.show', $publicacion)
+            ->with('success', 'Publicación actualizada exitosamente.');
     }
 }

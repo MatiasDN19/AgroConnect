@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
         ->name('publicaciones.create');
     Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
     Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show'])->name('publicaciones.show');
+    Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
     Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
