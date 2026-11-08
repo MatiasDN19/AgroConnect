@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\ResenaController;
+use App\Models\Publicacion;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -24,6 +25,10 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/categorias/disponibles', [CategoriaController::class, 'listado'])->name('categorias.disponibles');
 
+    // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
+    Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
+        ->can('create', Publicacion::class)
+        ->name('publicaciones.create');
     Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
     Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show'])->name('publicaciones.show');
     Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
