@@ -5,12 +5,30 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCategoriaRequest;
 use App\Http\Requests\UpdateCategoriaRequest;
 use App\Models\Categoria;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CategoriaController extends Controller
 {
+    /**
+     * Display a listing of available categories for navigation and filtering.
+     *
+     * @return JsonResponse|Collection<int, Categoria>
+     */
+    public function listado(): JsonResponse|Collection
+    {
+        $categorias = Categoria::orderBy('nombre')->get();
+
+        if (request()->wantsJson()) {
+            return response()->json($categorias);
+        }
+
+        return $categorias;
+    }
+
     /**
      * Display a listing of the resource.
      */
