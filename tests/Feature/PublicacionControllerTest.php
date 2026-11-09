@@ -317,3 +317,138 @@ test('la edición de publicación valida valores negativos en precio y stock', f
 
     $response->assertSessionHasErrors(['precio', 'stock']);
 });
+
+// --- Cambio de Estado de Publicaciones (KAN-48) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar cambiar el estado de una publicación', function () {
+    $publicacion = Publicacion::factory()->create(['estado' => Publicacion::ESTADO_ACTIVA]);
+
+    $response = $this->patch(route('publicaciones.estado', $publicacion), [
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    $response->assertRedirect(route('login'));
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
+
+test('el dueño de la publicación puede cambiar el estado a pausada y a vendida', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    // Pausar publicación
+    $responsePausar = $this->actingAs($productor)
+        ->from(route('publicaciones.show', $publicacion))
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_PAUSADA,
+        ]);
+
+    $responsePausar->assertSessionHasNoErrors();
+    $responsePausar->assertRedirect(route('publicaciones.show', $publicacion));
+    $responsePausar->assertSessionHas('success', 'Estado de la publicación actualizado exitosamente.');
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_PAUSADA);
+
+    // Marcar como vendida
+    $responseVendida = $this->actingAs($productor)
+        ->from(route('publicaciones.show', $publicacion))
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_VENDIDA,
+        ]);
+
+    $responseVendida->assertSessionHasNoErrors();
+    $responseVendida->assertRedirect(route('publicaciones.show', $publicacion));
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_VENDIDA);
+
+    // Reactivar publicación
+    $responseReactivar = $this->actingAs($productor)
+        ->from(route('publicaciones.show', $publicacion))
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_ACTIVA,
+        ]);
+
+    $responseReactivar->assertSessionHasNoErrors();
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
+
+test('un administrador puede cambiar el estado de cualquier publicación', function () {
+    $admin = User::factory()->admin()->create();
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('publicaciones.show', $publicacion))
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_PAUSADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('publicaciones.show', $publicacion));
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_PAUSADA);
+});
+
+test('otro usuario no puede cambiar el estado de una publicación ajena', function () {
+    $dueno = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $otroUsuario = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $dueno->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($otroUsuario)
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_PAUSADA,
+        ]);
+
+    $response->assertForbidden();
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
+
+test('un usuario con rol comprador no puede cambiar el estado de una publicación ajena', function () {
+    $dueno = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $dueno->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($comprador)
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => Publicacion::ESTADO_VENDIDA,
+        ]);
+
+    $response->assertForbidden();
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
+
+test('el cambio de estado valida el campo estado requerido y valores válidos', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    // Estado requerido
+    $responseRequired = $this->actingAs($productor)
+        ->patch(route('publicaciones.estado', $publicacion), []);
+
+    $responseRequired->assertSessionHasErrors([
+        'estado' => 'El estado es obligatorio.',
+    ]);
+
+    // Estado inválido
+    $responseInvalid = $this->actingAs($productor)
+        ->patch(route('publicaciones.estado', $publicacion), [
+            'estado' => 'eliminada',
+        ]);
+
+    $responseInvalid->assertSessionHasErrors([
+        'estado' => 'El estado seleccionado no es válido.',
+    ]);
+
+    expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
