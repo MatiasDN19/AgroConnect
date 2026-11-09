@@ -3,6 +3,7 @@
 use App\Models\Categoria;
 use App\Models\Publicacion;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('los invitados no autenticados son redirigidos al login al intentar crear una publicación', function () {
     $categoria = Categoria::factory()->create();
@@ -451,4 +452,98 @@ test('el cambio de estado valida el campo estado requerido y valores válidos', 
     ]);
 
     expect($publicacion->fresh()->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+});
+
+test('los invitados no autenticados son redirigidos al login al intentar ver el listado de publicaciones', function () {
+    $response = $this->get(route('publicaciones.index'));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('el listado de publicaciones solo muestra publicaciones activas', function () {
+    $usuario = User::factory()->create();
+    $categoria = Categoria::factory()->create();
+
+    $activa1 = Publicacion::factory()->create([
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Tomates activos',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subHour(),
+    ]);
+
+    $activa2 = Publicacion::factory()->create([
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Lechugas activas',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now(),
+    ]);
+
+    $pausada = Publicacion::factory()->create([
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Miel pausada',
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    $vendida = Publicacion::factory()->create([
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Huevos vendidos',
+        'estado' => Publicacion::ESTADO_VENDIDA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.titulo', $activa2->titulo)
+        ->where('publicaciones.1.titulo', $activa1->titulo)
+    );
+});
+
+test('el listado de publicaciones incluye las relaciones y puntuacion promedio', function () {
+    $usuario = User::factory()->create();
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR, 'name' => 'Don Pepe']);
+    $categoria = Categoria::factory()->create(['nombre' => 'Verduras']);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Zanahorias frescas',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $comprador1 = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $comprador2 = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador1->id,
+        'puntuacion' => 4,
+        'comentario' => 'Muy buenas',
+    ]);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador2->id,
+        'puntuacion' => 5,
+        'comentario' => 'Excelentes',
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones', 1, fn (Assert $item) => $item
+            ->where('id', $publicacion->id)
+            ->where('titulo', 'Zanahorias frescas')
+            ->where('categoria.id', $categoria->id)
+            ->where('categoria.nombre', 'Verduras')
+            ->where('usuario.id', $productor->id)
+            ->where('usuario.name', 'Don Pepe')
+            ->where('puntuacion_promedio', 4.5)
+            ->etc()
+        )
+    );
 });
