@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CambiarEstadoPublicacionRequest;
 use App\Http\Requests\StorePublicacionRequest;
 use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
@@ -77,5 +78,16 @@ class PublicacionController extends Controller
 
         return redirect()->route('publicaciones.show', $publicacion)
             ->with('success', 'Publicación actualizada exitosamente.');
+    }
+
+    /**
+     * Change the publication's state (activa, pausada, vendida).
+     */
+    public function cambiarEstado(CambiarEstadoPublicacionRequest $request, Publicacion $publicacion): RedirectResponse
+    {
+        $publicacion->update($request->validated());
+
+        return back(fallback: route('publicaciones.show', $publicacion))
+            ->with('success', 'Estado de la publicación actualizado exitosamente.');
     }
 }
