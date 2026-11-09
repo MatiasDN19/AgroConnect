@@ -7,6 +7,17 @@ export interface User {
     rol: 'productor' | 'comprador' | 'admin';
 }
 
+export interface Publicacion {
+    id: number;
+    categoria_id: number;
+    titulo: string;
+    descripcion: string;
+    precio: string; // viene como "1234.50" por el cast decimal:2 de Laravel
+    unidad: string;
+    stock: number;
+    estado?: 'activa' | 'pausada' | 'vendida';
+}
+
 export interface Categoria {
     id: number;
     nombre: string;

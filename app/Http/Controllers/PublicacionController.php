@@ -48,6 +48,20 @@ class PublicacionController extends Controller
     }
 
     /**
+     * Show the form for editing the specified publication.
+     * La autorización (dueño o admin) se aplica en la ruta con ->can('update', 'publicacion').
+     */
+    public function edit(Publicacion $publicacion): InertiaResponse
+    {
+        return Inertia::render('Publicaciones/Edit', [
+            'publicacion' => $publicacion->only([
+                'id', 'categoria_id', 'titulo', 'descripcion', 'precio', 'unidad', 'stock',
+            ]),
+            'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+        ]);
+    }
+
+    /**
      * Update the specified publication in storage.
      */
     public function update(UpdatePublicacionRequest $request, Publicacion $publicacion): RedirectResponse
