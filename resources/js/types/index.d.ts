@@ -9,6 +9,7 @@ export interface User {
 
 export interface Publicacion {
     id: number;
+    usuario_id: number;
     categoria_id: number;
     titulo: string;
     descripcion: string;
@@ -16,6 +17,14 @@ export interface Publicacion {
     unidad: string;
     stock: number;
     estado?: 'activa' | 'pausada' | 'vendida';
+}
+
+export interface Resena {
+    id: number;
+    puntuacion: number; // 1 a 5
+    comentario: string | null;
+    created_at: string;
+    usuario: Pick<User, 'id' | 'name'>;
 }
 
 export interface Categoria {
