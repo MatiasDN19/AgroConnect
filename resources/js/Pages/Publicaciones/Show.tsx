@@ -1,6 +1,10 @@
+import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
 type PublicacionDetalle = Publicacion & {
@@ -42,6 +46,25 @@ export default function Show({
     const avisoEstado = publicacion.estado
         ? TEXTO_ESTADO[publicacion.estado]
         : undefined;
+
+    // Cambio de estado (KAN-47): PATCH /publicaciones/{id}/estado.
+    const [procesando, setProcesando] = useState(false);
+    const [confirmandoVendida, setConfirmandoVendida] = useState(false);
+
+    const cambiarEstado = (estado: NonNullable<Publicacion['estado']>) => {
+        router.patch(
+            route('publicaciones.estado', publicacion.id),
+            { estado },
+            {
+                preserveScroll: true,
+                onStart: () => setProcesando(true),
+                onFinish: () => {
+                    setProcesando(false);
+                    setConfirmandoVendida(false);
+                },
+            },
+        );
+    };
 
     return (
         <AuthenticatedLayout
@@ -114,9 +137,45 @@ export default function Show({
                             </div>
 
                             {puedeEditar && (
-                                // Acciones del dueño (o admin). Acá van también los botones
-                                // de pausar / marcar como vendida (KAN-16).
+                                // Acciones del dueño (o admin): editar y cambiar estado.
+                                // Los botones de estado dependen del estado actual:
+                                //   activa  -> Pausar, Marcar vendida
+                                //   pausada -> Reactivar, Marcar vendida
+                                //   vendida -> Reactivar
                                 <div className="flex flex-wrap gap-3 border-t border-gray-100 pt-4">
+                                    {publicacion.estado !== 'activa' && (
+                                        <PrimaryButton
+                                            onClick={() =>
+                                                cambiarEstado('activa')
+                                            }
+                                            disabled={procesando}
+                                        >
+                                            Reactivar
+                                        </PrimaryButton>
+                                    )}
+
+                                    {publicacion.estado === 'activa' && (
+                                        <SecondaryButton
+                                            onClick={() =>
+                                                cambiarEstado('pausada')
+                                            }
+                                            disabled={procesando}
+                                        >
+                                            Pausar
+                                        </SecondaryButton>
+                                    )}
+
+                                    {publicacion.estado !== 'vendida' && (
+                                        <SecondaryButton
+                                            onClick={() =>
+                                                setConfirmandoVendida(true)
+                                            }
+                                            disabled={procesando}
+                                        >
+                                            Marcar como vendida
+                                        </SecondaryButton>
+                                    )}
+
                                     <Link
                                         href={route(
                                             'publicaciones.edit',
@@ -207,6 +266,38 @@ export default function Show({
                     </section>
                 </div>
             </div>
+
+            <Modal
+                show={confirmandoVendida}
+                onClose={() => setConfirmandoVendida(false)}
+            >
+                <div className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900">
+                        ¿Marcar “{publicacion.titulo}” como vendida?
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                        Va a dejar de aparecer en el listado de publicaciones
+                        activas. Si te equivocaste, la podés reactivar después.
+                    </p>
+
+                    <div className="mt-6 flex justify-end">
+                        <SecondaryButton
+                            onClick={() => setConfirmandoVendida(false)}
+                        >
+                            Cancelar
+                        </SecondaryButton>
+
+                        <PrimaryButton
+                            className="ms-3"
+                            onClick={() => cambiarEstado('vendida')}
+                            disabled={procesando}
+                        >
+                            Sí, marcar como vendida
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }
