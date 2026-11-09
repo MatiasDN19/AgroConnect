@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
         ->can('update', 'publicacion')
         ->name('publicaciones.edit');
     Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
+    Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
     Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
