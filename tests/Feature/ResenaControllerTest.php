@@ -165,4 +165,3 @@ test('la creación de reseña rechaza comentarios que exceden los 2000 caractere
     $response->assertSessionHasErrors(['comentario']);
     $this->assertDatabaseEmpty('resenas');
 });
-
