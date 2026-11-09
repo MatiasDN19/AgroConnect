@@ -25,6 +25,8 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/categorias/disponibles', [CategoriaController::class, 'listado'])->name('categorias.disponibles');
 
+    Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
+
     // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
     Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
         ->can('create', Publicacion::class)

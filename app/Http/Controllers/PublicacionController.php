@@ -14,6 +14,23 @@ use Inertia\Response as InertiaResponse;
 class PublicacionController extends Controller
 {
     /**
+     * Display a listing of active publications.
+     */
+    public function index(): InertiaResponse
+    {
+        $publicaciones = Publicacion::query()
+            ->where('estado', Publicacion::ESTADO_ACTIVA)
+            ->with(['categoria:id,nombre', 'usuario:id,name'])
+            ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
+            ->latest()
+            ->get();
+
+        return Inertia::render('Publicaciones/Index', [
+            'publicaciones' => $publicaciones,
+        ]);
+    }
+
+    /**
      * Show the form for creating a new publication.
      * La autorización (solo productores) se aplica en la ruta con ->can('create', Publicacion::class).
      */
