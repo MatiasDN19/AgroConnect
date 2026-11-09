@@ -34,6 +34,18 @@ export default function Authenticated({
                                     Dashboard
                                 </NavLink>
 
+                                <NavLink
+                                    href={route('publicaciones.index')}
+                                    active={
+                                        route().current(
+                                            'publicaciones.index',
+                                        ) ||
+                                        route().current('publicaciones.show')
+                                    }
+                                >
+                                    Publicaciones
+                                </NavLink>
+
                                 {user.rol === 'admin' && (
                                     <NavLink
                                         href={route('categorias.index')}
@@ -156,6 +168,16 @@ export default function Authenticated({
                             active={route().current('dashboard')}
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            href={route('publicaciones.index')}
+                            active={
+                                route().current('publicaciones.index') ||
+                                route().current('publicaciones.show')
+                            }
+                        >
+                            Publicaciones
                         </ResponsiveNavLink>
 
                         {user.rol === 'admin' && (

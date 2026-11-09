@@ -1,8 +1,10 @@
+import Estrellas from '@/Components/Estrellas';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
+import { formatearPrecio } from '@/utils/formato';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -12,11 +14,6 @@ type PublicacionDetalle = Publicacion & {
     usuario: Pick<User, 'id' | 'name' | 'telefono'>;
     resenas: Resena[];
 };
-
-const formatoPrecio = new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-});
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', {
     day: 'numeric',
@@ -99,9 +96,7 @@ export default function Show({
 
                             <div className="flex flex-wrap items-baseline gap-x-2">
                                 <p className="text-3xl font-semibold text-gray-900">
-                                    {formatoPrecio.format(
-                                        Number(publicacion.precio),
-                                    )}
+                                    {formatearPrecio(publicacion.precio)}
                                 </p>
                                 <p className="text-gray-600">
                                     por {publicacion.unidad}
@@ -299,28 +294,5 @@ export default function Show({
                 </div>
             </Modal>
         </AuthenticatedLayout>
-    );
-}
-
-// Muestra 5 estrellas, pintando las que corresponden al valor (redondeado).
-function Estrellas({ valor }: { valor: number }) {
-    const llenas = Math.round(valor);
-
-    return (
-        <span
-            role="img"
-            aria-label={`${valor.toFixed(1)} de 5 estrellas`}
-            className="text-base leading-none"
-        >
-            {[1, 2, 3, 4, 5].map((n) => (
-                <span
-                    key={n}
-                    aria-hidden="true"
-                    className={n <= llenas ? 'text-amber-400' : 'text-gray-300'}
-                >
-                    ★
-                </span>
-            ))}
-        </span>
     );
 }
