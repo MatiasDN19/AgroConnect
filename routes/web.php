@@ -30,7 +30,9 @@ Route::middleware('auth')->group(function () {
         ->can('create', Publicacion::class)
         ->name('publicaciones.create');
     Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
-    Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show'])->name('publicaciones.show');
+    Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show'])
+        ->can('view', 'publicacion')
+        ->name('publicaciones.show');
     Route::get('/publicaciones/{publicacion}/editar', [PublicacionController::class, 'edit'])
         ->can('update', 'publicacion')
         ->name('publicaciones.edit');
