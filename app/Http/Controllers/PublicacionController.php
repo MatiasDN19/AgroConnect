@@ -7,7 +7,6 @@ use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -41,10 +40,18 @@ class PublicacionController extends Controller
     /**
      * Display the specified publication.
      */
-    public function show(Publicacion $publicacion): Response
+    public function show(Publicacion $publicacion): InertiaResponse
     {
-        // El detalle completo con Inertia se implementa en KAN-55.
-        return response()->noContent();
+        $publicacion->load([
+            'usuario:id,name,email,telefono',
+            'categoria:id,nombre',
+            'resenas.usuario:id,name',
+        ]);
+
+        return Inertia::render('Publicaciones/Show', [
+            'publicacion' => $publicacion,
+            'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
+        ]);
     }
 
     /**
