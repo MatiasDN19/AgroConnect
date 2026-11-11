@@ -75,4 +75,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Alerta::class, 'usuario_id');
     }
+
+    /** @return HasMany<Favorito, $this> */
+    public function favoritos(): HasMany
+    {
+        return $this->hasMany(Favorito::class, 'usuario_id');
+    }
 }
