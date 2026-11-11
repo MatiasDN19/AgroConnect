@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -16,10 +17,13 @@ class PublicacionController extends Controller
     /**
      * Display a listing of active publications.
      */
-    public function index(): InertiaResponse
+    public function index(Request $request): InertiaResponse
     {
         $publicaciones = Publicacion::query()
             ->where('estado', Publicacion::ESTADO_ACTIVA)
+            ->when($request->filled('categoria_id'), function ($query) use ($request) {
+                $query->where('categoria_id', $request->input('categoria_id'));
+            })
             ->with(['categoria:id,nombre', 'usuario:id,name'])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->latest()
@@ -27,6 +31,7 @@ class PublicacionController extends Controller
 
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
+            'categoria_id' => $request->input('categoria_id'),
         ]);
     }
 
