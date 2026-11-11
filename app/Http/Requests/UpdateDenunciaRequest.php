@@ -41,4 +41,3 @@ class UpdateDenunciaRequest extends FormRequest
         ];
     }
 }
-
