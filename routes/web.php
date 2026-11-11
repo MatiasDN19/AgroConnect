@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'destroy'])->name('favoritos.destroy');
 
     Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])->name('solicitudes-compra.store');
+    Route::get('/solicitudes-compra', [SolicitudCompraController::class, 'index'])->name('solicitudes-compra.index');
+    Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
