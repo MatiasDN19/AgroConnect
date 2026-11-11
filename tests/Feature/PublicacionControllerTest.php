@@ -652,3 +652,100 @@ test('el detalle de publicación devuelve puntuacion promedio null cuando no tie
         ->where('puntuacion_promedio', null)
     );
 });
+
+// --- Filtro por Categoría en Listado de Publicaciones (KAN-54) ---
+
+test('el listado de publicaciones filtra por categoria_id devolviendo solo las publicaciones de esa categoría', function () {
+    $usuario = User::factory()->create();
+
+    $categoriaVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $categoriaFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    $publicacionVerdura1 = Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Acelga fresca',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $publicacionVerdura2 = Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Espinaca orgánica',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $publicacionFruta = Publicacion::factory()->create([
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Pomelos amarillos',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->get(route('publicaciones.index', ['categoria_id' => $categoriaVerduras->id]));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', (string) $categoriaVerduras->id)
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.categoria.id', $categoriaVerduras->id)
+        ->where('publicaciones.1.categoria.id', $categoriaVerduras->id)
+    );
+});
+
+test('el listado de publicaciones devuelve todas las activas si no se envía categoria_id', function () {
+    $usuario = User::factory()->create();
+
+    $categoriaVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $categoriaFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Zanahorias',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Mandarinas',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Zapallitos pausados',
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', null)
+        ->has('publicaciones', 2)
+    );
+});
+
+test('el listado de publicaciones devuelve un arreglo vacío si no hay publicaciones para la categoría filtrada', function () {
+    $usuario = User::factory()->create();
+    $categoriaConPublicacion = Categoria::factory()->create();
+    $categoriaVacia = Categoria::factory()->create();
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaConPublicacion->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->get(route('publicaciones.index', ['categoria_id' => $categoriaVacia->id]));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', (string) $categoriaVacia->id)
+        ->has('publicaciones', 0)
+    );
+});
