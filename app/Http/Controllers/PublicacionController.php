@@ -125,4 +125,30 @@ class PublicacionController extends Controller
             'precio_promedio' => $precioPromedio,
         ]);
     }
+
+    /**
+     * Devuelve las publicaciones activas georreferenciadas (cuyo dueño tiene lat y lng no nulos) para el mapa.
+     */
+    public function mapa(): JsonResponse
+    {
+        $publicaciones = Publicacion::query()
+            ->where('estado', Publicacion::ESTADO_ACTIVA)
+            ->whereHas('usuario', function ($query) {
+                $query->whereNotNull('lat')->whereNotNull('lng');
+            })
+            ->with('usuario:id,lat,lng')
+            ->get(['id', 'usuario_id', 'titulo', 'precio', 'unidad'])
+            ->map(function (Publicacion $publicacion) {
+                return [
+                    'id' => $publicacion->id,
+                    'titulo' => $publicacion->titulo,
+                    'precio' => $publicacion->precio,
+                    'unidad' => $publicacion->unidad,
+                    'lat' => (float) $publicacion->usuario->lat,
+                    'lng' => (float) $publicacion->usuario->lng,
+                ];
+            });
+
+        return response()->json($publicaciones);
+    }
 }

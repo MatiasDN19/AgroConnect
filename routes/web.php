@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/categorias/{categoria}/precio-sugerido', [PublicacionController::class, 'precioSugerido'])->name('categorias.precio-sugerido');
 
     Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
+    Route::get('/publicaciones/mapa', [PublicacionController::class, 'mapa'])->name('publicaciones.mapa');
 
     // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
     Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
