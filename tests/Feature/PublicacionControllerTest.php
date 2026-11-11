@@ -548,7 +548,7 @@ test('el listado de publicaciones incluye las relaciones y puntuacion promedio',
     );
 });
 
-// --- Detalle y Listado de Reseñas de una Publicación (KAN-57 / KAN-61 / KAN-63) ---
+// --- Detalle de Publicación (KAN-57) ---
 
 test('los invitados no autenticados son redirigidos al login al intentar ver el detalle de una publicación', function () {
     $publicacion = Publicacion::factory()->create();
@@ -558,94 +558,194 @@ test('los invitados no autenticados son redirigidos al login al intentar ver el 
     $response->assertRedirect(route('login'));
 });
 
-test('el detalle de una publicación muestra los datos del producto, productor y categoría', function () {
-    $productor = User::factory()->create([
-        'name' => 'María Gomez',
-        'email' => 'maria@agroconnect.test',
-        'telefono' => '3704123456',
-        'rol' => User::ROL_PRODUCTOR,
-    ]);
-    $categoria = Categoria::factory()->create(['nombre' => 'Frutas']);
-    $publicacion = Publicacion::factory()->create([
-        'usuario_id' => $productor->id,
-        'categoria_id' => $categoria->id,
-        'titulo' => 'Pomelos rosados',
-        'descripcion' => 'Pomelos recién cosechados del lote.',
-        'precio' => 1800.50,
-        'unidad' => 'cajón',
-        'stock' => 12,
-        'estado' => Publicacion::ESTADO_ACTIVA,
-    ]);
-
-    $usuario = User::factory()->create();
+test('cualquier usuario autenticado puede acceder al detalle de una publicación', function (string $rol) {
+    $usuario = User::factory()->create(['rol' => $rol]);
+    $publicacion = Publicacion::factory()->create();
 
     $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
 
     $response->assertOk();
-    $response->assertInertia(fn (Assert $page) => $page
-        ->component('Publicaciones/Show')
-        ->where('publicacion.id', $publicacion->id)
-        ->where('publicacion.titulo', 'Pomelos rosados')
-        ->where('publicacion.descripcion', 'Pomelos recién cosechados del lote.')
-        ->where('publicacion.precio', '1800.50')
-        ->where('publicacion.unidad', 'cajón')
-        ->where('publicacion.stock', 12)
-        ->where('publicacion.estado', Publicacion::ESTADO_ACTIVA)
-        ->where('publicacion.categoria.id', $categoria->id)
-        ->where('publicacion.categoria.nombre', 'Frutas')
-        ->where('publicacion.usuario.id', $productor->id)
-        ->where('publicacion.usuario.name', 'María Gomez')
-        ->where('publicacion.usuario.email', 'maria@agroconnect.test')
-        ->where('publicacion.usuario.telefono', '3704123456')
-        ->where('puntuacion_promedio', null)
-        ->has('publicacion.resenas', 0)
-    );
-});
+    $response->assertInertia(fn (Assert $page) => $page->component('Publicaciones/Show'));
+})->with([
+    'productor' => User::ROL_PRODUCTOR,
+    'comprador' => User::ROL_COMPRADOR,
+    'admin' => User::ROL_ADMIN,
+]);
 
-test('el detalle de una publicación lista todas las reseñas con puntuación, comentario, autor y puntuación promedio', function () {
-    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
-    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+test('el detalle de publicación devuelve todos los datos esperados, categoría, dueño y reseñas con promedio', function () {
+    $usuario = User::factory()->create();
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'name' => 'María Gómez',
+        'email' => 'maria@ejemplo.com',
+        'telefono' => '3704123456',
+    ]);
+    $categoria = Categoria::factory()->create(['nombre' => 'Frutas']);
 
-    $comprador1 = User::factory()->create(['name' => 'Carlos López', 'rol' => User::ROL_COMPRADOR]);
-    $comprador2 = User::factory()->create(['name' => 'Ana Martínez', 'rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Mandarinas Criollas',
+        'descripcion' => 'Mandarinas muy dulces cosechadas hoy.',
+        'precio' => 1800.50,
+        'unidad' => 'docena',
+        'stock' => 40,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $comprador1 = User::factory()->create(['rol' => User::ROL_COMPRADOR, 'name' => 'Carlos Comprador']);
+    $comprador2 = User::factory()->create(['rol' => User::ROL_COMPRADOR, 'name' => 'Ana Compradora']);
 
     $publicacion->resenas()->create([
         'usuario_id' => $comprador1->id,
-        'puntuacion' => 5,
-        'comentario' => 'Calidad impecable y muy buena atención.',
+        'puntuacion' => 4,
+        'comentario' => 'Muy ricas mandarinas',
     ]);
 
     $publicacion->resenas()->create([
         'usuario_id' => $comprador2->id,
-        'puntuacion' => 3,
-        'comentario' => 'Llegaron bien aunque con un poco de demora.',
+        'puntuacion' => 5,
+        'comentario' => 'Excelente atención y calidad',
     ]);
-
-    $usuario = User::factory()->create();
 
     $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
 
     $response->assertOk();
+
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Show')
         ->where('publicacion.id', $publicacion->id)
-        ->where('puntuacion_promedio', fn ($val) => (float) $val === 4.0)
+        ->where('publicacion.titulo', 'Mandarinas Criollas')
+        ->where('publicacion.descripcion', 'Mandarinas muy dulces cosechadas hoy.')
+        ->where('publicacion.precio', '1800.50')
+        ->where('publicacion.unidad', 'docena')
+        ->where('publicacion.stock', 40)
+        ->where('publicacion.estado', Publicacion::ESTADO_ACTIVA)
+        ->where('publicacion.categoria.id', $categoria->id)
+        ->where('publicacion.categoria.nombre', 'Frutas')
+        ->where('publicacion.usuario.id', $productor->id)
+        ->where('publicacion.usuario.name', 'María Gómez')
+        ->where('publicacion.usuario.email', 'maria@ejemplo.com')
+        ->where('publicacion.usuario.telefono', '3704123456')
         ->has('publicacion.resenas', 2)
-        ->has('publicacion.resenas', fn (Assert $resenas) => $resenas
-            ->each(fn (Assert $resena) => $resena
-                ->has('id')
-                ->has('puntuacion')
-                ->has('comentario')
-                ->has('usuario.id')
-                ->has('usuario.name')
-                ->etc()
-            )
-        )
-        ->where('publicacion.resenas.0.puntuacion', 5)
-        ->where('publicacion.resenas.0.comentario', 'Calidad impecable y muy buena atención.')
-        ->where('publicacion.resenas.0.usuario.name', 'Carlos López')
-        ->where('publicacion.resenas.1.puntuacion', 3)
-        ->where('publicacion.resenas.1.comentario', 'Llegaron bien aunque con un poco de demora.')
-        ->where('publicacion.resenas.1.usuario.name', 'Ana Martínez')
+        ->where('publicacion.resenas.0.usuario.name', 'Carlos Comprador')
+        ->where('publicacion.resenas.0.puntuacion', 4)
+        ->where('publicacion.resenas.0.comentario', 'Muy ricas mandarinas')
+        ->where('publicacion.resenas.1.usuario.name', 'Ana Compradora')
+        ->where('publicacion.resenas.1.puntuacion', 5)
+        ->where('puntuacion_promedio', 4.5)
+    );
+});
+
+test('el detalle de publicación devuelve puntuacion promedio null cuando no tiene reseñas', function () {
+    $usuario = User::factory()->create();
+    $publicacion = Publicacion::factory()->create();
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->has('publicacion.resenas', 0)
+        ->where('puntuacion_promedio', null)
+    );
+});
+
+// --- Filtro por Categoría en Listado de Publicaciones (KAN-54) ---
+
+test('el listado de publicaciones filtra por categoria_id devolviendo solo las publicaciones de esa categoría', function () {
+    $usuario = User::factory()->create();
+
+    $categoriaVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $categoriaFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    $publicacionVerdura1 = Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Acelga fresca',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $publicacionVerdura2 = Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Espinaca orgánica',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $publicacionFruta = Publicacion::factory()->create([
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Pomelos amarillos',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->get(route('publicaciones.index', ['categoria_id' => $categoriaVerduras->id]));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', (string) $categoriaVerduras->id)
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.categoria.id', $categoriaVerduras->id)
+        ->where('publicaciones.1.categoria.id', $categoriaVerduras->id)
+    );
+});
+
+test('el listado de publicaciones devuelve todas las activas si no se envía categoria_id', function () {
+    $usuario = User::factory()->create();
+
+    $categoriaVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $categoriaFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Zanahorias',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Mandarinas',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Zapallitos pausados',
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', null)
+        ->has('publicaciones', 2)
+    );
+});
+
+test('el listado de publicaciones devuelve un arreglo vacío si no hay publicaciones para la categoría filtrada', function () {
+    $usuario = User::factory()->create();
+    $categoriaConPublicacion = Categoria::factory()->create();
+    $categoriaVacia = Categoria::factory()->create();
+
+    Publicacion::factory()->create([
+        'categoria_id' => $categoriaConPublicacion->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->get(route('publicaciones.index', ['categoria_id' => $categoriaVacia->id]));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', (string) $categoriaVacia->id)
+        ->has('publicaciones', 0)
     );
 });
