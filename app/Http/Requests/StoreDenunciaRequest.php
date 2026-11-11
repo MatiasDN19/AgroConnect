@@ -28,6 +28,15 @@ class StoreDenunciaRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'motivo.required' => 'El motivo es obligatorio.',
+            'motivo.max' => 'El motivo no puede superar los 255 caracteres.',
+            'descripcion.max' => 'La descripción no puede superar los 2000 caracteres.',
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
@@ -36,6 +45,15 @@ class StoreDenunciaRequest extends FormRequest
 
             if ($publicacion->usuario_id === $this->user()->id) {
                 $validator->errors()->add('publicacion', 'No podés denunciar tu propia publicación.');
+            }
+
+            $yaDenuncio = Denuncia::query()
+                ->where('usuario_id', $this->user()->id)
+                ->where('publicacion_id', $publicacion->id)
+                ->exists();
+
+            if ($yaDenuncio) {
+                $validator->errors()->add('publicacion', 'Ya denunciaste esta publicación.');
             }
         });
     }

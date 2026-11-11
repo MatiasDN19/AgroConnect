@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
     Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
     Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
+    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->name('publicaciones.denuncias.store');
 
     Route::get('/favoritos', [FavoritoController::class, 'index'])->name('favoritos.index');
     Route::post('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'store'])->name('favoritos.store');
