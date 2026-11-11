@@ -542,7 +542,7 @@ test('el listado de publicaciones incluye las relaciones y puntuacion promedio',
             ->where('categoria.nombre', 'Verduras')
             ->where('usuario.id', $productor->id)
             ->where('usuario.name', 'Don Pepe')
-            ->where('puntuacion_promedio', 4.5)
+            ->where('puntuacion_promedio', fn ($val) => (float) $val === 4.5)
             ->etc()
         )
     );
