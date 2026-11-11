@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'usuario_id',
     'publicacion_id',
+    'created_at',
+    'updated_at',
 ])]
 class Favorito extends Model
 {
