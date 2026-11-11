@@ -24,6 +24,7 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/categorias/disponibles', [CategoriaController::class, 'listado'])->name('categorias.disponibles');
+    Route::get('/categorias/{categoria}/precio-sugerido', [PublicacionController::class, 'precioSugerido'])->name('categorias.precio-sugerido');
 
     Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
 

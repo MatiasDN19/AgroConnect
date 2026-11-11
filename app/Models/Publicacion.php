@@ -70,4 +70,23 @@ class Publicacion extends Model
     {
         return $this->resenas()->avg('puntuacion');
     }
+
+    /**
+     * Calcula el precio promedio sugerido para una categoría basado en publicaciones activas.
+     * Retorna null si no se alcanza el mínimo de publicaciones representativas (por defecto 3).
+     */
+    public static function calcularPrecioPromedioPorCategoria(int $categoriaId, int $minimoPublicaciones = 3): ?float
+    {
+        $query = static::query()
+            ->where('categoria_id', $categoriaId)
+            ->where('estado', static::ESTADO_ACTIVA);
+
+        if ($query->count() < $minimoPublicaciones) {
+            return null;
+        }
+
+        $promedio = $query->avg('precio');
+
+        return $promedio !== null ? round((float) $promedio, 2) : null;
+    }
 }
