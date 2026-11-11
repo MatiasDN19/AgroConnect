@@ -547,3 +547,108 @@ test('el listado de publicaciones incluye las relaciones y puntuacion promedio',
         )
     );
 });
+
+// --- Detalle de Publicación (KAN-57) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar ver el detalle de una publicación', function () {
+    $publicacion = Publicacion::factory()->create();
+
+    $response = $this->get(route('publicaciones.show', $publicacion));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('cualquier usuario autenticado puede acceder al detalle de una publicación', function (string $rol) {
+    $usuario = User::factory()->create(['rol' => $rol]);
+    $publicacion = Publicacion::factory()->create();
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page->component('Publicaciones/Show'));
+})->with([
+    'productor' => User::ROL_PRODUCTOR,
+    'comprador' => User::ROL_COMPRADOR,
+    'admin' => User::ROL_ADMIN,
+]);
+
+test('el detalle de publicación devuelve todos los datos esperados, categoría, dueño y reseñas con promedio', function () {
+    $usuario = User::factory()->create();
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'name' => 'María Gómez',
+        'email' => 'maria@ejemplo.com',
+        'telefono' => '3704123456',
+    ]);
+    $categoria = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Mandarinas Criollas',
+        'descripcion' => 'Mandarinas muy dulces cosechadas hoy.',
+        'precio' => 1800.50,
+        'unidad' => 'docena',
+        'stock' => 40,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $comprador1 = User::factory()->create(['rol' => User::ROL_COMPRADOR, 'name' => 'Carlos Comprador']);
+    $comprador2 = User::factory()->create(['rol' => User::ROL_COMPRADOR, 'name' => 'Ana Compradora']);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador1->id,
+        'puntuacion' => 4,
+        'comentario' => 'Muy ricas mandarinas',
+    ]);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador2->id,
+        'puntuacion' => 5,
+        'comentario' => 'Excelente atención y calidad',
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->where('publicacion.titulo', 'Mandarinas Criollas')
+        ->where('publicacion.descripcion', 'Mandarinas muy dulces cosechadas hoy.')
+        ->where('publicacion.precio', '1800.50')
+        ->where('publicacion.unidad', 'docena')
+        ->where('publicacion.stock', 40)
+        ->where('publicacion.estado', Publicacion::ESTADO_ACTIVA)
+        ->where('publicacion.categoria.id', $categoria->id)
+        ->where('publicacion.categoria.nombre', 'Frutas')
+        ->where('publicacion.usuario.id', $productor->id)
+        ->where('publicacion.usuario.name', 'María Gómez')
+        ->where('publicacion.usuario.email', 'maria@ejemplo.com')
+        ->where('publicacion.usuario.telefono', '3704123456')
+        ->has('publicacion.resenas', 2)
+        ->where('publicacion.resenas.0.usuario.name', 'Carlos Comprador')
+        ->where('publicacion.resenas.0.puntuacion', 4)
+        ->where('publicacion.resenas.0.comentario', 'Muy ricas mandarinas')
+        ->where('publicacion.resenas.1.usuario.name', 'Ana Compradora')
+        ->where('publicacion.resenas.1.puntuacion', 5)
+        ->where('puntuacion_promedio', 4.5)
+    );
+});
+
+test('el detalle de publicación devuelve puntuacion promedio null cuando no tiene reseñas', function () {
+    $usuario = User::factory()->create();
+    $publicacion = Publicacion::factory()->create();
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->has('publicacion.resenas', 0)
+        ->where('puntuacion_promedio', null)
+    );
+});
