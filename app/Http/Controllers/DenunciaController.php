@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDenunciaRequest;
+use App\Http\Requests\UpdateDenunciaRequest;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
@@ -50,5 +51,16 @@ class DenunciaController extends Controller
 
         return redirect()->route('publicaciones.show', $publicacion)
             ->with('success', 'Denuncia enviada exitosamente.');
+    }
+
+    /**
+     * Update the specified complaint's status in storage.
+     */
+    public function update(UpdateDenunciaRequest $request, Denuncia $denuncia): RedirectResponse
+    {
+        $denuncia->update($request->validated());
+
+        return redirect()->route('admin.denuncias.index')
+            ->with('success', 'Estado de la denuncia actualizado exitosamente.');
     }
 }
