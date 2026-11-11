@@ -3,6 +3,7 @@
 use App\Models\Denuncia;
 use App\Models\Publicacion;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('los invitados no autenticados son redirigidos al login al intentar denunciar una publicación', function () {
     $publicacion = Publicacion::factory()->create();
@@ -167,4 +168,106 @@ test('la creación de denuncia valida el campo motivo obligatorio y límite de c
     ]);
 
     $this->assertDatabaseEmpty('denuncias');
+});
+
+// --- Listado de Denuncias para Administración (KAN-67 / KAN-69) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar ver el listado de denuncias', function () {
+    $response = $this->get(route('admin.denuncias.index'));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('los usuarios con rol productor no pueden acceder al listado de denuncias de administración', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+
+    $response = $this->actingAs($productor)->get(route('admin.denuncias.index'));
+
+    $response->assertForbidden();
+});
+
+test('los usuarios con rol comprador no pueden acceder al listado de denuncias de administración', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $response = $this->actingAs($comprador)->get(route('admin.denuncias.index'));
+
+    $response->assertForbidden();
+});
+
+test('el administrador puede ver el listado de denuncias pendientes por defecto', function () {
+    $admin = User::factory()->admin()->create();
+
+    $autor = User::factory()->create(['name' => 'Autor Uno', 'rol' => User::ROL_PRODUCTOR]);
+    $denunciante = User::factory()->create(['name' => 'Denunciante Uno', 'rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $autor->id, 'titulo' => 'Publicación denunciada']);
+
+    $denunciaPendiente = Denuncia::factory()->create([
+        'usuario_id' => $denunciante->id,
+        'publicacion_id' => $publicacion->id,
+        'motivo' => 'Motivo pendiente',
+        'descripcion' => 'Descripción pendiente',
+        'estado' => Denuncia::ESTADO_PENDIENTE,
+    ]);
+
+    Denuncia::factory()->create([
+        'estado' => Denuncia::ESTADO_REVISADA,
+    ]);
+
+    Denuncia::factory()->create([
+        'estado' => Denuncia::ESTADO_DESCARTADA,
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.denuncias.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Admin/Denuncias/Index')
+        ->where('estado_actual', Denuncia::ESTADO_PENDIENTE)
+        ->has('denuncias', 1)
+        ->has('denuncias.0', fn (Assert $denuncia) => $denuncia
+            ->where('id', $denunciaPendiente->id)
+            ->where('motivo', 'Motivo pendiente')
+            ->where('descripcion', 'Descripción pendiente')
+            ->where('estado', Denuncia::ESTADO_PENDIENTE)
+            ->where('usuario.id', $denunciante->id)
+            ->where('usuario.name', 'Denunciante Uno')
+            ->where('publicacion.id', $publicacion->id)
+            ->where('publicacion.titulo', 'Publicación denunciada')
+            ->where('publicacion.usuario.id', $autor->id)
+            ->where('publicacion.usuario.name', 'Autor Uno')
+            ->etc()
+        )
+    );
+});
+
+test('el administrador puede filtrar denuncias por estado revisada y descartada', function () {
+    $admin = User::factory()->admin()->create();
+
+    Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+    $denunciaRevisada = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_REVISADA]);
+    $denunciaDescartada = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_DESCARTADA]);
+
+    // Filtrar por revisadas
+    $responseRevisada = $this->actingAs($admin)
+        ->get(route('admin.denuncias.index', ['estado' => Denuncia::ESTADO_REVISADA]));
+
+    $responseRevisada->assertOk();
+    $responseRevisada->assertInertia(fn (Assert $page) => $page
+        ->component('Admin/Denuncias/Index')
+        ->where('estado_actual', Denuncia::ESTADO_REVISADA)
+        ->has('denuncias', 1)
+        ->where('denuncias.0.id', $denunciaRevisada->id)
+    );
+
+    // Filtrar por descartadas
+    $responseDescartada = $this->actingAs($admin)
+        ->get(route('admin.denuncias.index', ['estado' => Denuncia::ESTADO_DESCARTADA]));
+
+    $responseDescartada->assertOk();
+    $responseDescartada->assertInertia(fn (Assert $page) => $page
+        ->component('Admin/Denuncias/Index')
+        ->where('estado_actual', Denuncia::ESTADO_DESCARTADA)
+        ->has('denuncias', 1)
+        ->where('denuncias.0.id', $denunciaDescartada->id)
+    );
 });
