@@ -81,4 +81,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Favorito::class, 'usuario_id');
     }
+
+    /** @return HasMany<SolicitudCompra, $this> */
+    public function solicitudesCompra(): HasMany
+    {
+        return $this->hasMany(SolicitudCompra::class, 'usuario_id');
+    }
 }
