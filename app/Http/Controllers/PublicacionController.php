@@ -7,6 +7,7 @@ use App\Http\Requests\StorePublicacionRequest;
 use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -111,5 +112,17 @@ class PublicacionController extends Controller
 
         return back(fallback: route('publicaciones.show', $publicacion))
             ->with('success', 'Estado de la publicación actualizado exitosamente.');
+    }
+
+    /**
+     * Devuelve el precio promedio sugerido para una categoría basado en publicaciones activas.
+     */
+    public function precioSugerido(Categoria $categoria): JsonResponse
+    {
+        $precioPromedio = Publicacion::calcularPrecioPromedioPorCategoria($categoria->id);
+
+        return response()->json([
+            'precio_promedio' => $precioPromedio,
+        ]);
     }
 }
