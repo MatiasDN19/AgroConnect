@@ -542,8 +542,110 @@ test('el listado de publicaciones incluye las relaciones y puntuacion promedio',
             ->where('categoria.nombre', 'Verduras')
             ->where('usuario.id', $productor->id)
             ->where('usuario.name', 'Don Pepe')
-            ->where('puntuacion_promedio', 4.5)
+            ->where('puntuacion_promedio', fn ($val) => (float) $val === 4.5)
             ->etc()
         )
+    );
+});
+
+// --- Detalle y Listado de Reseñas de una Publicación (KAN-57 / KAN-61 / KAN-63) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar ver el detalle de una publicación', function () {
+    $publicacion = Publicacion::factory()->create();
+
+    $response = $this->get(route('publicaciones.show', $publicacion));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('el detalle de una publicación muestra los datos del producto, productor y categoría', function () {
+    $productor = User::factory()->create([
+        'name' => 'María Gomez',
+        'email' => 'maria@agroconnect.test',
+        'telefono' => '3704123456',
+        'rol' => User::ROL_PRODUCTOR,
+    ]);
+    $categoria = Categoria::factory()->create(['nombre' => 'Frutas']);
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Pomelos rosados',
+        'descripcion' => 'Pomelos recién cosechados del lote.',
+        'precio' => 1800.50,
+        'unidad' => 'cajón',
+        'stock' => 12,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $usuario = User::factory()->create();
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->where('publicacion.titulo', 'Pomelos rosados')
+        ->where('publicacion.descripcion', 'Pomelos recién cosechados del lote.')
+        ->where('publicacion.precio', '1800.50')
+        ->where('publicacion.unidad', 'cajón')
+        ->where('publicacion.stock', 12)
+        ->where('publicacion.estado', Publicacion::ESTADO_ACTIVA)
+        ->where('publicacion.categoria.id', $categoria->id)
+        ->where('publicacion.categoria.nombre', 'Frutas')
+        ->where('publicacion.usuario.id', $productor->id)
+        ->where('publicacion.usuario.name', 'María Gomez')
+        ->where('publicacion.usuario.email', 'maria@agroconnect.test')
+        ->where('publicacion.usuario.telefono', '3704123456')
+        ->where('puntuacion_promedio', null)
+        ->has('publicacion.resenas', 0)
+    );
+});
+
+test('el detalle de una publicación lista todas las reseñas con puntuación, comentario, autor y puntuación promedio', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+
+    $comprador1 = User::factory()->create(['name' => 'Carlos López', 'rol' => User::ROL_COMPRADOR]);
+    $comprador2 = User::factory()->create(['name' => 'Ana Martínez', 'rol' => User::ROL_COMPRADOR]);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador1->id,
+        'puntuacion' => 5,
+        'comentario' => 'Calidad impecable y muy buena atención.',
+    ]);
+
+    $publicacion->resenas()->create([
+        'usuario_id' => $comprador2->id,
+        'puntuacion' => 3,
+        'comentario' => 'Llegaron bien aunque con un poco de demora.',
+    ]);
+
+    $usuario = User::factory()->create();
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->where('puntuacion_promedio', fn ($val) => (float) $val === 4.0)
+        ->has('publicacion.resenas', 2)
+        ->has('publicacion.resenas', fn (Assert $resenas) => $resenas
+            ->each(fn (Assert $resena) => $resena
+                ->has('id')
+                ->has('puntuacion')
+                ->has('comentario')
+                ->has('usuario.id')
+                ->has('usuario.name')
+                ->etc()
+            )
+        )
+        ->where('publicacion.resenas.0.puntuacion', 5)
+        ->where('publicacion.resenas.0.comentario', 'Calidad impecable y muy buena atención.')
+        ->where('publicacion.resenas.0.usuario.name', 'Carlos López')
+        ->where('publicacion.resenas.1.puntuacion', 3)
+        ->where('publicacion.resenas.1.comentario', 'Llegaron bien aunque con un poco de demora.')
+        ->where('publicacion.resenas.1.usuario.name', 'Ana Martínez')
     );
 });
