@@ -66,6 +66,12 @@ class Publicacion extends Model
         return $this->hasMany(Denuncia::class, 'publicacion_id');
     }
 
+    /** @return HasMany<Favorito, $this> */
+    public function favoritos(): HasMany
+    {
+        return $this->hasMany(Favorito::class, 'publicacion_id');
+    }
+
     public function puntuacionPromedio(): ?float
     {
         return $this->resenas()->avg('puntuacion');

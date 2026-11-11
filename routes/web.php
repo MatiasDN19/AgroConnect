@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
+use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\ResenaController;
@@ -44,6 +45,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
     Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
     Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->name('publicaciones.denuncias.store');
+
+    Route::get('/favoritos', [FavoritoController::class, 'index'])->name('favoritos.index');
+    Route::post('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'store'])->name('favoritos.store');
+    Route::delete('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'destroy'])->name('favoritos.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

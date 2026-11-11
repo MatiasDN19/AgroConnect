@@ -24,4 +24,3 @@ class DenunciaController extends Controller
             ->with('success', 'Denuncia enviada exitosamente.');
     }
 }
-
