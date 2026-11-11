@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
+    Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
 });
 
 require __DIR__.'/auth.php';
