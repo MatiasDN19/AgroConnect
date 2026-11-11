@@ -20,19 +20,41 @@ class PublicacionController extends Controller
      */
     public function index(Request $request): InertiaResponse
     {
-        $publicaciones = Publicacion::query()
-            ->where('estado', Publicacion::ESTADO_ACTIVA)
+        $hasUbicacion = $request->filled('lat') && $request->filled('lng');
+
+        $query = Publicacion::query()
+            ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA)
             ->when($request->filled('categoria_id'), function ($query) use ($request) {
-                $query->where('categoria_id', $request->input('categoria_id'));
-            })
+                $query->where('publicaciones.categoria_id', $request->input('categoria_id'));
+            });
+
+        if ($hasUbicacion) {
+            $userLat = (float) $request->input('lat');
+            $userLng = (float) $request->input('lng');
+
+            // Join con users para ordenar por distancia usando la fórmula de Haversine
+            $haversine = "(6371 * acos(min(1.0, max(-1.0, cos(radians({$userLat})) * cos(radians(users.lat)) * cos(radians(users.lng) - radians({$userLng})) + sin(radians({$userLat})) * sin(radians(users.lat))))))";
+
+            $query->join('users', 'publicaciones.usuario_id', '=', 'users.id')
+                ->select('publicaciones.*')
+                ->selectRaw("{$haversine} as distancia")
+                ->orderByRaw('CASE WHEN users.lat IS NOT NULL AND users.lng IS NOT NULL THEN 0 ELSE 1 END')
+                ->orderByRaw("{$haversine} ASC")
+                ->orderBy('publicaciones.created_at', 'desc');
+        } else {
+            $query->latest('publicaciones.created_at');
+        }
+
+        $publicaciones = $query
             ->with(['categoria:id,nombre', 'usuario:id,name'])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
-            ->latest()
             ->get();
 
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
             'categoria_id' => $request->input('categoria_id'),
+            'lat' => $request->input('lat'),
+            'lng' => $request->input('lng'),
         ]);
     }
 
