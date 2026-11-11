@@ -6,9 +6,37 @@ use App\Http\Requests\StoreDenunciaRequest;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DenunciaController extends Controller
 {
+    /**
+     * Display a listing of complaints for administration.
+     */
+    public function index(Request $request): Response
+    {
+        $estado = $request->query('estado', Denuncia::ESTADO_PENDIENTE);
+
+        $denuncias = Denuncia::query()
+            ->when($estado, function ($query, $estado) {
+                return $query->where('estado', $estado);
+            })
+            ->with([
+                'usuario:id,name,email',
+                'publicacion:id,titulo,usuario_id',
+                'publicacion.usuario:id,name,email',
+            ])
+            ->latest()
+            ->get();
+
+        return Inertia::render('Admin/Denuncias/Index', [
+            'denuncias' => $denuncias,
+            'estado_actual' => $estado,
+        ]);
+    }
+
     /**
      * Store a newly created complaint in storage.
      */
