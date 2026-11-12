@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'rol', 'telefono', 'lat', 'lng'])]
+#[Fillable(['name', 'email', 'password', 'rol', 'telefono', 'lat', 'lng', 'numero_socio', 'socio_validado'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -37,6 +37,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'lat' => 'decimal:7',
             'lng' => 'decimal:7',
+            'socio_validado' => 'boolean',
         ];
     }
 
@@ -53,6 +54,11 @@ class User extends Authenticatable
     public function esComprador(): bool
     {
         return $this->rol === self::ROL_COMPRADOR;
+    }
+
+    public function esSocioValidado(): bool
+    {
+        return (bool) $this->socio_validado;
     }
 
     /** @return HasMany<Publicacion, $this> */
