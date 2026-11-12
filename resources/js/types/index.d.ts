@@ -27,6 +27,21 @@ export interface Resena {
     usuario: Pick<User, 'id' | 'name'>;
 }
 
+export type EstadoDenuncia = 'pendiente' | 'revisada' | 'descartada';
+
+// Lo que manda DenunciaController::index() para el panel admin.
+export interface Denuncia {
+    id: number;
+    motivo: string;
+    descripcion: string | null;
+    estado: EstadoDenuncia;
+    created_at: string;
+    usuario?: Pick<User, 'id' | 'name' | 'email'>;
+    publicacion?: Pick<Publicacion, 'id' | 'titulo' | 'usuario_id'> & {
+        usuario?: Pick<User, 'id' | 'name' | 'email'>;
+    };
+}
+
 export interface Categoria {
     id: number;
     nombre: string;
