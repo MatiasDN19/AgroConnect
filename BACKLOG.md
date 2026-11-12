@@ -762,6 +762,91 @@ Casos a cubrir:
 
 </details>
 
+### KAN-203 — Agregar fotos a mis publicaciones
+
+> Como productor, quiero agregar fotos a mis publicaciones, para que los compradores vean el producto antes de contactarme.
+>
+> Criterios de aceptación:
+>
+> * Al crear o editar una publicación se pueden subir hasta 6 fotos (opcional, ninguna es obligatoria).
+> * Formatos permitidos: jpg, png y webp; tamaño máximo por foto: 2 MB.
+> * Las fotos tienen un orden; la primera es la portada que aparece en el listado.
+> * Al editar se pueden agregar fotos nuevas y quitar existentes.
+> * Solo el dueño de la publicación (o un admin) puede agregar o quitar fotos (`PublicacionPolicy::update`).
+> * Al borrar una publicación o una foto, también se borra el archivo del disco.
+> * Si una publicación no tiene fotos, se muestra un placeholder (ilustración por categoría).
+
+<details>
+<summary>**KAN-204** [backend] — Backend: migración, modelo y guardado de fotos de publicación</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/[fecha]_create_publicacion_fotos_table.php` (nuevo): `id`, `publicacion_id` (FK `cascadeOnDelete`), `ruta` (string), `orden` (`unsignedTinyInteger`), timestamps.
+* `app/Models/PublicacionFoto.php` (nuevo, con `protected $table = 'publicacion_fotos'`) y relación `fotos()` en `app/Models/Publicacion.php` (ordenada por `orden`).
+* `app/Http/Requests/StorePublicacionRequest.php` y `UpdatePublicacionRequest.php`: reglas `'fotos' => ['nullable', 'array', 'max:6']`, `'fotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048']`; en Update, además, `'fotos_eliminar' => ['nullable', 'array']` con `'fotos_eliminar.*' => ['integer', 'exists:publicacion_fotos,id']`, y validar que el total final no supere 6.
+* `app/Http/Controllers/PublicacionController.php`: `store()` y `update()` guardan los archivos en el disco `public` (carpeta `publicaciones/{id}`) y crean las filas; `update()` borra las de `fotos_eliminar` (fila + archivo). `show()`, `edit()` e `index()` devuelven las fotos (`index` solo la portada) con su URL pública (`Storage::url`).
+* Correr `php artisan storage:link` (documentarlo en el README).
+
+Guía:
+
+1. No editar migraciones ya corridas; todo en migraciones nuevas.
+2. Guardar con `$archivo->store("publicaciones/{$publicacion->id}", 'public')`.
+3. Borrar archivos del disco al eliminar una foto o la publicación (en el controller o con un evento `deleting` del modelo).
+4. Ojo: con Inertia, un formulario con archivos que usa PUT no llega bien a Laravel; el frontend va a mandar POST con `_method=put`, así que la ruta de update tiene que aceptarlo (`Route::match` ya incluye put/patch; verificar que funcione con method spoofing).
+
+</details>
+
+<details>
+<summary>**KAN-205** [frontend] — Frontend: subir, ordenar y ver fotos de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Partials/PublicacionForm.tsx` — campo de fotos con vista previa.
+* `resources/js/Pages/Publicaciones/Create.tsx` y `Edit.tsx` — mandar las fotos.
+* `resources/js/Pages/Publicaciones/Show.tsx` — galería de fotos.
+* `resources/js/Components/PublicacionCard.tsx` — portada o placeholder.
+* `resources/js/types/index.d.ts` — tipo `PublicacionFoto`.
+
+Guía:
+
+1. Input `type="file" multiple accept="image/jpeg,image/png,image/webp"` con vista previa (`URL.createObjectURL`, y revocarla al quitar la foto); permitir quitar antes de enviar y mostrar el límite de 6.
+2. `useForm` de Inertia manda `multipart/form-data` automáticamente cuando hay archivos; en Edit usar `post(route('publicaciones.update', id), { forceFormData: true })` agregando `_method: 'put'` a los datos (con PUT directo los archivos no llegan).
+3. En Edit: mostrar las fotos existentes con un botón para quitarlas (se agregan a `fotos_eliminar`) y permitir sumar nuevas sin pasar el máximo.
+4. Show: foto principal grande + miniaturas para cambiar; en `PublicacionCard`, la portada con `aspect-ratio` fijo y `object-cover`. Sin fotos, placeholder.
+5. Mostrar los errores de validación de fotos (tamaño, formato, cantidad) debajo del campo.
+
+</details>
+
+<details>
+<summary>**KAN-206** [frontend] — Frontend (Flutter): subir fotos al crear/editar una publicación</summary>
+
+Archivos a crear/modificar:
+
+* `lib/screens/publicaciones/publicacion_create_screen.dart` y `publicacion_edit_screen.dart`.
+* `pubspec.yaml` — dependencia `image_picker`.
+
+Guía:
+
+1. Depende de que la API REST (Epic Sanctum) acepte fotos en `POST`/`PATCH` `/api/publicaciones` (multipart).
+2. Elegir fotos con `image_picker` (galería o cámara), con vista previa y máximo 6.
+3. Mandarlas como multipart con el cliente HTTP autenticado.
+
+</details>
+
+<details>
+<summary>**KAN-207** [backend] — Tests: feature tests de fotos de publicación</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/PublicacionFotoTest.php` (nuevo).
+
+Guía:
+
+1. Usar `Storage::fake('public')` y `UploadedFile::fake()->image('foto.jpg')`.
+2. Casos: el dueño crea una publicación con fotos (filas en la base y archivos en el disco fake); se rechaza más de 6 fotos; se rechaza un archivo que no es imagen o que pesa más de 2 MB; al editar se pueden quitar fotos (se borra el archivo); otro productor no puede agregar ni quitar fotos de una publicación ajena (403); al borrar la publicación se borran sus archivos.
+
+</details>
+
 ---
 
 ## Epic: KAN-7 — Reseñas
@@ -2153,9 +2238,7 @@ Guía:
 
 ## Epic: KAN-86 — Compra directa y contacto
 
-_Resolver la compra como "compra directa" en el MVP: el comprador solicita la compra de una publicación, el productor la acepta o rechaza, y el acuerdo (precio, cantidad, forma de entrega) se cierra manualmente entre las partes. No hay pasarela de pago en esta Epic — MercadoPago queda documentado como Fase 2 y no se implementa ahora.
-
-También cubre el contacto directo por WhatsApp (deep-link wa.me) desde la publicación o el perfil del productor, usando el teléfono que ya existe en el modelo `User`._
+_Resolver la compra como "compra directa" en el MVP: el comprador solicita la compra de una publicación, el productor la acepta o rechaza, y el acuerdo (precio, cantidad, forma de entrega) se cierra manualmente entre las partes. No hay pasarela de pago en esta Epic — MercadoPago queda documentado como Fase 2 y no se implementa ahora.  También cubre el contacto directo por WhatsApp (deep-link wa.me) desde la publicación o el perfil del productor, usando el teléfono que ya existe en el modelo `User`._
 
 ### KAN-96 — Solicitar la compra directa de una publicación
 
@@ -2709,6 +2792,79 @@ _Matching y sugerencia de productos/productores relevantes (priorizando socios d
     * Si el usuario tiene `fcm_token` seteado y se genera el evento que dispara la Alerta, se hace la llamada HTTP esperada (`Http::assertSent(...)`).
     * Si el usuario NO tiene `fcm_token`, no se intenta ningún envío.
     * Si `Http::fake()` simula una respuesta de error de Firebase, el test verifica que la Alerta in-app de todas formas se creó en la base (el fallo del push no debe afectar lo demás) — usen `assertDatabaseHas('alertas', [...])`.
+
+</details>
+
+---
+
+## Epic: KAN-198 — Landing y presencia institucional
+
+_Página pública (ruta "/") que presenta AgroConnect a visitantes sin cuenta: qué es, cómo funciona y quién lo respalda (el Consorcio), antes de que decidan registrarse._
+
+### KAN-199 — Conocer AgroConnect en la landing pública antes de registrarme
+
+> Como visitante (sin cuenta), quiero conocer qué es AgroConnect, cómo funciona y quién lo respalda, para decidir si me registro como productor o comprador.
+>
+> Criterios de aceptación:
+>
+> * La ruta "/" muestra la landing a cualquier visitante, sin login (reemplaza la página Welcome de Breeze).
+> * Secciones, en este orden: Hero (título "El campo se conecta directo con quien lo necesita", con la palabra "conecta" en tipografía manuscrita, foto del productor y CTA "Ingresar"/"Crear cuenta"); franja con números reales (productores, publicaciones activas y categorías) con contador animado; mapa ilustrado de la zona (Laguna Naineck, Clorinda, Formosa Capital) con pines decorativos por zona; "Cómo funciona" en 3 pasos; "El Consorcio" (quiénes son y logos del Consorcio y del plan provincial); "Para productores / Para compradores" (beneficios por público, sin testimonios); Preguntas frecuentes; CTA final y footer con logos.
+> * Privacidad: la landing no muestra ubicaciones reales ni datos personales de ningún usuario.
+> * Los números de la franja salen de la base de datos; no se muestran cifras inventadas.
+> * Animaciones de aparición al hacer scroll, elementos flotantes y contador, hechas sin librerías externas; si el usuario tiene activado "reducir movimiento" (prefers-reduced-motion) no se anima nada.
+> * Responsive (mobile, tablet y escritorio).
+> * Identidad visual: se mantiene la paleta del mockup (azules, ámbar en los CTA, dorado del logo). Tipografía: títulos Bricolage Grotesque, texto Manrope, acento manuscrito Caveat Brush.
+> * Si el usuario ya inició sesión, los CTA de la landing llevan a "/publicaciones" en vez de login/registro.
+
+<details>
+<summary>**KAN-200** [backend] — Backend: ruta pública "/" y datos de la landing</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/LandingController.php` (nuevo) — método `index()`.
+* `routes/web.php` — reemplazar el closure de "/" que renderiza Welcome por `[LandingController::class, 'index']` (nombre de ruta: `landing`), fuera del grupo `auth`.
+
+Guía:
+
+1. `index()` renderiza `Inertia::render('Landing', [...])` con: `'estadisticas' => ['productores' => User::where('rol', User::ROL_PRODUCTOR)->count(), 'publicaciones_activas' => Publicacion::where('estado', Publicacion::ESTADO_ACTIVA)->count(), 'categorias' => Categoria::count()]`, más `'canLogin'` y `'canRegister'` como tenía Welcome.
+2. No exponer ningún dato personal (nombres, emails, teléfonos ni lat/lng).
+3. Opcional: cachear las estadísticas unos minutos (`Cache::remember`) para no contar en cada visita.
+
+</details>
+
+<details>
+<summary>**KAN-201** [frontend] — Frontend: página Landing con secciones y animaciones</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Landing.tsx` (nuevo).
+* `resources/js/Components/Landing/` (nuevo, un componente por sección si conviene: Hero, Estadisticas, MapaZona, ComoFunciona, Consorcio, Beneficios, PreguntasFrecuentes, Footer).
+* `resources/images/landing/` (nuevo) — fotos propias del proyecto y logos (AgroConnect, Consorcio, plan provincial).
+* `resources/views/app.blade.php` y `tailwind.config.js` — cargar las fuentes (Bricolage Grotesque, Manrope, Caveat Brush) y definir colores/fuentes como tokens del theme. Esto es configuración: acordarlo con el equipo.
+
+Guía:
+
+1. Seguir la estructura de secciones de los criterios de aceptación; usar los textos y la paleta del mockup.
+2. Animaciones sin librerías: aparición al hacer scroll con `IntersectionObserver` + clases CSS (con aparición escalonada en las tarjetas), elementos flotantes con `@keyframes`, contador animado con `requestAnimationFrame`, trazos SVG dibujados con `stroke-dashoffset`.
+3. Respetar `prefers-reduced-motion` (sin animaciones) y dejar todo el contenido visible aunque el JavaScript no haya corrido.
+4. El mapa es una ilustración (SVG/imagen) con pines decorativos por zona; no consumir `/publicaciones/mapa`.
+5. Los CTA cambian según `auth.user`: sin sesión → login/registro; con sesión → `/publicaciones`.
+6. Borrar `resources/js/Pages/Welcome.tsx` cuando la landing la reemplace.
+
+</details>
+
+<details>
+<summary>**KAN-202** [backend] — Tests: feature test de la landing pública</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/LandingTest.php` (nuevo).
+
+Guía:
+
+1. Testear que "/" responde 200 sin login y renderiza el componente `Landing` (`assertInertia`).
+2. Testear que `estadisticas` trae los conteos correctos (crear productores, compradores y publicaciones en distintos estados con factories, y verificar que solo cuenta productores y publicaciones activas).
+3. Testear que la respuesta no incluye datos personales (ni emails ni lat/lng).
 
 </details>
 
