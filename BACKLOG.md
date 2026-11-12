@@ -2680,6 +2680,268 @@ Casos a cubrir:
 
 </details>
 
+### KAN-214 — Navegación del panel de administración
+
+> Como administrador, quiero un panel con su propia navegación lateral, para moverme rápido entre las secciones de gestión y ver de un vistazo cuántas denuncias tengo pendientes.
+>
+> Criterios de aceptación:
+>
+> * Las páginas de admin usan un layout propio con sidebar fija: Resumen, Denuncias, Publicaciones, Usuarios, Socios, Categorías y Configuración.
+> * El ítem "Denuncias" muestra un globito con la cantidad de denuncias pendientes (se actualiza en cada navegación).
+> * La página de categorías existente (KAN-35) pasa a usar este layout.
+> * Un usuario que no es admin no ve el panel ni sus links (el acceso lo sigue bloqueando el middleware `admin`).
+> * En mobile, la sidebar se abre y cierra con un botón.
+
+<details>
+<summary>**KAN-218** [backend] — Backend: compartir el conteo de denuncias pendientes para el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Middleware/HandleInertiaRequests.php` — método `share()`.
+
+Guía:
+
+1. Agregar `'admin' => fn () => $request->user()?->esAdmin() ? ['denuncias_pendientes' => Denuncia::where('estado', Denuncia::ESTADO_PENDIENTE)->count()] : null`.
+2. Que sea una función (lazy) para que solo se calcule cuando hay un admin logueado.
+
+</details>
+
+<details>
+<summary>**KAN-219** [frontend] — Frontend: layout del panel de administración</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Layouts/AdminLayout.tsx` (nuevo).
+* `resources/js/Pages/Categorias/Index.tsx` — pasar a usar `AdminLayout`.
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — reemplazar el link "Categorías" por uno "Panel admin" (solo admins).
+* `resources/js/types/index.d.ts` — tipo de la prop compartida `admin`.
+
+Guía:
+
+1. Sidebar azul profundo con los ítems de la historia; marcar el activo con `route().current(...)`. Los ítems cuyas páginas todavía no existan quedan ocultos o deshabilitados hasta que se implementen.
+2. Globito en "Denuncias" con `usePage().props.admin.denuncias_pendientes` (no mostrarlo si es 0).
+3. Abajo de la sidebar: "En alianza con" + logos; y el usuario logueado con acceso a cerrar sesión.
+4. Responsive: en mobile la sidebar es un panel que se abre con un botón.
+5. Animación de entrada de las tarjetas (aparición escalonada) con CSS, respetando `prefers-reduced-motion`.
+
+</details>
+
+<details>
+<summary>**KAN-220** [backend] — Tests: feature test del conteo compartido en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Admin/PanelAdminTest.php` (nuevo).
+
+Guía:
+
+1. Un admin recibe la prop `admin.denuncias_pendientes` con el número correcto (crear denuncias pendientes y resueltas con factories).
+2. Un productor o comprador recibe `admin` => `null`.
+
+</details>
+
+### KAN-215 — Moderar publicaciones
+
+> Como administrador, quiero ver todas las publicaciones de la plataforma y poder bloquear o eliminar las que no cumplen las reglas, para mantener el marketplace confiable.
+>
+> Criterios de aceptación:
+>
+> * Revisión posterior: las publicaciones se publican al instante (no hay aprobación previa).
+> * El admin ve un listado de TODAS las publicaciones (cualquier estado), paginado, con buscador por título y filtros por estado y categoría.
+> * El admin puede bloquear una publicación indicando un motivo obligatorio. Una publicación bloqueada no aparece en el catálogo ni en el listado público.
+> * El dueño NO puede reactivar una publicación bloqueada (ni cambiarle el estado); solo el admin puede desbloquearla.
+> * El dueño ve en el detalle de su publicación que está bloqueada y el motivo.
+> * El admin puede eliminar una publicación, con confirmación.
+> * Si el sistema de alertas (KAN-73) ya existe, el dueño recibe una alerta cuando su publicación es bloqueada o eliminada.
+
+<details>
+<summary>**KAN-221** [backend] — Backend: estado "bloqueada" y endpoints de moderación de publicaciones</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/[fecha]_add_bloqueo_to_publicaciones_table.php` (nuevo): agregar `'bloqueada'` a los valores permitidos de la columna `estado`, y columnas `motivo_bloqueo` (text, nullable), `bloqueada_por` (foreignId `users`, nullable, `nullOnDelete`) y `bloqueada_at` (timestamp, nullable).
+* `app/Models/Publicacion.php` — constante `ESTADO_BLOQUEADA`, fillable/casts y método `estaBloqueada()`.
+* `app/Http/Requests/CambiarEstadoPublicacionRequest.php` y `UpdatePublicacionRequest.php` — que el dueño no pueda cambiar el estado de una bloqueada ni elegir `'bloqueada'`.
+* `app/Observers/PublicacionObserver.php` — no reactivar por stock una publicación bloqueada.
+* `app/Http/Controllers/Admin/PublicacionModeracionController.php` (nuevo) — `index()`, `bloquear()`, `desbloquear()`, `destroy()`.
+* `app/Http/Requests/BloquearPublicacionRequest.php` (nuevo) — `motivo required|string|max:1000`.
+* `routes/web.php` — rutas dentro del grupo `['auth', 'admin']`: `GET /admin/publicaciones`, `PATCH /admin/publicaciones/{publicacion}/bloquear`, `PATCH /admin/publicaciones/{publicacion}/desbloquear`, `DELETE /admin/publicaciones/{publicacion}`.
+
+Guía:
+
+1. No editar migraciones ya corridas. Para cambiar el enum en MySQL usar `->change()` en una migración nueva (verificar que también funcione en SQLite, que usa el CI).
+2. `index()`: todas las publicaciones con `usuario:id,name` y `categoria:id,nombre`, filtros `?q=`, `?estado=`, `?categoria_id=`, `paginate(20)->withQueryString()`.
+3. `bloquear()`: `estado = bloqueada` + `motivo` + `bloqueada_por` + `bloqueada_at`. `desbloquear()`: vuelve a `'pausada'` (para que el dueño decida cuándo reactivarla) y limpia los campos de bloqueo.
+4. El listado público (`PublicacionController::index`) ya filtra por `estado activa`, así que las bloqueadas no aparecen; verificarlo.
+5. `show()`: incluir `motivo_bloqueo` solo si quien mira es el dueño o un admin.
+6. `destroy()`: borrar la publicación (y sus fotos, si KAN-204 ya está hecha).
+
+</details>
+
+<details>
+<summary>**KAN-222** [frontend] — Frontend: sección de moderación de publicaciones en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Publicaciones/Index.tsx` (nuevo).
+* `resources/js/Pages/Publicaciones/Show.tsx` — aviso de "bloqueada" con el motivo para el dueño/admin; ocultar al dueño los botones de estado si está bloqueada; botones de moderación para el admin.
+* `resources/js/types/index.d.ts` — sumar `'bloqueada'` a los estados y los campos de bloqueo.
+
+Guía:
+
+1. Usar `AdminLayout` (Historia "Navegación del panel de administración").
+2. Tabla con título, productor, categoría, estado (chip de color), fecha y acciones: Ver, Bloquear/Desbloquear, Eliminar.
+3. Buscador y filtros por estado y categoría con `router.get` conservando los filtros; paginación.
+4. Bloquear abre un modal con el motivo obligatorio; Eliminar abre un modal de confirmación.
+5. Mostrar los mensajes flash de éxito/error.
+
+</details>
+
+<details>
+<summary>**KAN-223** [backend] — Tests: feature tests de moderación de publicaciones</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Admin/ModeracionPublicacionTest.php` (nuevo).
+
+Guía:
+
+1. Un admin ve todas las publicaciones (de cualquier estado) y los filtros funcionan.
+2. Un admin bloquea con motivo; sin motivo da error de validación.
+3. Una publicación bloqueada no aparece en el listado público.
+4. El dueño no puede reactivar ni cambiar el estado de una bloqueada (403 o error de validación).
+5. El observer no reactiva por stock una bloqueada.
+6. Desbloquear la deja en `'pausada'`; eliminar la borra.
+7. Un productor o comprador recibe 403 en todas las rutas `/admin/publicaciones`.
+
+</details>
+
+### KAN-216 — Configuración de la plataforma
+
+> Como administrador, quiero editar los datos de contacto y algunas reglas de la plataforma desde el panel, para mantenerlos actualizados sin tener que tocar el código.
+>
+> Criterios de aceptación:
+>
+> * El admin puede editar los datos de contacto: email de soporte, WhatsApp de soporte, dirección, y links a Facebook e Instagram. Se muestran en el footer y en la landing.
+> * El admin puede editar reglas de la plataforma que hoy están fijas en el código: cantidad mínima de publicaciones activas para mostrar el precio sugerido (hoy 3), cantidad máxima de fotos por publicación (6) y tamaño máximo por foto (2 MB).
+> * Los cambios se aplican sin redeploy y los valores se validan (por ejemplo, el máximo de fotos entre 1 y 10).
+> * Si nunca se configuró un valor, se usa el valor por defecto actual.
+> * Solo los admins pueden ver y editar la configuración.
+
+<details>
+<summary>**KAN-224** [backend] — Backend: tabla de configuración, lectura con valores por defecto y endpoint de edición</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/[fecha]_create_configuraciones_table.php` (nuevo): `id`, `clave` (string, unique), `valor` (text, nullable), timestamps.
+* `app/Models/Configuracion.php` (nuevo, `protected $table = 'configuraciones'`) con un método estático `obtener($clave, $porDefecto)` cacheado (`Cache::rememberForever`, que se limpia al guardar).
+* `config/agroconnect.php` (nuevo) — valores por defecto de cada clave.
+* `app/Http/Controllers/Admin/ConfiguracionController.php` (nuevo) — `edit()` y `update()`.
+* `app/Http/Requests/UpdateConfiguracionRequest.php` (nuevo) — validación de cada campo (email, URL, enteros con rangos).
+* `app/Models/Publicacion.php` — `calcularPrecioPromedioPorCategoria()` usa `Configuracion::obtener('precio_sugerido_minimo', 3)` en vez del 3 fijo.
+* Reglas de fotos (KAN-204, si ya existe) — leer el máximo de fotos y el tamaño desde `Configuracion`.
+* `app/Http/Middleware/HandleInertiaRequests.php` — compartir los datos de contacto (públicos) para el footer y la landing.
+* `routes/web.php` — `GET` y `PUT` `/admin/configuracion` en el grupo `['auth', 'admin']`.
+
+Guía:
+
+1. Claves sugeridas: `contacto_email`, `contacto_whatsapp`, `contacto_direccion`, `red_facebook`, `red_instagram`, `precio_sugerido_minimo`, `fotos_maximo`, `fotos_tamano_max_kb`.
+2. Compartir solo los datos de contacto; las reglas no hace falta mandarlas a todas las páginas.
+3. Que todo siga funcionando si la tabla está vacía (valores por defecto de `config/agroconnect.php`).
+
+</details>
+
+<details>
+<summary>**KAN-225** [frontend] — Frontend: página de configuración en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Configuracion/Edit.tsx` (nuevo).
+* Footer/landing: usar los datos de contacto compartidos (si la landing KAN-201 ya existe).
+
+Guía:
+
+1. Usar `AdminLayout`. Formulario en dos bloques: "Datos de contacto" y "Reglas de la plataforma", con una ayuda corta debajo de cada regla explicando qué afecta.
+2. `useForm` + `put(route(...))` + `InputError` por campo + mensaje de guardado.
+
+</details>
+
+<details>
+<summary>**KAN-226** [backend] — Tests: feature tests de configuración</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Admin/ConfiguracionTest.php` (nuevo).
+
+Guía:
+
+1. Un admin puede ver y guardar la configuración; los valores inválidos dan error de validación.
+2. Sin configuración guardada se usan los valores por defecto.
+3. Cambiar `precio_sugerido_minimo` cambia el resultado del endpoint de precio sugerido (KAN-126).
+4. Un productor o comprador recibe 403.
+
+</details>
+
+### KAN-217 — Gestionar administradores
+
+> Como administrador, quiero dar o quitar el rol de administrador a otros usuarios, para sumar personas del Consorcio a la moderación sin depender de la consola.
+>
+> Criterios de aceptación:
+>
+> * Desde el listado de usuarios del panel (KAN-119) el admin puede hacer admin a un usuario o quitarle el rol de admin, con confirmación.
+> * Al quitar el rol de admin, el usuario vuelve al rol que elija el admin (productor o comprador).
+> * Un admin no puede quitarse el rol a sí mismo.
+> * Siempre tiene que quedar al menos un administrador en la plataforma.
+> * Solo los admins pueden hacerlo.
+
+<details>
+<summary>**KAN-227** [backend] — Backend: endpoint para cambiar el rol de un usuario</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Admin/UsuarioController.php` (el de KAN-111; crearlo si todavía no existe) — método `cambiarRol()`.
+* `app/Http/Requests/CambiarRolUsuarioRequest.php` (nuevo) — `rol required|in:admin,productor,comprador`.
+* `routes/web.php` — `PATCH /admin/usuarios/{usuario}/rol` en el grupo `['auth', 'admin']`.
+
+Guía:
+
+1. Rechazar si el admin intenta cambiarse el rol a sí mismo.
+2. Rechazar si el cambio dejaría la plataforma sin ningún admin.
+3. Redirigir con flash de éxito o error.
+
+</details>
+
+<details>
+<summary>**KAN-228** [frontend] — Frontend: acción de dar/quitar admin en el listado de usuarios</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Usuarios/Index.tsx` (el de KAN-119).
+
+Guía:
+
+1. Mostrar el rol de cada usuario con un chip.
+2. Botón "Hacer admin" / "Quitar admin" (no se muestra en la fila del propio admin logueado). Al quitar, un modal para elegir el nuevo rol (productor o comprador) y confirmar.
+3. Mostrar los mensajes flash.
+
+</details>
+
+<details>
+<summary>**KAN-229** [backend] — Tests: feature tests de gestión de administradores</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Admin/GestionAdministradoresTest.php` (nuevo).
+
+Guía:
+
+1. Un admin puede hacer admin a un productor y quitárselo eligiendo el nuevo rol.
+2. Un admin no puede quitarse el rol a sí mismo.
+3. No se puede quitar el último admin.
+4. Un productor o comprador recibe 403.
+
+</details>
+
 ---
 
 ## Epic: KAN-93 — Inteligencia y notificaciones avanzadas
