@@ -847,6 +847,93 @@ Guía:
 
 </details>
 
+### KAN-208 — Pantalla de inicio del marketplace
+
+> Como usuario de AgroConnect, quiero que al entrar a la aplicación vea directamente el marketplace con buscador, categorías y el catálogo paginado, para encontrar rápido lo que necesito (y, si soy productor, ver de un vistazo el estado de mis publicaciones y solicitudes).
+>
+> Criterios de aceptación:
+>
+> * Al iniciar sesión, registrarse o verificar el email, el usuario va a "/publicaciones" (el marketplace). La página `/dashboard` de Breeze se elimina.
+> * Hay un buscador por texto que busca en el título y la descripción de las publicaciones activas.
+> * Se muestran las categorías con la cantidad de publicaciones activas de cada una; al elegir una se filtra el catálogo.
+> * El catálogo está paginado (12 publicaciones por página) y la paginación conserva la búsqueda y el filtro activos.
+> * Si el usuario es productor, arriba del catálogo ve una franja con SU resumen: cantidad de publicaciones activas, pausadas y vendidas, y cantidad de solicitudes de compra pendientes, con links a cada sección.
+> * Las tarjetas no muestran carrito, descuentos ni "comprar ahora" (no hay pagos: la compra es por solicitud directa o WhatsApp).
+> * Responsive (mobile, tablet y escritorio).
+
+<details>
+<summary>**KAN-209** [backend] — Backend: búsqueda, paginación, categorías con conteo y resumen del productor en el listado</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — método `index()`.
+
+Guía:
+
+1. Búsqueda: aceptar `?q=` y, cuando venga, filtrar con `where(fn ($w) => $w->where('publicaciones.titulo', 'like', "%{$q}%")->orWhere('publicaciones.descripcion', 'like', "%{$q}%"))` (agrupado entre paréntesis para no romper el filtro de estado/categoría).
+2. Paginación: reemplazar `->get()` por `->paginate(12)->withQueryString()`, para que los links de página conserven `q`, `categoria_id`, `lat` y `lng`.
+3. Categorías: mandar `'categorias' => Categoria::withCount(['publicaciones' => fn ($q) => $q->where('estado', Publicacion::ESTADO_ACTIVA)])->orderBy('nombre')->get(['id', 'nombre'])`.
+4. Mandar también `'filtros' => $request->only(['q', 'categoria_id'])` para que el frontend sepa qué está activo.
+5. Resumen del productor: si `$request->user()->esProductor()`, mandar `'resumen' => ['activas' => ..., 'pausadas' => ..., 'vendidas' => ..., 'solicitudes_pendientes' => ...]` (contando SUS publicaciones por estado y las solicitudes de compra pendientes sobre sus publicaciones). Para el resto, `'resumen' => null`.
+6. Ojo: al paginar, la prop `publicaciones` pasa a ser un objeto `{ data, links, meta... }` en vez de un array; avisar a frontend.
+
+</details>
+
+<details>
+<summary>**KAN-210** [backend] — Backend: eliminar /dashboard y redirigir al marketplace después de login/registro</summary>
+
+Archivos a crear/modificar:
+
+* `routes/web.php` — eliminar la ruta `/dashboard`.
+* `app/Http/Controllers/Auth/AuthenticatedSessionController.php`, `ConfirmablePasswordController.php`, `EmailVerificationNotificationController.php`, `EmailVerificationPromptController.php`, `RegisteredUserController.php`, `VerifyEmailController.php` — reemplazar `route('dashboard', absolute: false)` por `route('publicaciones.index', absolute: false)` (en `VerifyEmailController` conservar el `?verified=1`).
+* `tests/Feature/Auth/AuthenticationTest.php`, `EmailVerificationTest.php`, `RegistrationTest.php` — actualizar los `assertRedirect` que apuntan a `'dashboard'`.
+
+Guía:
+
+1. Buscar con grep todos los usos de `'dashboard'` en `app/`, `routes/`, `tests/` y `resources/js` para no dejar ninguno roto (Ziggy tira error en el frontend si se llama a `route('dashboard')` y la ruta no existe).
+2. Coordinar con frontend: `AuthenticatedLayout.tsx` y `Welcome.tsx` también usan `route('dashboard')`; se actualizan en la subtask de frontend, en el mismo PR o justo después.
+
+</details>
+
+<details>
+<summary>**KAN-211** [frontend] — Frontend: rediseño de la pantalla de inicio del marketplace</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Index.tsx` — nueva estructura de la pantalla.
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — header nuevo (logo, buscador, favoritos, notificaciones, + Publicar para productores, avatar); quitar el link "Dashboard".
+* `resources/js/Pages/Dashboard.tsx` — eliminar.
+* `resources/js/Components/` — componentes nuevos que hagan falta (ej. `BuscadorPublicaciones`, `CategoriasDestacadas`, `ResumenProductor`, `Paginacion`, `BannerBienvenida`).
+* `resources/js/types/index.d.ts` — tipos de la respuesta paginada y del resumen.
+
+Guía:
+
+1. Estructura, de arriba hacia abajo: banner de bienvenida (azul en degradé, según el rol) → franja de resumen (solo productores) → categorías en círculos con su cantidad (al tocar una se filtra; la elegida queda marcada) → espacio para "Sugerido para vos" (KAN-170, no implementarlo acá) → dos banners informativos (ej. "Socios del Consorcio" y "Publicá tu producción") → catálogo en grilla con paginación.
+2. Buscador: `router.get(route('publicaciones.index'), { ...filtros, q }, { preserveState: true })`, con un debounce corto o al apretar Enter.
+3. Adaptar a la respuesta paginada: `publicaciones.data` para la grilla y `publicaciones.links` para la paginación.
+4. Reusar `Components/PublicacionCard.tsx`; los agregados de foto, favorito e insignia de socio van en sus propias tareas (KAN-203, KAN-188, KAN-173).
+5. Paleta y tipografía del proyecto: azules, ámbar en los CTA; títulos en Bricolage Grotesque y texto en Manrope (definidos en la tarea de la landing, KAN-201).
+6. Coordinar con KAN-53: el filtro por categoría se conecta acá mismo (si KAN-53 sigue abierta, resolverla en conjunto).
+
+</details>
+
+<details>
+<summary>**KAN-212** [backend] — Tests: feature tests de la pantalla de inicio</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/PublicacionControllerTest.php` (agregar casos).
+
+Guía:
+
+1. La búsqueda `?q=` devuelve solo publicaciones activas cuyo título o descripción coincide, y se combina bien con `?categoria_id=`.
+2. La paginación devuelve 12 por página y los links conservan los filtros.
+3. `'categorias'` trae el conteo de publicaciones ACTIVAS (una pausada no suma).
+4. `'resumen'` trae los conteos correctos para un productor (sus publicaciones por estado y solicitudes pendientes, sin contar las de otros) y es `null` para un comprador.
+5. Después del login el usuario es redirigido a `publicaciones.index`, y `/dashboard` devuelve 404.
+
+</details>
+
 ---
 
 ## Epic: KAN-7 — Reseñas
@@ -1894,6 +1981,26 @@ Guía:
 1. Test: con lat/lng del usuario, el listado devuelve las publicaciones ordenadas de más cerca a más lejos (armá 2-3 productores con ubicaciones conocidas y verificá el orden exacto).
 2. Test: sin lat/lng, el listado se comporta igual que antes (no se rompe KAN-49/KAN-51).
 3. Test: combinar orden por cercanía con filtro de categoría (KAN-54) y verificar que ambos se aplican juntos.
+
+</details>
+
+<details>
+<summary>**KAN-213** [backend] — Bug: el listado de publicaciones con ?lat=&lng= da error de SQL en MySQL</summary>
+
+En `PublicacionController::index()`, la fórmula de Haversine usa `min(1.0, max(-1.0, ...))`. En MySQL, `MIN` y `MAX` son funciones de agregado y eso da "SQLSTATE[42000] Syntax error" (confirmado contra la base MySQL local). En SQLite funciona, por eso no se detectó. Además no hay ningún test que llame a `/publicaciones?lat=..&lng=..`.
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php`
+* `tests/Feature/PublicacionControllerTest.php`
+
+Guía:
+
+1. Usar `LEAST(1.0, GREATEST(-1.0, ...))` en MySQL. Como SQLite no tiene `LEAST`/`GREATEST`, armar la expresión según `DB::getDriverName()`, o mover el cálculo a un scope del modelo.
+2. Agregar un test que cree productores con lat/lng distintos y verifique el orden por distancia.
+3. Correr ese test también contra MySQL (el entorno local usa MySQL) antes de mergear.
+
+Nota: el proyecto no tiene un tipo de issue "Bug" habilitado — se creó como Subtask de KAN-101 (la Historia de "ordenar por cercanía").
 
 </details>
 
