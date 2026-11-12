@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\UpdateNumeroSocioRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,5 +60,22 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Update the user's partner number and reset verification.
+     */
+    public function updateSocio(UpdateNumeroSocioRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $user->fill([
+            'numero_socio' => $request->validated('numero_socio'),
+            'socio_validado' => false,
+        ]);
+
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('status', 'socio-actualizado');
     }
 }
