@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AlertaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\DenunciaController;
@@ -30,4 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/denuncias', [DenunciaController::class, 'store']);
     Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store']);
+
+    Route::get('/alertas', [AlertaController::class, 'index']);
+    Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida']);
 });
