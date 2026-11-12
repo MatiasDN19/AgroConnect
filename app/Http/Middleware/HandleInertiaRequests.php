@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Denuncia;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -39,6 +40,10 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            // Datos del panel de administración (solo para administradores)
+            'admin' => fn () => $request->user()?->esAdmin()
+                ? ['denuncias_pendientes' => Denuncia::where('estado', Denuncia::ESTADO_PENDIENTE)->count()]
+                : null,
         ];
     }
 }
