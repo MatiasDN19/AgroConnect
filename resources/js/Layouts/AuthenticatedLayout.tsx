@@ -2,6 +2,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import { rutaInicioAdmin } from '@/utils/panelAdmin';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 
@@ -10,6 +11,9 @@ export default function Authenticated({
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
+
+    // Link al panel admin: va a la primera sección que ya exista (KAN-219).
+    const inicioAdmin = user.rol === 'admin' ? rutaInicioAdmin() : null;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -46,12 +50,9 @@ export default function Authenticated({
                                     Publicaciones
                                 </NavLink>
 
-                                {user.rol === 'admin' && (
-                                    <NavLink
-                                        href={route('categorias.index')}
-                                        active={route().current('categorias.*')}
-                                    >
-                                        Categorías
+                                {inicioAdmin && (
+                                    <NavLink href={inicioAdmin} active={false}>
+                                        Panel admin
                                     </NavLink>
                                 )}
 
@@ -180,12 +181,9 @@ export default function Authenticated({
                             Publicaciones
                         </ResponsiveNavLink>
 
-                        {user.rol === 'admin' && (
-                            <ResponsiveNavLink
-                                href={route('categorias.index')}
-                                active={route().current('categorias.*')}
-                            >
-                                Categorías
+                        {inicioAdmin && (
+                            <ResponsiveNavLink href={inicioAdmin}>
+                                Panel admin
                             </ResponsiveNavLink>
                         )}
 

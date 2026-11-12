@@ -5,9 +5,9 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { Categoria, PageProps } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
 
 export default function Index({
@@ -79,23 +79,16 @@ export default function Index({
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                        Categorías
-                    </h2>
-
-                    <PrimaryButton onClick={abrirCrear}>
-                        Nueva categoría
-                    </PrimaryButton>
-                </div>
+        <AdminLayout
+            titulo="Categorías"
+            acciones={
+                <PrimaryButton onClick={abrirCrear}>
+                    Nueva categoría
+                </PrimaryButton>
             }
         >
-            <Head title="Categorías" />
-
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
+            <div>
+                <div className="mx-auto max-w-7xl space-y-4">
                     {flash.success && (
                         <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
                             {flash.success}
@@ -289,6 +282,6 @@ export default function Index({
                     </div>
                 </form>
             </Modal>
-        </AuthenticatedLayout>
+        </AdminLayout>
     );
 }

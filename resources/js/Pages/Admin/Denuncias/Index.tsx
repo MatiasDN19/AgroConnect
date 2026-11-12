@@ -1,5 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
 
 interface DenunciaItem {
     id: number;
@@ -31,17 +30,9 @@ interface Props {
 
 export default function Index({ denuncias, estado_actual }: Props) {
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Panel de Denuncias
-                </h2>
-            }
-        >
-            <Head title="Admin - Denuncias" />
-
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <AdminLayout titulo="Denuncias">
+            <div>
+                <div className="mx-auto max-w-7xl">
                     <div className="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
                         <div className="mb-4">
                             <span className="font-medium text-gray-700">
@@ -88,6 +79,6 @@ export default function Index({ denuncias, estado_actual }: Props) {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </AdminLayout>
     );
 }

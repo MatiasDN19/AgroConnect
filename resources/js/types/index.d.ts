@@ -44,4 +44,8 @@ export type PageProps<
         success?: string | null;
         error?: string | null;
     };
+    // Solo viene para admins (KAN-218); para el resto es null o no está.
+    admin?: {
+        denuncias_pendientes: number;
+    } | null;
 };
