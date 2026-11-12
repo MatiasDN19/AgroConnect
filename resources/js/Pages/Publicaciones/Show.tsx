@@ -1,6 +1,7 @@
 import Estrellas from '@/Components/Estrellas';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import ResenaForm from '@/Components/ResenaForm';
 import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
@@ -43,6 +44,14 @@ export default function Show({
     const avisoEstado = publicacion.estado
         ? TEXTO_ESTADO[publicacion.estado]
         : undefined;
+
+    // Reseñas (KAN-59): el dueño no puede reseñar su publicación y cada usuario
+    // deja una sola. Lo resolvemos acá para no mostrar un formulario que el
+    // backend va a rechazar (StoreResenaRequest lo sigue validando igual).
+    const esDueno = auth.user.id === publicacion.usuario_id;
+    const yaReseno = publicacion.resenas.some(
+        (resena) => resena.usuario.id === auth.user.id,
+    );
 
     // Cambio de estado (KAN-47): PATCH /publicaciones/{id}/estado.
     const [procesando, setProcesando] = useState(false);
@@ -257,7 +266,21 @@ export default function Show({
                                 ))}
                             </ul>
                         )}
-                        {/* Acá va el formulario para dejar una reseña (Epic Reseñas). */}
+                        {!esDueno && (
+                            <div className="mt-6 border-t border-gray-100 pt-6">
+                                {yaReseno ? (
+                                    <p className="text-sm text-gray-600">
+                                        Ya dejaste tu reseña en esta
+                                        publicación. ¡Gracias por compartir tu
+                                        experiencia!
+                                    </p>
+                                ) : (
+                                    <ResenaForm
+                                        publicacionId={publicacion.id}
+                                    />
+                                )}
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
