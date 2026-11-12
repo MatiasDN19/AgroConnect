@@ -23,6 +23,7 @@ class StoreDenunciaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'publicacion_id' => $this->route('publicacion') ? ['nullable'] : ['required', 'integer', 'exists:publicaciones,id'],
             'motivo' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string', 'max:2000'],
         ];
@@ -31,6 +32,8 @@ class StoreDenunciaRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'publicacion_id.required' => 'La publicación a denunciar es obligatoria.',
+            'publicacion_id.exists' => 'La publicación seleccionada no existe.',
             'motivo.required' => 'El motivo es obligatorio.',
             'motivo.max' => 'El motivo no puede superar los 255 caracteres.',
             'descripcion.max' => 'La descripción no puede superar los 2000 caracteres.',
@@ -40,8 +43,12 @@ class StoreDenunciaRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            /** @var Publicacion $publicacion */
-            $publicacion = $this->route('publicacion');
+            /** @var Publicacion|null $publicacion */
+            $publicacion = $this->getPublicacion();
+
+            if (! $publicacion) {
+                return;
+            }
 
             if ($publicacion->usuario_id === $this->user()->id) {
                 $validator->errors()->add('publicacion', 'No podés denunciar tu propia publicación.');
@@ -56,5 +63,20 @@ class StoreDenunciaRequest extends FormRequest
                 $validator->errors()->add('publicacion', 'Ya denunciaste esta publicación.');
             }
         });
+    }
+
+    public function getPublicacion(): ?Publicacion
+    {
+        $routePublicacion = $this->route('publicacion');
+
+        if ($routePublicacion instanceof Publicacion) {
+            return $routePublicacion;
+        }
+
+        if (is_numeric($routePublicacion)) {
+            return Publicacion::find($routePublicacion);
+        }
+
+        return Publicacion::find($this->input('publicacion_id'));
     }
 }
