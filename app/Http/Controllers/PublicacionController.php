@@ -10,6 +10,7 @@ use App\Models\Publicacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -33,7 +34,15 @@ class PublicacionController extends Controller
             $userLng = (float) $request->input('lng');
 
             // Join con users para ordenar por distancia usando la fórmula de Haversine
-            $haversine = "(6371 * acos(min(1.0, max(-1.0, cos(radians({$userLat})) * cos(radians(users.lat)) * cos(radians(users.lng) - radians({$userLng})) + sin(radians({$userLat})) * sin(radians(users.lat))))))";
+            $cosFormula = "cos(radians({$userLat})) * cos(radians(users.lat)) * cos(radians(users.lng) - radians({$userLng})) + sin(radians({$userLat})) * sin(radians(users.lat))";
+
+            // MySQL/MariaDB usan LEAST/GREATEST para clamping escalar; SQLite usa min/max con 2 argumentos
+            $clamped = match (DB::connection()->getDriverName()) {
+                'mysql', 'mariadb' => "LEAST(1.0, GREATEST(-1.0, {$cosFormula}))",
+                default => "min(1.0, max(-1.0, {$cosFormula}))",
+            };
+
+            $haversine = "(6371 * acos({$clamped}))";
 
             $query->join('users', 'publicaciones.usuario_id', '=', 'users.id')
                 ->select('publicaciones.*')
