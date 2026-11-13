@@ -749,3 +749,136 @@ test('el listado de publicaciones devuelve un arreglo vacío si no hay publicaci
         ->has('publicaciones', 0)
     );
 });
+
+// --- Priorización de Socios Validados en el Listado (KAN-196) ---
+
+test('el listado de publicaciones devuelve primero las de socios validados aunque sean mas antiguas', function () {
+    $usuario = User::factory()->create();
+
+    $socioValidado = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => 'SOCIO-001',
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => null,
+        'socio_validado' => false,
+    ]);
+
+    // Publicación más vieja pero de socio validado
+    $pubSocioVieja = Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'titulo' => 'Banana de socio (vieja)',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDays(5),
+    ]);
+
+    // Publicación más reciente pero de no socio
+    $pubNoSocioReciente = Publicacion::factory()->create([
+        'usuario_id' => $noSocio->id,
+        'titulo' => 'Tomate de no socio (reciente)',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.id', $pubSocioVieja->id)
+        ->where('publicaciones.1.id', $pubNoSocioReciente->id)
+    );
+});
+
+test('la prioridad de socios validados se mantiene cuando se filtra por categoria', function () {
+    $usuario = User::factory()->create();
+    $categoriaFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+    $categoriaVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+
+    $socioValidado = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'socio_validado' => false,
+    ]);
+
+    // En categoría Frutas: socio (vieja) y no socio (nueva)
+    $pubSocioFruta = Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Naranja de socio',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDays(4),
+    ]);
+
+    $pubNoSocioFruta = Publicacion::factory()->create([
+        'usuario_id' => $noSocio->id,
+        'categoria_id' => $categoriaFrutas->id,
+        'titulo' => 'Manzana de no socio',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDays(1),
+    ]);
+
+    // En otra categoría
+    Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'categoria_id' => $categoriaVerduras->id,
+        'titulo' => 'Lechuga de socio',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->get(route('publicaciones.index', ['categoria_id' => $categoriaFrutas->id]));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('categoria_id', (string) $categoriaFrutas->id)
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.id', $pubSocioFruta->id)
+        ->where('publicaciones.1.id', $pubNoSocioFruta->id)
+    );
+});
+
+test('dentro del mismo estado de socio validado se respeta el orden cronologico mas reciente primero', function () {
+    $usuario = User::factory()->create();
+
+    $socioValidado = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'socio_validado' => true,
+    ]);
+
+    $pubSocioVieja = Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'titulo' => 'Socio anterior',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDays(3),
+    ]);
+
+    $pubSocioNueva = Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'titulo' => 'Socio reciente',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDay(),
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones', 2)
+        ->where('publicaciones.0.id', $pubSocioNueva->id)
+        ->where('publicaciones.1.id', $pubSocioVieja->id)
+    );
+});

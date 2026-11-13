@@ -67,6 +67,42 @@ test('el listado de publicaciones puede filtrarse por categoria', function () {
     $response->assertJsonPath('data.0.categoria_id', $catVerduras->id);
 });
 
+test('el listado de publicaciones via api prioriza productores socios validados', function () {
+    $usuario = User::factory()->create();
+    Sanctum::actingAs($usuario);
+
+    $socioValidado = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'socio_validado' => false,
+    ]);
+
+    $pubSocioVieja = Publicacion::factory()->create([
+        'usuario_id' => $socioValidado->id,
+        'titulo' => 'Publicacion de socio',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDays(5),
+    ]);
+
+    $pubNoSocioReciente = Publicacion::factory()->create([
+        'usuario_id' => $noSocio->id,
+        'titulo' => 'Publicacion de no socio',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subDay(),
+    ]);
+
+    $response = $this->getJson('/api/publicaciones');
+
+    $response->assertOk();
+    $response->assertJsonCount(2, 'data');
+    $response->assertJsonPath('data.0.id', $pubSocioVieja->id);
+    $response->assertJsonPath('data.1.id', $pubNoSocioReciente->id);
+});
+
 test('un usuario puede ver el detalle de una publicacion', function () {
     $usuario = User::factory()->create();
     Sanctum::actingAs($usuario);
