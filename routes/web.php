@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
@@ -66,6 +67,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
     Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
+    Route::patch('/admin/usuarios/{usuario}/inhabilitar', [UsuarioController::class, 'toggleInhabilitado'])->name('admin.usuarios.inhabilitar');
 });
 
 require __DIR__.'/auth.php';

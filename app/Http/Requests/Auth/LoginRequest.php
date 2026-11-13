@@ -50,6 +50,19 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $user = Auth::user();
+
+        if ($user?->estaInhabilitado()) {
+            Auth::guard('web')->logout();
+
+            $this->session()->invalidate();
+            $this->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta fue inhabilitada, contactá al administrador.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
