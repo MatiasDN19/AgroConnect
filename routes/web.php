@@ -6,6 +6,7 @@ use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\ResenaController;
+use App\Http\Controllers\SocioController;
 use App\Http\Controllers\SolicitudCompraController;
 use App\Models\Publicacion;
 use Illuminate\Foundation\Application;
@@ -66,6 +67,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
     Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
+    Route::get('/admin/socios', [SocioController::class, 'index'])->name('admin.socios.index');
+    Route::match(['post', 'patch'], '/admin/socios/{usuario}/aceptar', [SocioController::class, 'aceptar'])->name('admin.socios.aceptar');
+    Route::match(['post', 'patch'], '/admin/socios/{usuario}/rechazar', [SocioController::class, 'rechazar'])->name('admin.socios.rechazar');
 });
 
 require __DIR__.'/auth.php';
