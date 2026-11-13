@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
     Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
+    Route::patch('/admin/usuarios/{usuario}/inhabilitar', [UsuarioController::class, 'toggleInhabilitado'])->name('admin.usuarios.inhabilitar');
     Route::get('/admin/socios', [SocioController::class, 'index'])->name('admin.socios.index');
     Route::match(['post', 'patch'], '/admin/socios/{usuario}/aceptar', [SocioController::class, 'aceptar'])->name('admin.socios.aceptar');
     Route::match(['post', 'patch'], '/admin/socios/{usuario}/rechazar', [SocioController::class, 'rechazar'])->name('admin.socios.rechazar');

@@ -62,6 +62,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->estaInhabilitado()) {
+            throw ValidationException::withMessages([
+                'email' => ['Tu cuenta fue inhabilitada, contactá al administrador.'],
+            ]);
+        }
+
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
