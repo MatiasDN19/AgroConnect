@@ -54,4 +54,14 @@ class UserFactory extends Factory
             'rol' => User::ROL_ADMIN,
         ]);
     }
+
+    /**
+     * Indicate that the user is inhabilitado.
+     */
+    public function inhabilitado(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'inhabilitado' => true,
+        ]);
+    }
 }
