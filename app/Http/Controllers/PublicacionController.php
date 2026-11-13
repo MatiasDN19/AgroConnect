@@ -7,6 +7,7 @@ use App\Http\Requests\StorePublicacionRequest;
 use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,10 @@ class PublicacionController extends Controller
             ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA)
             ->when($request->filled('categoria_id'), function ($query) use ($request) {
                 $query->where('publicaciones.categoria_id', $request->input('categoria_id'));
-            });
+            })
+            ->orderByDesc(
+                User::selectRaw('COALESCE(socio_validado, 0)')->whereColumn('users.id', 'publicaciones.usuario_id')
+            );
 
         if ($hasUbicacion) {
             $userLat = (float) $request->input('lat');
