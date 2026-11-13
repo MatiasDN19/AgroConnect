@@ -271,3 +271,96 @@ test('el administrador puede filtrar denuncias por estado revisada y descartada'
         ->where('denuncias.0.id', $denunciaDescartada->id)
     );
 });
+
+// --- Resolución de Denuncias (KAN-70 / KAN-72) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar resolver una denuncia', function () {
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    $response = $this->patch(route('admin.denuncias.update', $denuncia), [
+        'estado' => Denuncia::ESTADO_REVISADA,
+    ]);
+
+    $response->assertRedirect(route('login'));
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_PENDIENTE);
+});
+
+test('un usuario con rol productor no puede resolver una denuncia', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    $response = $this->actingAs($productor)
+        ->patch(route('admin.denuncias.update', $denuncia), [
+            'estado' => Denuncia::ESTADO_REVISADA,
+        ]);
+
+    $response->assertForbidden();
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_PENDIENTE);
+});
+
+test('un usuario con rol comprador no puede resolver una denuncia', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    $response = $this->actingAs($comprador)
+        ->patch(route('admin.denuncias.update', $denuncia), [
+            'estado' => Denuncia::ESTADO_DESCARTADA,
+        ]);
+
+    $response->assertForbidden();
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_PENDIENTE);
+});
+
+test('el administrador puede marcar una denuncia como revisada', function () {
+    $admin = User::factory()->admin()->create();
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    $response = $this->actingAs($admin)
+        ->patch(route('admin.denuncias.update', $denuncia), [
+            'estado' => Denuncia::ESTADO_REVISADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('admin.denuncias.index'));
+    $response->assertSessionHas('success', 'Estado de la denuncia actualizado exitosamente.');
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_REVISADA);
+});
+
+test('el administrador puede marcar una denuncia como descartada', function () {
+    $admin = User::factory()->admin()->create();
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    $response = $this->actingAs($admin)
+        ->patch(route('admin.denuncias.update', $denuncia), [
+            'estado' => Denuncia::ESTADO_DESCARTADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('admin.denuncias.index'));
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_DESCARTADA);
+});
+
+test('la resolución de denuncia valida el campo estado requerido y valores válidos', function () {
+    $admin = User::factory()->admin()->create();
+    $denuncia = Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE]);
+
+    // Estado requerido
+    $responseRequired = $this->actingAs($admin)
+        ->patch(route('admin.denuncias.update', $denuncia), []);
+
+    $responseRequired->assertSessionHasErrors([
+        'estado' => 'El estado es obligatorio.',
+    ]);
+
+    // Estado inválido
+    $responseInvalido = $this->actingAs($admin)
+        ->patch(route('admin.denuncias.update', $denuncia), [
+            'estado' => 'estado_inexistente',
+        ]);
+
+    $responseInvalido->assertSessionHasErrors([
+        'estado' => 'El estado seleccionado no es válido.',
+    ]);
+
+    expect($denuncia->fresh()->estado)->toBe(Denuncia::ESTADO_PENDIENTE);
+});
