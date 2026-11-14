@@ -59,7 +59,7 @@ class PublicacionController extends Controller
         }
 
         $publicaciones = $query
-            ->with(['categoria:id,nombre', 'usuario:id,name'])
+            ->with(['categoria:id,nombre', 'usuario:id,name,socio_validado'])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->get();
 
@@ -102,7 +102,7 @@ class PublicacionController extends Controller
     public function show(Publicacion $publicacion): InertiaResponse
     {
         $publicacion->load([
-            'usuario:id,name,email,telefono',
+            'usuario:id,name,email,telefono,socio_validado',
             'categoria:id,nombre',
             'resenas.usuario:id,name',
         ]);
