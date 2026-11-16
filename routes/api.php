@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/publicaciones', [PublicacionController::class, 'index']);
+    Route::get('/publicaciones/sugeridas', [PublicacionController::class, 'sugeridas']);
     Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show']);
     Route::post('/publicaciones', [PublicacionController::class, 'store']);
     Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update']);

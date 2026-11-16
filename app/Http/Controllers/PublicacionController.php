@@ -186,4 +186,53 @@ class PublicacionController extends Controller
 
         return response()->json($publicaciones);
     }
+
+    /**
+     * Devuelve las publicaciones sugeridas para el usuario autenticado,
+     * basadas en su historial (categorías de favoritos o reseñas),
+     * priorizando socios validados del Consorcio y con fallback a las más recientes.
+     */
+    public function sugeridas(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // 1. Obtener categorías de interés a partir de favoritos o reseñas
+        $categoriasDeInteres = collect();
+
+        if ($user) {
+            $categoriasFavoritos = $user->favoritos()
+                ->with('publicacion:id,categoria_id')
+                ->get()
+                ->pluck('publicacion.categoria_id')
+                ->filter();
+
+            $categoriasResenas = $user->resenas()
+                ->with('publicacion:id,categoria_id')
+                ->get()
+                ->pluck('publicacion.categoria_id')
+                ->filter();
+
+            $categoriasDeInteres = $categoriasFavoritos->merge($categoriasResenas)->unique();
+        }
+
+        // 2. Construir la consulta de publicaciones sugeridas activas
+        $query = Publicacion::query()
+            ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA);
+
+        if ($categoriasDeInteres->isNotEmpty()) {
+            $query->whereIn('publicaciones.categoria_id', $categoriasDeInteres);
+        }
+
+        // 3. Priorizar socios validados y luego más recientes
+        $publicaciones = $query
+            ->orderByDesc(
+                User::selectRaw('COALESCE(socio_validado, 0)')->whereColumn('users.id', 'publicaciones.usuario_id')
+            )
+            ->latest('publicaciones.created_at')
+            ->with(['categoria:id,nombre', 'usuario:id,name,socio_validado'])
+            ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
+            ->paginate(10);
+
+        return response()->json($publicaciones);
+    }
 }
