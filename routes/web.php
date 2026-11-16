@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\MetricasController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
@@ -65,6 +66,8 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/resumen', [MetricasController::class, 'index'])->name('admin.resumen');
+    Route::get('/admin/metricas', [MetricasController::class, 'index'])->name('admin.metricas.index');
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
     Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
