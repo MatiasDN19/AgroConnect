@@ -277,3 +277,49 @@ test('cambiar estado con un valor invalido devuelve 422', function () {
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['estado']);
 });
+
+test('las respuestas del listado y detalle de publicaciones via API incluyen socio_validado y no exponen numero_socio', function () {
+    $lector = User::factory()->create();
+    Sanctum::actingAs($lector);
+
+    $socio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => 'SOCIO-SECRET-999',
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => null,
+        'socio_validado' => false,
+    ]);
+
+    $pubSocio = Publicacion::factory()->create([
+        'usuario_id' => $socio->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $pubNoSocio = Publicacion::factory()->create([
+        'usuario_id' => $noSocio->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $responseIndex = $this->getJson('/api/publicaciones');
+    $responseIndex->assertOk();
+    $responseIndex->assertJsonPath('data.0.id', $pubSocio->id);
+    $responseIndex->assertJsonPath('data.0.usuario.socio_validado', true);
+    $responseIndex->assertJsonMissingPath('data.0.usuario.numero_socio');
+    $responseIndex->assertJsonPath('data.1.id', $pubNoSocio->id);
+    $responseIndex->assertJsonPath('data.1.usuario.socio_validado', false);
+    $responseIndex->assertJsonMissingPath('data.1.usuario.numero_socio');
+
+    $responseShowSocio = $this->getJson("/api/publicaciones/{$pubSocio->id}");
+    $responseShowSocio->assertOk();
+    $responseShowSocio->assertJsonPath('data.usuario.socio_validado', true);
+    $responseShowSocio->assertJsonMissingPath('data.usuario.numero_socio');
+
+    $responseShowNoSocio = $this->getJson("/api/publicaciones/{$pubNoSocio->id}");
+    $responseShowNoSocio->assertOk();
+    $responseShowNoSocio->assertJsonPath('data.usuario.socio_validado', false);
+    $responseShowNoSocio->assertJsonMissingPath('data.usuario.numero_socio');
+});
