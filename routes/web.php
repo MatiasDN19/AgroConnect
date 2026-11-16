@@ -6,24 +6,17 @@ use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\ResenaController;
 use App\Http\Controllers\SocioController;
 use App\Http\Controllers\SolicitudCompraController;
 use App\Models\Publicacion;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
