@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Denuncia;
-use App\Models\Publicacion;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -57,39 +56,16 @@ test('un administrador recibe el conteo correcto de denuncias pendientes en los 
         'rol' => User::ROL_ADMIN,
     ]);
 
-    $autor = User::factory()->create();
-    $denunciante = User::factory()->create();
-
-    $pub1 = Publicacion::factory()->create(['usuario_id' => $autor->id]);
-    $pub2 = Publicacion::factory()->create(['usuario_id' => $autor->id]);
-    $pub3 = Publicacion::factory()->create(['usuario_id' => $autor->id]);
-
     // 3 denuncias pendientes
-    Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub1->id,
-        'estado' => Denuncia::ESTADO_PENDIENTE,
-    ]);
-    Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub2->id,
-        'estado' => Denuncia::ESTADO_PENDIENTE,
-    ]);
-    Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub3->id,
+    Denuncia::factory()->count(3)->create([
         'estado' => Denuncia::ESTADO_PENDIENTE,
     ]);
 
     // Otras denuncias no pendientes (no deben sumarse al conteo)
     Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub1->id,
         'estado' => Denuncia::ESTADO_REVISADA,
     ]);
     Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub2->id,
         'estado' => Denuncia::ESTADO_DESCARTADA,
     ]);
 
@@ -108,13 +84,7 @@ test('el conteo de denuncias pendientes para el administrador es cero cuando no 
         'rol' => User::ROL_ADMIN,
     ]);
 
-    $autor = User::factory()->create();
-    $denunciante = User::factory()->create();
-    $pub = Publicacion::factory()->create(['usuario_id' => $autor->id]);
-
     Denuncia::factory()->create([
-        'usuario_id' => $denunciante->id,
-        'publicacion_id' => $pub->id,
         'estado' => Denuncia::ESTADO_REVISADA,
     ]);
 
