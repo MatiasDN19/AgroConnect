@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\UsuarioController;
+use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
@@ -57,6 +58,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])->name('solicitudes-compra.store');
     Route::get('/solicitudes-compra', [SolicitudCompraController::class, 'index'])->name('solicitudes-compra.index');
     Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');
+
+    Route::get('/alertas', [AlertaController::class, 'index'])->name('alertas.index');
+    Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida'])->name('alertas.marcar-leida');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

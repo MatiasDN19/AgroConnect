@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Alerta;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class AlertaController extends Controller
+{
+    /**
+     * Listar las alertas del usuario autenticado ordenadas por más recientes.
+     * Soporta respuesta Inertia para la web y JSON si se solicita explícitamente.
+     */
+    public function index(Request $request): Response|JsonResponse
+    {
+        $alertas = $request->user()
+            ->alertas()
+            ->latest()
+            ->get();
+
+        if ($request->wantsJson()) {
+            return response()->json($alertas);
+        }
+
+        return Inertia::render('Alertas/Index', [
+            'alertas' => $alertas,
+        ]);
+    }
+
+    /**
+     * Marcar una alerta como leída.
+     */
+    public function marcarLeida(Request $request, Alerta $alerta): RedirectResponse|JsonResponse
+    {
+        $this->authorize('update', $alerta);
+
+        $alerta->update([
+            'leida' => true,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'alerta' => $alerta,
+            ]);
+        }
+
+        return back()->with('success', 'Alerta marcada como leída.');
+    }
+}
