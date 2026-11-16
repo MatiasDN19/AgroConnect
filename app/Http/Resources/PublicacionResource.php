@@ -35,6 +35,7 @@ class PublicacionResource extends JsonResource
                 'telefono' => $this->usuario->telefono,
                 'lat' => $this->usuario->lat,
                 'lng' => $this->usuario->lng,
+                'socio_validado' => (bool) $this->usuario->socio_validado,
             ]),
             'categoria' => new CategoriaResource($this->whenLoaded('categoria')),
             'resenas' => $this->whenLoaded('resenas'),

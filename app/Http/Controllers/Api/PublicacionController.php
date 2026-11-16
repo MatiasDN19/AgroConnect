@@ -56,7 +56,7 @@ class PublicacionController extends Controller
         }
 
         $publicaciones = $query
-            ->with(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng'])
+            ->with(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng,socio_validado'])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->get();
 
@@ -69,7 +69,7 @@ class PublicacionController extends Controller
     public function show(Publicacion $publicacion): PublicacionResource
     {
         $publicacion->load([
-            'usuario:id,name,email,telefono,lat,lng',
+            'usuario:id,name,email,telefono,lat,lng,socio_validado',
             'categoria:id,nombre,descripcion',
             'resenas.usuario:id,name',
         ]);
@@ -87,7 +87,7 @@ class PublicacionController extends Controller
             'usuario_id' => $request->user()->id,
         ]);
 
-        $publicacion->load(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng']);
+        $publicacion->load(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng,socio_validado']);
 
         return (new PublicacionResource($publicacion))
             ->response()
@@ -101,7 +101,7 @@ class PublicacionController extends Controller
     {
         $publicacion->update($request->validated());
 
-        $publicacion->load(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng']);
+        $publicacion->load(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng,socio_validado']);
 
         return new PublicacionResource($publicacion);
     }
