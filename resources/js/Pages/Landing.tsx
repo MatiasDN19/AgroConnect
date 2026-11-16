@@ -46,7 +46,8 @@ export default function Landing({
                         AgroConnect
                     </h1>
                     <p className="mt-4 text-lg text-gray-600">
-                        Marketplace agro para el Consorcio Productivo de Laguna Naineck
+                        Marketplace agro para el Consorcio Productivo de Laguna
+                        Naineck
                     </p>
                 </div>
                 <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
