@@ -25,8 +25,20 @@ export default function Authenticated({
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
-                                <Link href="/">
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+                                {/* Insignia chica + nombre: a este tamaño los detalles del logo no se leen solos (como en el mockup). */}
+                                <Link
+                                    href={route('publicaciones.index')}
+                                    className="flex items-center gap-2"
+                                >
+                                    <ApplicationLogo className="block h-10 w-10" />
+                                    <span className="hidden font-display text-lg font-extrabold tracking-tight sm:inline">
+                                        <span className="text-marca-azul">
+                                            Agro
+                                        </span>
+                                        <span className="text-marca-dorado">
+                                            Connect
+                                        </span>
+                                    </span>
                                 </Link>
                             </div>
 
