@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDenunciaRequest;
 use App\Http\Requests\UpdateDenunciaRequest;
+use App\Mail\NuevaAlertaMail;
 use App\Models\Alerta;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -67,21 +69,31 @@ class DenunciaController extends Controller
             $tituloPublicacion = $denuncia->publicacion?->titulo ?? 'tu publicación';
 
             // Alerta al denunciante
-            Alerta::create([
+            $alertaDenunciante = Alerta::create([
                 'usuario_id' => $denuncia->usuario_id,
                 'tipo' => 'denuncia_resuelta',
                 'mensaje' => "Tu denuncia sobre la publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
                 'leida' => false,
             ]);
 
+            $denunciante = $denuncia->usuario;
+            if ($denunciante && ($denunciante->notificar_por_mail ?? true)) {
+                Mail::to($denunciante)->send(new NuevaAlertaMail($alertaDenunciante));
+            }
+
             // Alerta al dueño de la publicación denunciada
             if ($denuncia->publicacion && $denuncia->publicacion->usuario_id) {
-                Alerta::create([
+                $alertaDueno = Alerta::create([
                     'usuario_id' => $denuncia->publicacion->usuario_id,
                     'tipo' => 'denuncia_resuelta',
                     'mensaje' => "La denuncia sobre tu publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
                     'leida' => false,
                 ]);
+
+                $dueno = $denuncia->publicacion->usuario;
+                if ($dueno && ($dueno->notificar_por_mail ?? true)) {
+                    Mail::to($dueno)->send(new NuevaAlertaMail($alertaDueno));
+                }
             }
         }
 
