@@ -44,14 +44,14 @@ export default function Index({ alertas }: Props) {
                                         className={`flex items-center justify-between p-6 transition ${
                                             alerta.leida
                                                 ? 'bg-white text-gray-600'
-                                                : 'bg-indigo-50/50 text-gray-900 font-medium'
+                                                : 'bg-indigo-50/50 font-medium text-gray-900'
                                         }`}
                                     >
                                         <div className="space-y-1">
                                             <p>{alerta.mensaje}</p>
                                             <p className="text-xs text-gray-400">
                                                 {new Date(
-                                                    alerta.created_at
+                                                    alerta.created_at,
                                                 ).toLocaleString()}
                                             </p>
                                         </div>
