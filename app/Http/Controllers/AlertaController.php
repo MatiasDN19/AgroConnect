@@ -6,6 +6,7 @@ use App\Models\Alerta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,7 +37,7 @@ class AlertaController extends Controller
      */
     public function marcarLeida(Request $request, Alerta $alerta): RedirectResponse|JsonResponse
     {
-        $this->authorize('update', $alerta);
+        Gate::authorize('update', $alerta);
 
         $alerta->update([
             'leida' => true,
