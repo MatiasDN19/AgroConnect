@@ -2,10 +2,11 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
+import SocioBadge from '@/Components/SocioBadge';
 import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
 import { useForm, usePage } from '@inertiajs/react';
-import { BadgeCheck, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 type EstadoSocio = 'sin_solicitar' | 'pendiente' | 'validado';
@@ -150,13 +151,9 @@ export default function UpdateSocioForm({
 }
 
 function ChipEstado({ estado }: { estado: EstadoSocio }) {
+    // Validado: la misma insignia que ven los demás en sus publicaciones (KAN-173).
     if (estado === 'validado') {
-        return (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                <BadgeCheck className="h-4 w-4" aria-hidden="true" />
-                Socio validado
-            </span>
-        );
+        return <SocioBadge />;
     }
 
     if (estado === 'pendiente') {

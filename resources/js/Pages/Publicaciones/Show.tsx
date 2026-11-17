@@ -3,6 +3,7 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import ResenaForm from '@/Components/ResenaForm';
 import SecondaryButton from '@/Components/SecondaryButton';
+import SocioBadge from '@/Components/SocioBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
@@ -12,7 +13,7 @@ import { useState } from 'react';
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
 type PublicacionDetalle = Publicacion & {
     categoria: Pick<Categoria, 'id' | 'nombre'>;
-    usuario: Pick<User, 'id' | 'name' | 'telefono'>;
+    usuario: Pick<User, 'id' | 'name' | 'telefono' | 'socio_validado'>;
     resenas: Resena[];
 };
 
@@ -201,6 +202,9 @@ export default function Show({
                             <p className="text-lg font-semibold text-gray-900">
                                 {publicacion.usuario.name}
                             </p>
+                            {publicacion.usuario.socio_validado && (
+                                <SocioBadge />
+                            )}
 
                             {publicacion.usuario.telefono ? (
                                 <a
