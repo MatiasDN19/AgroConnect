@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreResenaRequest;
 use App\Http\Resources\ResenaResource;
+use App\Models\Alerta;
 use App\Models\Publicacion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,10 +30,20 @@ class ResenaController extends Controller
      */
     public function store(StoreResenaRequest $request, Publicacion $publicacion): JsonResponse
     {
-        $resena = $publicacion->resenas()->create([
+        $publicacion->resenas()->create([
             ...$request->validated(),
             'usuario_id' => $request->user()->id,
         ]);
+
+        // Generar alerta para el dueño de la publicación (KAN-73)
+        Alerta::create([
+            'usuario_id' => $publicacion->usuario_id,
+            'tipo' => 'nueva_resena',
+            'mensaje' => "Tu publicación '{$publicacion->titulo}' recibió una nueva reseña.",
+            'leida' => false,
+        ]);
+
+        $resena = $publicacion->resenas()->latest()->first();
 
         $resena->load('usuario:id,name');
 

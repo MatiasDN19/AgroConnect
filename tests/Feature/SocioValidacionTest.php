@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Publicacion;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -236,4 +237,90 @@ test('los invitados no autenticados son redirigidos al login al intentar acceder
     $usuario->refresh();
     expect($usuario->numero_socio)->toBe('SOCIO-GUEST');
     expect($usuario->socio_validado)->toBeFalse();
+});
+
+test('la respuesta de perfil incluye socio_validado en true para socios validados y false para el resto sin exponer numero_socio', function () {
+    $socioValidado = User::factory()->create([
+        'numero_socio' => 'SOCIO-PRIVADO-1',
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'numero_socio' => null,
+        'socio_validado' => false,
+    ]);
+
+    $responseSocio = $this
+        ->actingAs($socioValidado)
+        ->get(route('profile.edit'));
+
+    $responseSocio->assertOk();
+    $responseSocio->assertInertia(fn (Assert $page) => $page
+        ->component('Profile/Edit')
+        ->where('socio_validado', true)
+    );
+
+    $responseNoSocio = $this
+        ->actingAs($noSocio)
+        ->get(route('profile.edit'));
+
+    $responseNoSocio->assertOk();
+    $responseNoSocio->assertInertia(fn (Assert $page) => $page
+        ->component('Profile/Edit')
+        ->where('socio_validado', false)
+    );
+});
+
+test('el listado y detalle de publicaciones incluyen socio_validado del productor y no exponen numero_socio', function () {
+    $lector = User::factory()->create();
+
+    $socio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => 'SOCIO-SECRETO-99',
+        'socio_validado' => true,
+    ]);
+
+    $noSocio = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'numero_socio' => null,
+        'socio_validado' => false,
+    ]);
+
+    $pubSocio = Publicacion::factory()->create([
+        'usuario_id' => $socio->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $pubNoSocio = Publicacion::factory()->create([
+        'usuario_id' => $noSocio->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $responseIndex = $this->actingAs($lector)->get(route('publicaciones.index'));
+    $responseIndex->assertOk();
+    $responseIndex->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('publicaciones.0.id', $pubSocio->id)
+        ->where('publicaciones.0.usuario.socio_validado', true)
+        ->missing('publicaciones.0.usuario.numero_socio')
+        ->where('publicaciones.1.id', $pubNoSocio->id)
+        ->where('publicaciones.1.usuario.socio_validado', false)
+        ->missing('publicaciones.1.usuario.numero_socio')
+    );
+
+    $responseShowSocio = $this->actingAs($lector)->get(route('publicaciones.show', $pubSocio));
+    $responseShowSocio->assertOk();
+    $responseShowSocio->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.usuario.socio_validado', true)
+        ->missing('publicacion.usuario.numero_socio')
+    );
+
+    $responseShowNoSocio = $this->actingAs($lector)->get(route('publicaciones.show', $pubNoSocio));
+    $responseShowNoSocio->assertOk();
+    $responseShowNoSocio->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.usuario.socio_validado', false)
+        ->missing('publicacion.usuario.numero_socio')
+    );
 });

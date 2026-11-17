@@ -5,6 +5,9 @@ export interface User {
     email_verified_at?: string;
     telefono?: string | null;
     rol: 'productor' | 'comprador' | 'admin';
+    // Socio del Consorcio (KAN-92): sin número = sin solicitar.
+    numero_socio?: string | null;
+    socio_validado?: boolean;
 }
 
 export interface Publicacion {

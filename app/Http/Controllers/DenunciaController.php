@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDenunciaRequest;
 use App\Http\Requests\UpdateDenunciaRequest;
+use App\Models\Alerta;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
@@ -59,6 +60,30 @@ class DenunciaController extends Controller
     public function update(UpdateDenunciaRequest $request, Denuncia $denuncia): RedirectResponse
     {
         $denuncia->update($request->validated());
+
+        // Generar alertas ante la resolución de la denuncia (KAN-73)
+        $estado = $denuncia->estado;
+        if (in_array($estado, [Denuncia::ESTADO_REVISADA, Denuncia::ESTADO_DESCARTADA])) {
+            $tituloPublicacion = $denuncia->publicacion?->titulo ?? 'tu publicación';
+
+            // Alerta al denunciante
+            Alerta::create([
+                'usuario_id' => $denuncia->usuario_id,
+                'tipo' => 'denuncia_resuelta',
+                'mensaje' => "Tu denuncia sobre la publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
+                'leida' => false,
+            ]);
+
+            // Alerta al dueño de la publicación denunciada
+            if ($denuncia->publicacion && $denuncia->publicacion->usuario_id) {
+                Alerta::create([
+                    'usuario_id' => $denuncia->publicacion->usuario_id,
+                    'tipo' => 'denuncia_resuelta',
+                    'mensaje' => "La denuncia sobre tu publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
+                    'leida' => false,
+                ]);
+            }
+        }
 
         return redirect()->route('admin.denuncias.index')
             ->with('success', 'Estado de la denuncia actualizado exitosamente.');

@@ -1,28 +1,22 @@
 <?php
 
+use App\Http\Controllers\Admin\MetricasController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\DenunciaController;
 use App\Http\Controllers\FavoritoController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\ResenaController;
 use App\Http\Controllers\SocioController;
 use App\Http\Controllers\SolicitudCompraController;
 use App\Models\Publicacion;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -33,6 +27,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/categorias/{categoria}/precio-sugerido', [PublicacionController::class, 'precioSugerido'])->name('categorias.precio-sugerido');
 
     Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
+    Route::get('/publicaciones/sugeridas', [PublicacionController::class, 'sugeridas'])->name('publicaciones.sugeridas');
     Route::get('/publicaciones/mapa', [PublicacionController::class, 'mapa'])->name('publicaciones.mapa');
 
     // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
@@ -69,6 +64,8 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/resumen', [MetricasController::class, 'index'])->name('admin.resumen');
+    Route::get('/admin/metricas', [MetricasController::class, 'index'])->name('admin.metricas.index');
     Route::resource('categorias', CategoriaController::class);
     Route::get('/admin/denuncias', [DenunciaController::class, 'index'])->name('admin.denuncias.index');
     Route::patch('/admin/denuncias/{denuncia}', [DenunciaController::class, 'update'])->name('admin.denuncias.update');
