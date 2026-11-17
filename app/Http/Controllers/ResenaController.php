@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreResenaRequest;
+use App\Mail\NuevaAlertaMail;
 use App\Models\Alerta;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Mail;
 
 class ResenaController extends Controller
 {
@@ -20,12 +22,18 @@ class ResenaController extends Controller
         ]);
 
         // Generar alerta para el dueño de la publicación (KAN-73)
-        Alerta::create([
+        $alerta = Alerta::create([
             'usuario_id' => $publicacion->usuario_id,
             'tipo' => 'nueva_resena',
             'mensaje' => "Tu publicación '{$publicacion->titulo}' recibió una nueva reseña.",
             'leida' => false,
         ]);
+
+        // Enviar mail si el usuario no desactivó notificaciones (KAN-76)
+        $dueno = $publicacion->usuario;
+        if ($dueno && ($dueno->notificar_por_mail ?? true)) {
+            Mail::to($dueno)->send(new NuevaAlertaMail($alerta));
+        }
 
         return redirect()->route('publicaciones.show', $publicacion)
             ->with('success', 'Reseña creada exitosamente.');
