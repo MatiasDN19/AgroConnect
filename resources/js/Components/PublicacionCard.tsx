@@ -1,4 +1,5 @@
 import Estrellas from '@/Components/Estrellas';
+import SocioBadge from '@/Components/SocioBadge';
 import { Categoria, Publicacion, User } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { Link } from '@inertiajs/react';
@@ -10,7 +11,7 @@ export type PublicacionResumen = Pick<
     'id' | 'titulo' | 'precio' | 'unidad'
 > & {
     categoria: Pick<Categoria, 'id' | 'nombre'>;
-    usuario: Pick<User, 'id' | 'name'>;
+    usuario: Pick<User, 'id' | 'name' | 'socio_validado'>;
     // withAvg de Laravel puede devolverlo como string ("4.0000") o null.
     puntuacion_promedio: number | string | null;
 };
@@ -50,8 +51,14 @@ export default function PublicacionCard({
 
             {/* mt-auto empuja esta fila al fondo, así todas las tarjetas quedan alineadas */}
             <div className="mt-auto flex items-center justify-between gap-2 border-t border-gray-100 pt-3 text-sm">
-                <span className="truncate text-gray-600">
-                    {publicacion.usuario.name}
+                {/* min-w-0 deja que el nombre se corte con "…" y la insignia nunca se esconda */}
+                <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-gray-600">
+                        {publicacion.usuario.name}
+                    </span>
+                    {publicacion.usuario.socio_validado && (
+                        <SocioBadge compacta />
+                    )}
                 </span>
 
                 {promedio !== null ? (
