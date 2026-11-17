@@ -100,7 +100,7 @@ export default function Index({
                                 onClick={() => filtrar(filtro.valor)}
                                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 ${
                                     activo
-                                        ? 'bg-sky-800 text-white'
+                                        ? 'bg-marca-azul-profundo text-white'
                                         : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'
                                 }`}
                             >
@@ -194,7 +194,7 @@ export default function Index({
                                                                         .publicacion
                                                                         .id,
                                                                 )}
-                                                                className="font-medium text-sky-700 hover:underline"
+                                                                className="font-medium text-marca-azul hover:underline"
                                                             >
                                                                 {
                                                                     denuncia

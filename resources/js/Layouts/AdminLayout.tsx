@@ -3,6 +3,8 @@ import { seccionesDisponibles } from '@/utils/panelAdmin';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, LogOut, Menu, X } from 'lucide-react';
 import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+import logoConsorcio from '../../images/logos/consorcio-laguna-naineck.webp';
+import logoPlanNutrir from '../../images/logos/plan-nutrir.webp';
 
 // Layout del panel de administración (KAN-219): sidebar azul con las secciones
 // del panel y área principal clara con el título de la página.
@@ -47,7 +49,7 @@ export default function AdminLayout({
 
             <aside
                 id="sidebar-admin"
-                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sky-800 text-sky-50 transition-transform duration-200 lg:translate-x-0 ${
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-marca-azul-profundo text-sky-50 transition-transform duration-200 lg:translate-x-0 ${
                     menuAbierto ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
@@ -56,7 +58,7 @@ export default function AdminLayout({
                         href={route('publicaciones.index')}
                         className="flex items-center gap-2"
                     >
-                        <ApplicationLogo className="h-8 w-auto fill-current text-white" />
+                        <ApplicationLogo className="h-10 w-10 rounded-full bg-white p-0.5" />
                         <span className="leading-tight">
                             <span className="block font-semibold text-white">
                                 AgroConnect
@@ -70,7 +72,7 @@ export default function AdminLayout({
                     <button
                         type="button"
                         onClick={() => setMenuAbierto(false)}
-                        className="rounded-md p-1 text-sky-100 hover:bg-sky-700 lg:hidden"
+                        className="rounded-md p-1 text-sky-100 hover:bg-white/10 lg:hidden"
                         aria-label="Cerrar menú"
                     >
                         <X className="h-5 w-5" />
@@ -101,7 +103,7 @@ export default function AdminLayout({
 
                                 {seccion.nombre === 'Denuncias' &&
                                     pendientes > 0 && (
-                                        <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950">
+                                        <span className="rounded-full bg-marca-ambar px-2 py-0.5 text-xs font-bold text-amber-950">
                                             {pendientes}
                                             <span className="sr-only">
                                                 {' '}
@@ -115,18 +117,27 @@ export default function AdminLayout({
                 </nav>
 
                 <div className="space-y-4 border-t border-white/10 px-5 py-4">
-                    {/* Acá van los logos del Consorcio y del plan provincial cuando estén. */}
                     <div>
                         <p className="text-xs uppercase tracking-wider text-sky-200">
                             En alianza con
                         </p>
-                        <p className="mt-1 text-sm text-white">
-                            Consorcio Productivo de Laguna Naineck
-                        </p>
+                        {/* Fondo blanco: los logos institucionales son a color y no se leen sobre azul. */}
+                        <div className="mt-2 flex items-center gap-3 rounded-lg bg-white px-3 py-2">
+                            <img
+                                src={logoConsorcio}
+                                alt="Consorcio Productivo de Laguna Naineck"
+                                className="h-14 w-auto"
+                            />
+                            <img
+                                src={logoPlanNutrir}
+                                alt="Plan Nutrir, plan provincial alimentario"
+                                className="h-10 w-auto"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400 font-bold text-amber-950">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca-ambar font-bold text-amber-950">
                             {auth.user.name.charAt(0).toUpperCase()}
                         </span>
                         <div className="min-w-0">
