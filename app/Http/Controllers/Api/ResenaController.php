@@ -8,6 +8,7 @@ use App\Http\Resources\ResenaResource;
 use App\Mail\NuevaAlertaMail;
 use App\Models\Alerta;
 use App\Models\Publicacion;
+use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Mail;
@@ -49,6 +50,11 @@ class ResenaController extends Controller
         $dueno = $publicacion->usuario;
         if ($dueno && ($dueno->notificar_por_mail ?? true)) {
             Mail::to($dueno)->send(new NuevaAlertaMail($alerta));
+        }
+
+        // Enviar push notification si tiene token FCM registrado (KAN-187)
+        if ($dueno) {
+            app(PushNotificationService::class)->sendPush($dueno, $alerta);
         }
 
         $resena = $publicacion->resenas()->latest()->first();

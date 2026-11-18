@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\DenunciaController;
 use App\Http\Controllers\Api\PublicacionController;
+use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ResenaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,4 +36,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/alertas', [AlertaController::class, 'index']);
     Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida']);
+
+    Route::post('/push-token', [PushTokenController::class, 'store']);
 });

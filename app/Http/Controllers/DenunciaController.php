@@ -8,6 +8,7 @@ use App\Mail\NuevaAlertaMail;
 use App\Models\Alerta;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
+use App\Services\PushNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -81,6 +82,11 @@ class DenunciaController extends Controller
                 Mail::to($denunciante)->send(new NuevaAlertaMail($alertaDenunciante));
             }
 
+            // Enviar push notification al denunciante si tiene FCM token (KAN-187)
+            if ($denunciante) {
+                app(PushNotificationService::class)->sendPush($denunciante, $alertaDenunciante);
+            }
+
             // Alerta al dueño de la publicación denunciada
             if ($denuncia->publicacion && $denuncia->publicacion->usuario_id) {
                 $alertaDueno = Alerta::create([
@@ -93,6 +99,11 @@ class DenunciaController extends Controller
                 $dueno = $denuncia->publicacion->usuario;
                 if ($dueno && ($dueno->notificar_por_mail ?? true)) {
                     Mail::to($dueno)->send(new NuevaAlertaMail($alertaDueno));
+                }
+
+                // Enviar push notification al dueño si tiene FCM token (KAN-187)
+                if ($dueno) {
+                    app(PushNotificationService::class)->sendPush($dueno, $alertaDueno);
                 }
             }
         }
