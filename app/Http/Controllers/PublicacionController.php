@@ -99,7 +99,7 @@ class PublicacionController extends Controller
     /**
      * Display the specified publication.
      */
-    public function show(Publicacion $publicacion): InertiaResponse
+    public function show(Request $request, Publicacion $publicacion): InertiaResponse
     {
         $publicacion->load([
             'usuario:id,name,email,telefono,socio_validado',
@@ -107,9 +107,16 @@ class PublicacionController extends Controller
             'resenas.usuario:id,name',
         ]);
 
+        // Denuncia del usuario logueado sobre esta publicación (KAN-65), para que el detalle
+        // muestre "ya la denunciaste" en vez del formulario. Solo estado y fecha: nada más hace falta.
+        $miDenuncia = $publicacion->denuncias()
+            ->where('usuario_id', $request->user()->id)
+            ->first(['estado', 'created_at']);
+
         return Inertia::render('Publicaciones/Show', [
             'publicacion' => $publicacion,
             'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
+            'mi_denuncia' => $miDenuncia,
         ]);
     }
 
