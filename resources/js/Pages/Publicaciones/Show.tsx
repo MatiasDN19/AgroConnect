@@ -7,6 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import ResenaForm from '@/Components/ResenaForm';
 import SecondaryButton from '@/Components/SecondaryButton';
 import SocioBadge from '@/Components/SocioBadge';
+import SolicitarCompra, { MiSolicitud } from '@/Components/SolicitarCompra';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
@@ -35,11 +36,14 @@ export default function Show({
     publicacion,
     puntuacion_promedio,
     mi_denuncia,
+    mi_solicitud,
 }: PageProps<{
     publicacion: PublicacionDetalle;
     puntuacion_promedio: number | null;
     // Denuncia del usuario logueado sobre esta publicación (KAN-65).
     mi_denuncia: MiDenuncia | null;
+    // Última solicitud de compra del usuario logueado (KAN-116).
+    mi_solicitud: MiSolicitud | null;
 }>) {
     const { auth, flash } = usePage().props;
 
@@ -63,6 +67,10 @@ export default function Show({
     // Denuncias (KAN-65): el dueño no puede denunciar lo suyo (el backend lo rechaza)
     // y el admin no denuncia, modera desde su panel.
     const puedeDenunciar = !esDueno && auth.user.rol !== 'admin';
+
+    // Solicitud de compra (KAN-116): misma regla, el dueño no compra lo suyo
+    // (el backend lo rechaza) y el admin no compra.
+    const puedeComprar = !esDueno && auth.user.rol !== 'admin';
 
     // Cambio de estado (KAN-47): PATCH /publicaciones/{id}/estado.
     const [procesando, setProcesando] = useState(false);
@@ -229,6 +237,22 @@ export default function Show({
                                 </p>
                             )}
                             {/* Acá va el botón de WhatsApp (KAN-178). */}
+
+                            {/* Con la publicación pausada o vendida no se puede pedir,
+                                pero si ya había una solicitud se sigue viendo en qué quedó. */}
+                            {puedeComprar &&
+                                (publicacion.estado === 'activa' ||
+                                    mi_solicitud) && (
+                                    <div className="pt-3">
+                                        <SolicitarCompra
+                                            publicacion={publicacion}
+                                            miSolicitud={mi_solicitud}
+                                            disponible={
+                                                publicacion.estado === 'activa'
+                                            }
+                                        />
+                                    </div>
+                                )}
 
                             {puedeDenunciar && (
                                 <div className="border-t border-gray-100 pt-3">

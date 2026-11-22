@@ -1,0 +1,198 @@
+import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
+import { Publicacion } from '@/types';
+import { formatearPrecio } from '@/utils/formato';
+import { useForm } from '@inertiajs/react';
+import {
+    CheckCircle2,
+    Clock,
+    LucideIcon,
+    ShoppingCart,
+    XCircle,
+} from 'lucide-react';
+import { FormEventHandler, useState } from 'react';
+
+export type EstadoSolicitud = 'pendiente' | 'aceptada' | 'rechazada';
+
+// Lo que manda PublicacionController::show() en `mi_solicitud` (la última del usuario).
+export type MiSolicitud = { estado: EstadoSolicitud; created_at: string };
+
+const MAX_MENSAJE = 2000;
+
+const formatoFecha = new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+});
+
+const AVISO_ESTADO: Record<
+    EstadoSolicitud,
+    { Icono: LucideIcon; titulo: string; texto: string; clases: string }
+> = {
+    pendiente: {
+        Icono: Clock,
+        titulo: 'Solicitud enviada',
+        texto: 'Estás esperando la respuesta del productor. Cuando la acepte o la rechace, lo vas a ver acá.',
+        clases: 'bg-amber-50 text-amber-900',
+    },
+    aceptada: {
+        Icono: CheckCircle2,
+        titulo: '¡El productor aceptó tu solicitud!',
+        texto: 'Coordiná con él la entrega y el pago usando sus datos de contacto.',
+        clases: 'bg-green-50 text-green-900',
+    },
+    rechazada: {
+        Icono: XCircle,
+        titulo: 'El productor rechazó tu solicitud',
+        texto: 'Podés volver a intentarlo, por ejemplo con otra cantidad o fecha de retiro.',
+        clases: 'bg-gray-50 text-gray-800',
+    },
+};
+
+// Botón "Solicitar compra" + modal con el mensaje opcional (KAN-116).
+// POST /publicaciones/{id}/solicitudes-compra. Si el usuario ya solicitó, muestra en qué
+// quedó su última solicitud; con una pendiente no deja mandar otra (el backend tampoco).
+export default function SolicitarCompra({
+    publicacion,
+    miSolicitud,
+    disponible,
+}: {
+    publicacion: Pick<Publicacion, 'id' | 'titulo' | 'precio' | 'unidad'>;
+    miSolicitud: MiSolicitud | null;
+    // false si la publicación está pausada o vendida: se ve el estado, pero no se puede pedir.
+    disponible: boolean;
+}) {
+    const [abierto, setAbierto] = useState(false);
+
+    const { data, setData, post, processing, errors, reset, clearErrors } =
+        useForm({ mensaje: '' });
+
+    // 'publicacion' no es un campo del formulario: lo agrega StoreSolicitudCompraRequest::withValidator.
+    const errorGeneral = (errors as Record<string, string | undefined>)
+        .publicacion;
+
+    const cerrar = () => {
+        setAbierto(false);
+        reset();
+        clearErrors();
+    };
+
+    const enviar: FormEventHandler = (e) => {
+        e.preventDefault();
+
+        post(route('solicitudes-compra.store', publicacion.id), {
+            preserveScroll: true,
+            // El mensaje de éxito llega como flash y lo muestra la página.
+            onSuccess: () => cerrar(),
+        });
+    };
+
+    const aviso = miSolicitud ? AVISO_ESTADO[miSolicitud.estado] : null;
+    // Con una pendiente se espera la respuesta; aceptada o rechazada, se puede pedir de nuevo.
+    const puedeSolicitar = disponible && miSolicitud?.estado !== 'pendiente';
+
+    return (
+        <div className="space-y-3">
+            {miSolicitud && aviso && (
+                <div
+                    role="status"
+                    className={`flex gap-2.5 rounded-md p-3 text-sm ${aviso.clases}`}
+                >
+                    <aviso.Icono
+                        className="mt-0.5 h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <div>
+                        <p className="font-medium">{aviso.titulo}</p>
+                        <p className="mt-0.5 opacity-90">{aviso.texto}</p>
+                        <p className="mt-1 text-xs opacity-75">
+                            La enviaste el{' '}
+                            {formatoFecha.format(
+                                new Date(miSolicitud.created_at),
+                            )}
+                            .
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {puedeSolicitar && (
+                <PrimaryButton
+                    onClick={() => setAbierto(true)}
+                    className="w-full justify-center gap-2"
+                >
+                    <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+                    {miSolicitud ? 'Hacer otra solicitud' : 'Solicitar compra'}
+                </PrimaryButton>
+            )}
+
+            <Modal show={abierto} onClose={cerrar}>
+                <form onSubmit={enviar} className="space-y-5 p-6">
+                    <div>
+                        <h2 className="text-lg font-medium text-gray-900">
+                            Solicitar compra
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-600">
+                            El productor va a ver tu solicitud y la puede
+                            aceptar o rechazar. El pago y la entrega los
+                            coordinan entre ustedes.
+                        </p>
+                    </div>
+
+                    {/* Resumen de lo que está pidiendo */}
+                    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
+                        <p className="font-medium text-gray-900">
+                            {publicacion.titulo}
+                        </p>
+                        <p className="text-gray-600">
+                            {formatearPrecio(publicacion.precio)} por{' '}
+                            {publicacion.unidad}
+                        </p>
+                    </div>
+
+                    <div>
+                        <InputLabel
+                            htmlFor="mensaje"
+                            value="Mensaje para el productor (opcional)"
+                        />
+                        <textarea
+                            id="mensaje"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            rows={4}
+                            value={data.mensaje}
+                            onChange={(e) => setData('mensaje', e.target.value)}
+                            maxLength={MAX_MENSAJE}
+                            placeholder="Por ejemplo: necesito 3 cajones, ¿puedo retirar el sábado a la mañana?"
+                        />
+                        <div className="mt-1 flex justify-between gap-4">
+                            <InputError message={errors.mensaje} />
+                            <span className="ms-auto text-xs text-gray-500">
+                                {data.mensaje.length}/{MAX_MENSAJE}
+                            </span>
+                        </div>
+                    </div>
+
+                    {errorGeneral && (
+                        <p
+                            role="alert"
+                            className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+                        >
+                            {errorGeneral}
+                        </p>
+                    )}
+
+                    <div className="flex justify-end gap-3">
+                        <SecondaryButton onClick={cerrar}>
+                            Cancelar
+                        </SecondaryButton>
+                        <PrimaryButton disabled={processing}>
+                            Enviar solicitud
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </Modal>
+        </div>
+    );
+}
