@@ -78,6 +78,17 @@ export default function Authenticated({
                                         Publicar
                                     </NavLink>
                                 )}
+
+                                {user.rol === 'productor' && (
+                                    <NavLink
+                                        href={route('solicitudes-compra.index')}
+                                        active={route().current(
+                                            'solicitudes-compra.index',
+                                        )}
+                                    >
+                                        Solicitudes
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
@@ -205,6 +216,17 @@ export default function Authenticated({
                                 active={route().current('publicaciones.create')}
                             >
                                 Publicar
+                            </ResponsiveNavLink>
+                        )}
+
+                        {user.rol === 'productor' && (
+                            <ResponsiveNavLink
+                                href={route('solicitudes-compra.index')}
+                                active={route().current(
+                                    'solicitudes-compra.index',
+                                )}
+                            >
+                                Solicitudes recibidas
                             </ResponsiveNavLink>
                         )}
                     </div>
