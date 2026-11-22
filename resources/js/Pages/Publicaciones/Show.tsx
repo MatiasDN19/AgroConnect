@@ -1,3 +1,6 @@
+import DenunciarPublicacion, {
+    MiDenuncia,
+} from '@/Components/DenunciarPublicacion';
 import Estrellas from '@/Components/Estrellas';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -31,9 +34,12 @@ const TEXTO_ESTADO: Record<string, string> = {
 export default function Show({
     publicacion,
     puntuacion_promedio,
+    mi_denuncia,
 }: PageProps<{
     publicacion: PublicacionDetalle;
     puntuacion_promedio: number | null;
+    // Denuncia del usuario logueado sobre esta publicación (KAN-65).
+    mi_denuncia: MiDenuncia | null;
 }>) {
     const { auth, flash } = usePage().props;
 
@@ -53,6 +59,10 @@ export default function Show({
     const yaReseno = publicacion.resenas.some(
         (resena) => resena.usuario.id === auth.user.id,
     );
+
+    // Denuncias (KAN-65): el dueño no puede denunciar lo suyo (el backend lo rechaza)
+    // y el admin no denuncia, modera desde su panel.
+    const puedeDenunciar = !esDueno && auth.user.rol !== 'admin';
 
     // Cambio de estado (KAN-47): PATCH /publicaciones/{id}/estado.
     const [procesando, setProcesando] = useState(false);
@@ -219,6 +229,15 @@ export default function Show({
                                 </p>
                             )}
                             {/* Acá va el botón de WhatsApp (KAN-178). */}
+
+                            {puedeDenunciar && (
+                                <div className="border-t border-gray-100 pt-3">
+                                    <DenunciarPublicacion
+                                        publicacionId={publicacion.id}
+                                        miDenuncia={mi_denuncia}
+                                    />
+                                </div>
+                            )}
                         </aside>
                     </div>
 
