@@ -27,7 +27,20 @@ class SolicitudCompraController extends Controller
                 'usuario:id,name,email,telefono',
             ])
             ->latest()
-            ->get();
+            ->get()
+            // El contacto del comprador (email y teléfono) solo viaja si la solicitud fue
+            // aceptada (KAN-151): antes de aceptar, el productor ve nombre y mensaje.
+            // Se arma campo por campo porque el eager loading comparte la misma instancia
+            // de User entre solicitudes del mismo comprador (makeHidden afectaría a todas).
+            ->map(fn (SolicitudCompra $solicitud) => [
+                ...$solicitud->only(['id', 'estado', 'mensaje', 'created_at', 'updated_at']),
+                'publicacion' => $solicitud->publicacion?->only(['id', 'titulo', 'precio', 'unidad']),
+                'usuario' => $solicitud->usuario?->only(
+                    $solicitud->estado === SolicitudCompra::ESTADO_ACEPTADA
+                        ? ['id', 'name', 'email', 'telefono']
+                        : ['id', 'name']
+                ),
+            ]);
 
         return Inertia::render('SolicitudesCompra/Index', [
             'solicitudes' => $solicitudes,
