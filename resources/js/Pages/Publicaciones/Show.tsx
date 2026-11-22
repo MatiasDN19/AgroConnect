@@ -8,6 +8,7 @@ import ResenaForm from '@/Components/ResenaForm';
 import SecondaryButton from '@/Components/SecondaryButton';
 import SocioBadge from '@/Components/SocioBadge';
 import SolicitarCompra, { MiSolicitud } from '@/Components/SolicitarCompra';
+import WhatsappButton from '@/Components/WhatsappButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
@@ -236,7 +237,15 @@ export default function Show({
                                     No cargó un teléfono de contacto.
                                 </p>
                             )}
-                            {/* Acá va el botón de WhatsApp (KAN-178). */}
+                            {/* WhatsApp (KAN-178): no aparece si el teléfono no se puede
+                                convertir a un número válido; queda el teléfono de arriba. */}
+                            {!esDueno && (
+                                <WhatsappButton
+                                    telefono={publicacion.usuario.telefono}
+                                    mensaje={`¡Hola ${publicacion.usuario.name}! Vi tu publicación "${publicacion.titulo}" en AgroConnect y quería hacerte una consulta.`}
+                                    className="w-full"
+                                />
+                            )}
 
                             {/* Con la publicación pausada o vendida no se puede pedir,
                                 pero si ya había una solicitud se sigue viendo en qué quedó. */}
