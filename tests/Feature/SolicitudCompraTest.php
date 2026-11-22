@@ -396,3 +396,35 @@ test('el detalle de publicación devuelve el estado de la última solicitud del 
             ->missing('mi_solicitud.mensaje')
         );
 });
+
+// --- KAN-151: el contacto del comprador solo se ve si la solicitud fue aceptada ---
+
+test('el listado de recibidas solo incluye el contacto del comprador en las solicitudes aceptadas', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create([
+        'rol' => User::ROL_COMPRADOR,
+        'email' => 'comprador@agroconnect.test',
+        'telefono' => '3704111222',
+    ]);
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+
+    // Mismo comprador con una pendiente y una aceptada: cada una se arma por separado.
+    $this->travel(-1)->days();
+    $aceptada = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_ACEPTADA);
+    $this->travelBack();
+    $pendiente = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $this->actingAs($productor)
+        ->get(route('solicitudes-compra.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('solicitudes', 2)
+            ->where('solicitudes.0.id', $pendiente->id)
+            ->where('solicitudes.0.usuario.name', $comprador->name)
+            ->missing('solicitudes.0.usuario.email')
+            ->missing('solicitudes.0.usuario.telefono')
+            ->where('solicitudes.1.id', $aceptada->id)
+            ->where('solicitudes.1.usuario.email', 'comprador@agroconnect.test')
+            ->where('solicitudes.1.usuario.telefono', '3704111222')
+        );
+});
