@@ -2,6 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import { numeroWhatsapp } from '@/utils/whatsapp';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -86,7 +87,27 @@ export default function UpdateProfileInformation({
                         onChange={(e) => setData('telefono', e.target.value)}
                         autoComplete="tel"
                         placeholder="Ej: +54 9 3718 123456"
+                        aria-describedby="telefono-ayuda"
                     />
+
+                    {/* Mismo armado que usa el botón de WhatsApp (KAN-178), para avisar en vivo
+                        si con este número los compradores van a poder escribirle. */}
+                    <p
+                        id="telefono-ayuda"
+                        className={`mt-1 text-xs ${
+                            !data.telefono
+                                ? 'text-gray-500'
+                                : numeroWhatsapp(data.telefono)
+                                  ? 'text-green-700'
+                                  : 'text-amber-700'
+                        }`}
+                    >
+                        {!data.telefono
+                            ? 'Celular con código de área, sin 0 ni 15. Ej: 3718 123456.'
+                            : numeroWhatsapp(data.telefono)
+                              ? '✓ Te van a poder escribir por WhatsApp desde tus publicaciones.'
+                              : 'No lo reconocemos como celular argentino: revisá que tenga el código de área. Sin eso, no vas a tener botón de WhatsApp.'}
+                    </p>
 
                     <InputError className="mt-2" message={errors.telefono} />
                 </div>

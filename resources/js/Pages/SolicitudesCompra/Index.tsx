@@ -3,6 +3,7 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { EstadoSolicitud } from '@/Components/SolicitarCompra';
+import WhatsappButton from '@/Components/WhatsappButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
@@ -300,6 +301,13 @@ function TarjetaSolicitud({
                             {usuario.email}
                         </a>
                     )}
+                    {/* WhatsApp (KAN-178): no aparece si el teléfono no es un número válido. */}
+                    <WhatsappButton
+                        telefono={usuario.telefono}
+                        mensaje={`¡Hola ${usuario.name}! Acepté tu solicitud de compra de "${publicacion?.titulo ?? 'mi publicación'}" en AgroConnect. ¿Coordinamos la entrega y el pago?`}
+                        texto="Escribirle por WhatsApp"
+                        className="mt-2"
+                    />
                 </div>
             )}
 
