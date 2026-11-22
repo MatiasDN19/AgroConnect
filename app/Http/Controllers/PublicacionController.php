@@ -113,10 +113,20 @@ class PublicacionController extends Controller
             ->where('usuario_id', $request->user()->id)
             ->first(['estado', 'created_at']);
 
+        // Última solicitud de compra del usuario logueado sobre esta publicación (KAN-116),
+        // para mostrar en qué quedó en vez del botón. La última porque, si le rechazaron
+        // una, puede volver a solicitar. Solo estado y fecha.
+        $miSolicitud = $publicacion->solicitudesCompra()
+            ->where('usuario_id', $request->user()->id)
+            ->latest()
+            ->latest('id')
+            ->first(['estado', 'created_at']);
+
         return Inertia::render('Publicaciones/Show', [
             'publicacion' => $publicacion,
             'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
             'mi_denuncia' => $miDenuncia,
+            'mi_solicitud' => $miSolicitud,
         ]);
     }
 

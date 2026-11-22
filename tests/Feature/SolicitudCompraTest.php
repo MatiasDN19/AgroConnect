@@ -313,3 +313,86 @@ test('el detalle de la publicación devuelve teléfono null cuando el productor 
         ->where('publicacion.usuario.telefono', null)
     );
 });
+
+// --- KAN-116: una sola solicitud pendiente y estado en el detalle ---
+
+function crearSolicitud(User $comprador, Publicacion $publicacion, string $estado): SolicitudCompra
+{
+    return SolicitudCompra::create([
+        'usuario_id' => $comprador->id,
+        'publicacion_id' => $publicacion->id,
+        'mensaje' => null,
+        'estado' => $estado,
+    ]);
+}
+
+test('un usuario no puede crear una segunda solicitud mientras tenga una pendiente sobre la misma publicación', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create();
+    crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $response = $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion), ['mensaje' => 'De nuevo']);
+
+    $response->assertSessionHasErrors([
+        'publicacion' => 'Ya tenés una solicitud pendiente para esta publicación.',
+    ]);
+    expect(SolicitudCompra::count())->toBe(1);
+});
+
+test('un usuario puede volver a solicitar la compra si su solicitud anterior fue rechazada', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create();
+    crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_RECHAZADA);
+
+    $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion), ['mensaje' => 'Otra cantidad'])
+        ->assertSessionHasNoErrors();
+
+    expect(SolicitudCompra::where('estado', SolicitudCompra::ESTADO_PENDIENTE)->count())->toBe(1);
+});
+
+test('una solicitud pendiente de otro usuario no impide solicitar la misma publicación', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create();
+    crearSolicitud(User::factory()->create(), $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion))
+        ->assertSessionHasNoErrors();
+
+    expect(SolicitudCompra::count())->toBe(2);
+});
+
+test('el detalle de publicación devuelve mi_solicitud null si el usuario no solicitó la compra', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create();
+    crearSolicitud(User::factory()->create(), $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $this->actingAs($comprador)
+        ->get(route('publicaciones.show', $publicacion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('mi_solicitud', null));
+});
+
+test('el detalle de publicación devuelve el estado de la última solicitud del usuario', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $publicacion = Publicacion::factory()->create();
+
+    $this->travel(-2)->days();
+    crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_RECHAZADA);
+    $this->travelBack();
+    crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_ACEPTADA);
+
+    $this->actingAs($comprador)
+        ->get(route('publicaciones.show', $publicacion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('mi_solicitud.estado', SolicitudCompra::ESTADO_ACEPTADA)
+            ->has('mi_solicitud.created_at')
+            ->missing('mi_solicitud.mensaje')
+        );
+});
