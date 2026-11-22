@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Categoria;
+use App\Models\Denuncia;
 use App\Models\Publicacion;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -651,6 +652,47 @@ test('el detalle de publicación devuelve puntuacion promedio null cuando no tie
         ->has('publicacion.resenas', 0)
         ->where('puntuacion_promedio', null)
     );
+});
+
+// --- Denuncia propia en el detalle (KAN-65) ---
+
+test('el detalle de publicación devuelve mi_denuncia null si el usuario no la denunció', function () {
+    $usuario = User::factory()->create();
+    $publicacion = Publicacion::factory()->create();
+
+    // Una denuncia de otro usuario no cuenta.
+    Denuncia::factory()->create(['publicacion_id' => $publicacion->id]);
+
+    $this->actingAs($usuario)
+        ->get(route('publicaciones.show', $publicacion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Publicaciones/Show')
+            ->where('mi_denuncia', null)
+        );
+});
+
+test('el detalle de publicación devuelve el estado de la denuncia del usuario', function () {
+    $usuario = User::factory()->create();
+    $publicacion = Publicacion::factory()->create();
+
+    Denuncia::factory()->create([
+        'usuario_id' => $usuario->id,
+        'publicacion_id' => $publicacion->id,
+        'estado' => Denuncia::ESTADO_REVISADA,
+        'motivo' => 'Posible estafa',
+    ]);
+
+    $this->actingAs($usuario)
+        ->get(route('publicaciones.show', $publicacion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('mi_denuncia.estado', Denuncia::ESTADO_REVISADA)
+            ->has('mi_denuncia.created_at')
+            // Solo viaja lo necesario: ni el motivo ni el id del denunciante.
+            ->missing('mi_denuncia.motivo')
+            ->missing('mi_denuncia.usuario_id')
+        );
 });
 
 // --- Filtro por Categoría en Listado de Publicaciones (KAN-54) ---
