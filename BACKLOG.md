@@ -152,6 +152,62 @@ Guía:
 
 </details>
 
+### KAN-230 — Ingresar y registrarme en pantallas claras y con la identidad de AgroConnect
+
+> Como productor o comprador, quiero que las pantallas de ingreso y registro sean claras, estén en castellano y tengan la identidad visual de AgroConnect, para entender rápido qué tengo que completar y confiar en la plataforma desde el primer contacto.
+>
+> Criterios de aceptación:
+>
+> * Login, registro, "olvidé mi contraseña" y "restablecer contraseña" comparten el mismo diseño, con el logo, los colores y las tipografías de la marca (los mismos de la landing).
+> * Todos los textos y mensajes de error están en castellano.
+> * Se ven bien en celular (una columna, sin scroll horizontal) y en escritorio.
+> * Son accesibles: cada campo tiene su etiqueta, los errores se asocian al campo y se puede completar todo con el teclado.
+> * El registro mantiene el selector de rol (productor/comprador) y explica en una línea qué hace cada uno.
+
+<details>
+<summary>**KAN-231** [frontend] — Frontend Web: rediseño de login y registro con la identidad de AgroConnect</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Layouts/GuestLayout.tsx` — layout compartido por todas las pantallas de ingreso.
+* `resources/js/Pages/Auth/Login.tsx`
+* `resources/js/Pages/Auth/Register.tsx`
+* `resources/js/Pages/Auth/ForgotPassword.tsx` y `resources/js/Pages/Auth/ResetPassword.tsx` (alinear estilo y textos).
+
+Guía:
+
+1. Rediseñar `GuestLayout` con la identidad de la marca (logo, colores `marca-*` de Tailwind, fuentes Manrope / Bricolage Grotesque) para que todas las pantallas de ingreso queden iguales.
+2. Traducir al castellano los textos que quedaron en inglés de Breeze ("Log in", "Remember me", "Forgot your password?", etc.).
+3. En el registro, mantener el selector de rol y sumar una línea que explique qué puede hacer un productor y qué puede hacer un comprador.
+4. Links claros entre login y registro, y para volver a la landing.
+5. Verificar responsive y accesibilidad (etiquetas, errores asociados al campo, navegación con teclado).
+
+Relacionada: KAN-210 (Backend: eliminar /dashboard y redirigir al marketplace después de login/registro). No depende de ella, pero juntas completan el flujo de entrada.
+
+</details>
+
+<details>
+<summary>**KAN-232** [frontend] — Frontend (Flutter): pantallas de login y registro con la identidad de AgroConnect</summary>
+
+Archivos a crear/modificar:
+
+* `lib/theme/app_theme.dart` (crear si no existe: colores, tipografías y logo de la identidad de AgroConnect, para que los use toda la app, no solo estas pantallas).
+* `lib/screens/auth/login_screen.dart` (crear, si no existe todavía la carpeta `lib/screens/auth/`, crearla).
+* `lib/screens/auth/register_screen.dart` (compartida con KAN-85, que agrega ahí el selector de rol — coordinar para no pisarse).
+* `lib/screens/auth/forgot_password_screen.dart` y `lib/screens/auth/reset_password_screen.dart` (recuperación de contraseña).
+
+Guía:
+
+1. Depende de que la Epic "API REST (Sanctum)" (KAN-82) tenga expuestos los endpoints de login, registro y recuperación de contraseña.
+2. Definir en `app_theme.dart` los mismos colores, logo y tipografías que la versión web (ver KAN-231 y la landing, KAN-201), para que ambas implementaciones compartan la misma identidad visual aunque el código esté separado.
+3. Todos los textos y mensajes de error en castellano.
+4. Mostrar los errores de validación que devuelve el backend debajo de cada campo correspondiente.
+5. Links claros entre login y registro, y accesibilidad básica (labels en los campos, tamaño de toque adecuado en los botones).
+
+Relacionada: KAN-231 (la misma Historia, versión Web) y KAN-85 (selector de rol en el registro de Flutter). No depende de ellas para empezar el armado visual, pero conviene coordinarlas porque tocan los mismos archivos.
+
+</details>
+
 ---
 
 ## Epic: KAN-5 — Categorías
@@ -762,6 +818,22 @@ Casos a cubrir:
 
 </details>
 
+<details>
+<summary>**KAN-234** [frontend] — Frontend (Flutter): reflejar el estado automático en la vista de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `lib/screens/publicaciones/publicacion_detail_screen.dart` (pantalla de detalle, ver KAN-118) — probablemente no haga falta tocar nada si ya muestra el `estado` tal cual viene del backend.
+
+Guía:
+
+1. Confirmá que el estado/badge de la publicación en esta pantalla se recalcula siempre desde la respuesta del backend (no queda cacheado en el estado local de la app).
+2. Si hace falta, agregar un texto aclaratorio como "Pausada automáticamente por falta de stock" cuando corresponda, igual que en la versión Web (KAN-195).
+
+Relacionada: KAN-195 (la misma Historia, versión Web).
+
+</details>
+
 ### KAN-203 — Agregar fotos a mis publicaciones
 
 > Como productor, quiero agregar fotos a mis publicaciones, para que los compradores vean el producto antes de contactarme.
@@ -931,6 +1003,29 @@ Guía:
 3. `'categorias'` trae el conteo de publicaciones ACTIVAS (una pausada no suma).
 4. `'resumen'` trae los conteos correctos para un productor (sus publicaciones por estado y solicitudes pendientes, sin contar las de otros) y es `null` para un comprador.
 5. Después del login el usuario es redirigido a `publicaciones.index`, y `/dashboard` devuelve 404.
+
+</details>
+
+<details>
+<summary>**KAN-233** [frontend] — Frontend (Flutter): pantalla de inicio del marketplace</summary>
+
+Archivos a crear/modificar:
+
+* `lib/screens/marketplace/home_screen.dart` (crear, pantalla principal del marketplace).
+* `lib/widgets/publicacion_card.dart` (reusar si ya existe del listado/detalle; crear si no).
+* `lib/widgets/categoria_chip.dart` (nuevo) — categorías destacadas, al tocar una se filtra el listado.
+* `lib/models/publicacion.dart` y `lib/models/categoria.dart` (si no existen todavía, para tipar la respuesta paginada).
+* `lib/services/publicacion_service.dart` (o el servicio que ya exista de la Epic API REST para consumir el listado).
+
+Guía:
+
+1. Depende de que la Epic "API REST (Sanctum)" (KAN-82) tenga expuesto el endpoint de listado paginado de publicaciones con búsqueda y filtro por categoría — el mismo que consume la Web (ver KAN-209, el backend, y KAN-211, la versión Web de esta misma pantalla).
+2. Estructura equivalente a la versión Web (KAN-211): banner de bienvenida según el rol, resumen para productores, categorías destacadas, buscador arriba, catálogo con scroll infinito o paginación (lo que sea más natural en Flutter).
+3. Reusar la identidad visual definida en `lib/theme/app_theme.dart` (ver KAN-232).
+4. Los agregados de foto, favorito e insignia de socio van en sus propias tareas Flutter (KAN-206, y las de favoritos/insignia si ya existen — confirmar).
+5. Pull-to-refresh para actualizar el listado.
+
+Relacionada: KAN-211 (la misma pantalla, versión Web).
 
 </details>
 
@@ -1987,7 +2082,7 @@ Guía:
 <details>
 <summary>**KAN-213** [backend] — Bug: el listado de publicaciones con ?lat=&lng= da error de SQL en MySQL</summary>
 
-En `PublicacionController::index()`, la fórmula de Haversine usa `min(1.0, max(-1.0, ...))`. En MySQL, `MIN` y `MAX` son funciones de agregado y eso da "SQLSTATE[42000] Syntax error" (confirmado contra la base MySQL local). En SQLite funciona, por eso no se detectó. Además no hay ningún test que llame a `/publicaciones?lat=..&lng=..`.
+En `PublicacionController::index()`, la fórmula de Haversine usa `min(1.0, max(-1.0, ...))`. En MySQL, `MIN` y `MAX` son funciones de agregado y eso da "SQLSTATE\[42000\] Syntax error" (confirmado contra la base MySQL local). En SQLite funciona, por eso no se detectó. Además no hay ningún test que llame a `/publicaciones?lat=..&lng=..`.
 
 Archivos a crear/modificar:
 
@@ -2000,7 +2095,7 @@ Guía:
 2. Agregar un test que cree productores con lat/lng distintos y verifique el orden por distancia.
 3. Correr ese test también contra MySQL (el entorno local usa MySQL) antes de mergear.
 
-Nota: el proyecto no tiene un tipo de issue "Bug" habilitado — se creó como Subtask de KAN-101 (la Historia de "ordenar por cercanía").
+Nota: el proyecto no tiene un tipo de issue "Bug" habilitado — se creó como Subtask de KAN-101 (la Historia de "ordenar por cercanía"), tal como indicó el reporte original como alternativa.
 
 </details>
 
@@ -2345,7 +2440,9 @@ Guía:
 
 ## Epic: KAN-86 — Compra directa y contacto
 
-_Resolver la compra como "compra directa" en el MVP: el comprador solicita la compra de una publicación, el productor la acepta o rechaza, y el acuerdo (precio, cantidad, forma de entrega) se cierra manualmente entre las partes. No hay pasarela de pago en esta Epic — MercadoPago queda documentado como Fase 2 y no se implementa ahora.  También cubre el contacto directo por WhatsApp (deep-link wa.me) desde la publicación o el perfil del productor, usando el teléfono que ya existe en el modelo `User`._
+_Resolver la compra como "compra directa" en el MVP: el comprador solicita la compra de una publicación, el productor la acepta o rechaza, y el acuerdo (precio, cantidad, forma de entrega) se cierra manualmente entre las partes. No hay pasarela de pago en esta Epic — MercadoPago queda documentado como Fase 2 y no se implementa ahora.
+
+También cubre el contacto directo por WhatsApp (deep-link wa.me) desde la publicación o el perfil del productor, usando el teléfono que ya existe en el modelo `User`._
 
 ### KAN-96 — Solicitar la compra directa de una publicación
 
