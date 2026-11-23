@@ -169,12 +169,20 @@ class PublicacionController extends Controller
     /**
      * Devuelve el precio promedio sugerido para una categoría basado en publicaciones activas.
      */
-    public function precioSugerido(Categoria $categoria): JsonResponse
+    public function precioSugerido(Request $request, Categoria $categoria): JsonResponse
     {
-        $precioPromedio = Publicacion::calcularPrecioPromedioPorCategoria($categoria->id);
+        // ?unidad=kg compara solo publicaciones con la misma unidad (KAN-132).
+        // Sin unidad se comporta como antes: toda la categoría.
+        $unidad = $request->filled('unidad') ? (string) $request->query('unidad') : null;
+
+        $estadisticas = Publicacion::estadisticasPrecio($categoria->id, $unidad);
 
         return response()->json([
-            'precio_promedio' => $precioPromedio,
+            'precio_promedio' => $estadisticas['promedio'] ?? null,
+            'precio_mediana' => $estadisticas['mediana'] ?? null,
+            'precio_minimo' => $estadisticas['minimo'] ?? null,
+            'precio_maximo' => $estadisticas['maximo'] ?? null,
+            'cantidad' => $estadisticas['cantidad'] ?? 0,
         ]);
     }
 

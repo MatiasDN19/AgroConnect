@@ -141,3 +141,78 @@ test('publicaciones de otras categorías no afectan el promedio de la categoría
         'precio_promedio' => 500.00,
     ]);
 });
+
+// --- KAN-132: comparar por unidad y devolver rango y mediana ---
+
+test('con unidad solo compara publicaciones de esa unidad, sin importar mayúsculas ni espacios', function () {
+    $usuario = User::factory()->create();
+    $categoria = Categoria::factory()->create();
+
+    foreach ([[900, 'kg'], [1300, 'KG'], [1550, ' kg ']] as [$precio, $unidad]) {
+        Publicacion::factory()->create([
+            'categoria_id' => $categoria->id,
+            'precio' => $precio,
+            'unidad' => $unidad,
+            'estado' => Publicacion::ESTADO_ACTIVA,
+        ]);
+    }
+
+    // Por cajón: no entra en la referencia por kg.
+    Publicacion::factory()->create([
+        'categoria_id' => $categoria->id,
+        'precio' => 25000,
+        'unidad' => 'cajón',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $this->actingAs($usuario)
+        ->getJson(route('categorias.precio-sugerido', ['categoria' => $categoria, 'unidad' => 'Kg']))
+        ->assertOk()
+        ->assertJson([
+            'precio_mediana' => 1300,
+            'precio_minimo' => 900,
+            'precio_maximo' => 1550,
+            'cantidad' => 3,
+        ]);
+});
+
+test('con unidad devuelve null si no hay suficientes publicaciones de esa unidad', function () {
+    $usuario = User::factory()->create();
+    $categoria = Categoria::factory()->create();
+
+    Publicacion::factory()->count(3)->create([
+        'categoria_id' => $categoria->id,
+        'unidad' => 'cajón',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $this->actingAs($usuario)
+        ->getJson(route('categorias.precio-sugerido', ['categoria' => $categoria, 'unidad' => 'kg']))
+        ->assertOk()
+        ->assertJson(['precio_mediana' => null, 'cantidad' => 0]);
+});
+
+test('la mediana no se deja arrastrar por un precio fuera de lo común', function () {
+    $usuario = User::factory()->create();
+    $categoria = Categoria::factory()->create();
+
+    foreach ([900, 1300, 1550, 9999] as $precio) {
+        Publicacion::factory()->create([
+            'categoria_id' => $categoria->id,
+            'precio' => $precio,
+            'unidad' => 'kg',
+            'estado' => Publicacion::ESTADO_ACTIVA,
+        ]);
+    }
+
+    // Cantidad par: la mediana es el promedio de los dos del medio (1300 y 1550).
+    $this->actingAs($usuario)
+        ->getJson(route('categorias.precio-sugerido', ['categoria' => $categoria, 'unidad' => 'kg']))
+        ->assertOk()
+        ->assertJson([
+            'precio_promedio' => 3437.25,
+            'precio_mediana' => 1425,
+            'precio_maximo' => 9999,
+            'cantidad' => 4,
+        ]);
+});

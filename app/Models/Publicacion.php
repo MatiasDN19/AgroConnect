@@ -89,16 +89,50 @@ class Publicacion extends Model
      */
     public static function calcularPrecioPromedioPorCategoria(int $categoriaId, int $minimoPublicaciones = 3): ?float
     {
-        $query = static::query()
-            ->where('categoria_id', $categoriaId)
-            ->where('estado', static::ESTADO_ACTIVA);
+        return static::estadisticasPrecio($categoriaId, null, $minimoPublicaciones)['promedio'] ?? null;
+    }
 
-        if ($query->count() < $minimoPublicaciones) {
+    /**
+     * Referencia de precios de las publicaciones activas de una categoría (KAN-132).
+     * Si se pasa la unidad, compara solo publicaciones con esa unidad (sin importar
+     * mayúsculas ni espacios), para no mezclar precios por kg con precios por cajón.
+     * Además del promedio devuelve mediana, mínimo y máximo: la mediana no se deja
+     * arrastrar por un precio fuera de lo común y el rango muestra cuánto varía.
+     * Devuelve null si hay menos publicaciones que el mínimo representativo.
+     *
+     * @return array{promedio: float, mediana: float, minimo: float, maximo: float, cantidad: int}|null
+     */
+    public static function estadisticasPrecio(int $categoriaId, ?string $unidad = null, int $minimoPublicaciones = 3): ?array
+    {
+        $unidad = $unidad !== null ? mb_strtolower(trim($unidad)) : null;
+
+        $precios = static::query()
+            ->where('categoria_id', $categoriaId)
+            ->where('estado', static::ESTADO_ACTIVA)
+            ->when($unidad, fn ($query) => $query->whereRaw('LOWER(TRIM(unidad)) = ?', [$unidad]))
+            ->orderBy('precio')
+            ->pluck('precio')
+            ->map(fn ($precio) => (float) $precio)
+            ->values();
+
+        $cantidad = $precios->count();
+
+        if ($cantidad < $minimoPublicaciones) {
             return null;
         }
 
-        $promedio = $query->avg('precio');
+        // Con cantidad par, la mediana es el promedio de los dos del medio.
+        $medio = intdiv($cantidad, 2);
+        $mediana = $cantidad % 2 === 1
+            ? $precios[$medio]
+            : ($precios[$medio - 1] + $precios[$medio]) / 2;
 
-        return $promedio !== null ? round((float) $promedio, 2) : null;
+        return [
+            'promedio' => round($precios->avg(), 2),
+            'mediana' => round($mediana, 2),
+            'minimo' => $precios->first(),
+            'maximo' => $precios->last(),
+            'cantidad' => $cantidad,
+        ];
     }
 }
