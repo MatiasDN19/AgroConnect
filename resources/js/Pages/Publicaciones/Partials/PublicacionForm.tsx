@@ -3,7 +3,9 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Categoria } from '@/types';
+import { formatearPrecio } from '@/utils/formato';
 import { FormEventHandler } from 'react';
+import usePrecioSugerido from './usePrecioSugerido';
 
 // Campos del formulario de publicación, compartidos por Create y Edit.
 // Los valores van como string porque es lo que devuelven los inputs;
@@ -50,6 +52,12 @@ export default function PublicacionForm({
     onSubmit: FormEventHandler;
     textoBoton: string;
 }) {
+    // Se pide antes del return temprano: los hooks no pueden ir después de un return.
+    const referencia = usePrecioSugerido(data.categoria_id, data.unidad);
+    const nombreCategoria = categorias.find(
+        (categoria) => String(categoria.id) === data.categoria_id,
+    )?.nombre;
+
     if (categorias.length === 0) {
         return (
             <p className="text-sm text-gray-600">
@@ -132,8 +140,36 @@ export default function PublicacionForm({
                         className="mt-1 block w-full"
                         value={data.precio}
                         onChange={(e) => setData('precio', e.target.value)}
+                        aria-describedby="precio-referencia"
                         required
                     />
+
+                    {/* Solo referencia (KAN-132): no se autocompleta el campo.
+                        Compara la misma categoría y unidad; el "precio típico" es la
+                        mediana, que no se deja arrastrar por un precio fuera de lo común. */}
+                    <p
+                        id="precio-referencia"
+                        className="mt-1 text-xs text-gray-600"
+                        aria-live="polite"
+                    >
+                        {referencia ? (
+                            <>
+                                {nombreCategoria} por {data.unidad.trim()}:
+                                precio típico{' '}
+                                <strong className="font-semibold text-gray-800">
+                                    {formatearPrecio(referencia.mediana)}
+                                </strong>{' '}
+                                (entre {formatearPrecio(referencia.minimo)} y{' '}
+                                {formatearPrecio(referencia.maximo)}, según{' '}
+                                {referencia.cantidad} publicaciones). Varía
+                                según el producto.
+                            </>
+                        ) : (
+                            data.categoria_id &&
+                            !data.unidad.trim() &&
+                            'Completá la unidad para ver precios de referencia.'
+                        )}
+                    </p>
 
                     <InputError className="mt-2" message={errors.precio} />
                 </div>
