@@ -1600,6 +1600,24 @@ Guía:
 
 </details>
 
+<details>
+<summary>**KAN-248** [backend] — Backend: compartir la cantidad de alertas no leídas en todas las páginas</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Middleware/HandleInertiaRequests.php` — sumar una prop compartida `alertas_no_leidas`.
+* `tests/Feature/AlertaTest.php` (o un test nuevo) — agregar casos.
+
+Guía:
+
+1. `alertas_no_leidas` = cantidad de alertas del usuario logueado con `leida = false` (la tabla ya tiene índice en `usuario_id, leida`). Para invitados, `0` o `null`.
+2. Usar una closure (`fn () => ...`) como el resto de las props compartidas, así solo se calcula cuando hace falta.
+3. Tests: el número coincide con las alertas no leídas del usuario, baja al marcar una como leída y no cuenta las de otros usuarios.
+
+Relacionada: KAN-74 (campanita con contador) y KAN-80 (panel desplegable), que necesitan el número en todas las páginas del layout.
+
+</details>
+
 ### KAN-26 — Recibir un mail ante esos mismos eventos
 
 > Como usuario, quiero recibir un mail cuando pase algo relevante, para enterarme aunque no tenga la aplicación abierta.
@@ -2325,6 +2343,23 @@ Guía:
 
 </details>
 
+<details>
+<summary>**KAN-247** [backend] — Backend: indicar si la publicación es favorita del usuario en el detalle (es_favorito)</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — en `show()`, mandar la prop `es_favorito`.
+* `tests/Feature/FavoritoTest.php` — agregar casos.
+
+Guía:
+
+1. `es_favorito` = `true` si el usuario logueado tiene a esa publicación en favoritos (`$publicacion->favoritos()->where('usuario_id', $request->user()->id)->exists()`), `false` si no. Mismo patrón que `mi_denuncia` y `mi_solicitud`, que ya manda `show()`.
+2. Tests: `es_favorito` es `true` después de marcarla y `false` para otro usuario que no la marcó.
+
+Relacionada: KAN-188 (botón de favorito en el detalle y página "Mis favoritos"), que necesita este dato para mostrar el corazón lleno o vacío de entrada.
+
+</details>
+
 ---
 
 ## Epic: KAN-84 — Socios del Consorcio
@@ -2873,6 +2908,43 @@ Casos a cubrir:
 
 </details>
 
+<details>
+<summary>**KAN-245** [backend] — Backend: listado de usuarios del panel admin con búsqueda y filtros</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Admin/UsuarioController.php` — agregar el método `index()` (hoy solo tiene `toggleInhabilitado()`).
+* `routes/web.php` — `GET /admin/usuarios` dentro del grupo `['auth', 'admin']`, con el nombre `admin.usuarios.index` (es el nombre que ya espera el menú del panel en `resources/js/utils/panelAdmin.ts`, así la sección aparece sola).
+* `resources/js/Pages/Admin/Usuarios/Index.tsx` — solo un borrador mínimo para que la ruta renderice; la página la hace el frontend (KAN-119).
+
+Guía:
+
+1. `index()`: todos los usuarios con `id`, `name`, `email`, `rol`, `telefono`, `socio_validado`, `inhabilitado` y `created_at`, más `withCount('publicaciones')`. Ordenados por más recientes, `paginate(20)->withQueryString()`.
+2. Filtros: `?q=` (busca en nombre y email), `?rol=` (productor, comprador o admin) e `?inhabilitado=1|0`.
+3. Devolver también `filtros` con lo que se aplicó (`$request->only(['q', 'rol', 'inhabilitado'])`), igual que `PublicacionModeracionController::index()`.
+4. No mandar campos sensibles (contraseña, tokens, `fcm_token`).
+
+Relacionada: KAN-119 (frontend del listado) y KAN-228 (dar o quitar admin desde el listado), que hoy están bloqueadas por esta ruta.
+
+</details>
+
+<details>
+<summary>**KAN-246** [backend] — Tests: feature tests del listado de usuarios del panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Admin/UsuariosListadoTest.php` (nuevo).
+
+Guía:
+
+1. Un admin ve el listado paginado con los datos esperados y el conteo de publicaciones de cada usuario.
+2. La búsqueda `?q=` encuentra por nombre y por email.
+3. Los filtros `?rol=` e `?inhabilitado=` devuelven solo los usuarios que corresponden.
+4. La respuesta no incluye la contraseña ni el `fcm_token`.
+5. Un productor o comprador recibe 403; un invitado es redirigido al login.
+
+</details>
+
 ### KAN-140 — Ver métricas básicas de uso de la plataforma
 
 > Como administrador, quiero ver métricas básicas de uso de la plataforma, para entender el estado general del Consorcio sin tener que revisar cada módulo por separado.
@@ -3059,6 +3131,25 @@ Guía:
 5. El observer no reactiva por stock una bloqueada.
 6. Desbloquear la deja en `'pausada'`; eliminar la borra.
 7. Un productor o comprador recibe 403 en todas las rutas `/admin/publicaciones`.
+
+</details>
+
+<details>
+<summary>**KAN-249** [backend] — Backend: responder 404 al ver una publicación bloqueada si no es el dueño ni un admin</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — en `show()` (web).
+* `app/Http/Controllers/Api/PublicacionController.php` — en `show()` (API), si también la devuelve.
+* `tests/Feature/Admin/ModeracionPublicacionTest.php` — agregar casos.
+
+Guía:
+
+1. Si la publicación está `bloqueada` y quien la pide no es el dueño ni un admin, responder `abort(404)`. Hoy el listado ya la oculta, pero se puede seguir pidiendo por URL (un link viejo o compartido) y el backend la devuelve completa.
+2. El frontend (KAN-222) ya muestra "Esta publicación no está disponible" en ese caso; con el 404 el dato directamente no viaja.
+3. Tests: un comprador recibe 404 al pedir una bloqueada; el dueño y un admin la siguen viendo con el motivo.
+
+Relacionada: KAN-222 (moderación en el panel admin).
 
 </details>
 
