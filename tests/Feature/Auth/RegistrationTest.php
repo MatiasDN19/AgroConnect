@@ -110,3 +110,18 @@ test('registration rejects invalid roles', function () {
         'email' => 'invalidrole@example.com',
     ]);
 });
+
+test('validation error messages are returned in spanish', function () {
+    $response = $this->post('/register', [
+        'name' => '',
+        'email' => 'correo-invalido',
+        'password' => 'corta',
+        'password_confirmation' => 'otra',
+    ]);
+
+    $response->assertSessionHasErrors([
+        'name' => 'El campo nombre es obligatorio.',
+        'email' => 'El campo correo electrónico debe ser una dirección de correo electrónico válida.',
+        'password' => 'La confirmación del campo contraseña no coincide.',
+    ]);
+});
