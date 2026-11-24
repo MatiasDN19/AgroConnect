@@ -1,16 +1,35 @@
+import {
+    BotonAuth,
+    CampoAuth,
+    CampoContrasena,
+} from '@/Components/Auth/CampoAuth';
+import RedesProximamente from '@/Components/Auth/RedesProximamente';
 import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { LucideIcon, Mail, ShoppingBasket, Sprout, User } from 'lucide-react';
+import { FormEventHandler, ReactNode } from 'react';
 
 // Roles que se pueden elegir en el registro público (nunca "admin").
 // Los valores tienen que coincidir con User::ROL_PRODUCTOR y User::ROL_COMPRADOR.
-const roles = [
-    { value: 'productor', label: 'Productor' },
-    { value: 'comprador', label: 'Comprador' },
+const ROLES: {
+    value: string;
+    label: string;
+    descripcion: string;
+    Icono: LucideIcon;
+}[] = [
+    {
+        value: 'productor',
+        label: 'Productor',
+        descripcion: 'Publico lo que produzco y recibo pedidos.',
+        Icono: Sprout,
+    },
+    {
+        value: 'comprador',
+        label: 'Comprador',
+        descripcion: 'Busco productos y contacto a productores.',
+        Icono: ShoppingBasket,
+    },
 ];
 
 export default function Register() {
@@ -31,127 +50,143 @@ export default function Register() {
     };
 
     return (
-        <GuestLayout>
-            <Head title="Register" />
+        <>
+            <Head title="Registrarme" />
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
+            <h1 className="font-display text-2xl font-extrabold tracking-tight">
+                Creá tu cuenta
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+                Es gratis y te lleva un minuto.
+            </p>
 
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
+            <form onSubmit={submit} className="mt-5 space-y-3.5">
+                <fieldset>
+                    <legend className="mb-1.5 block text-sm font-medium text-slate-700">
+                        Quiero registrarme como
+                    </legend>
 
-                    <InputError message={errors.name} className="mt-2" />
-                </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {ROLES.map(({ value, label, descripcion, Icono }) => {
+                            const elegido = data.rol === value;
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
+                            return (
+                                <label
+                                    key={value}
+                                    className={`flex cursor-pointer gap-3 rounded-xl border-2 p-3 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-marca-azul ${
+                                        elegido
+                                            ? 'border-marca-azul bg-marca-azul/5'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="rol"
+                                        value={value}
+                                        checked={elegido}
+                                        onChange={() => setData('rol', value)}
+                                        className="sr-only"
+                                        required
+                                    />
+                                    <Icono
+                                        className={`mt-0.5 h-5 w-5 shrink-0 ${
+                                            elegido
+                                                ? 'text-marca-azul'
+                                                : 'text-slate-400'
+                                        }`}
+                                        aria-hidden="true"
+                                    />
+                                    <span>
+                                        <span className="block text-sm font-semibold">
+                                            {label}
+                                        </span>
+                                        <span className="block text-xs text-slate-500">
+                                            {descripcion}
+                                        </span>
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                    />
+                    <InputError message={errors.rol} className="mt-1.5" />
+                </fieldset>
 
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
+                <CampoAuth
+                    id="name"
+                    etiqueta="Nombre y apellido"
+                    name="name"
+                    value={data.name}
+                    autoComplete="name"
+                    placeholder="Ej: Juana Pérez"
+                    icono={User}
+                    error={errors.name}
+                    onChange={(e) => setData('name', e.target.value)}
+                    required
+                />
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                <CampoAuth
+                    id="email"
+                    etiqueta="Correo electrónico"
+                    type="email"
+                    name="email"
+                    value={data.email}
+                    autoComplete="username"
+                    placeholder="tucorreo@ejemplo.com"
+                    icono={Mail}
+                    error={errors.email}
+                    onChange={(e) => setData('email', e.target.value)}
+                    required
+                />
 
-                    <TextInput
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <CampoContrasena
                         id="password"
-                        type="password"
+                        etiqueta="Contraseña"
                         name="password"
                         value={data.password}
-                        className="mt-1 block w-full"
                         autoComplete="new-password"
+                        error={errors.password}
                         onChange={(e) => setData('password', e.target.value)}
                         required
                     />
 
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
-                    <TextInput
+                    <CampoContrasena
                         id="password_confirmation"
-                        type="password"
+                        etiqueta="Repetí la contraseña"
                         name="password_confirmation"
                         value={data.password_confirmation}
-                        className="mt-1 block w-full"
                         autoComplete="new-password"
+                        error={errors.password_confirmation}
                         onChange={(e) =>
                             setData('password_confirmation', e.target.value)
                         }
                         required
                     />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
                 </div>
 
-                <fieldset className="mt-4">
-                    <legend className="block text-sm font-medium text-gray-700">
-                        Quiero registrarme como
-                    </legend>
-
-                    <div className="mt-2 flex gap-6">
-                        {roles.map((rol) => (
-                            <label
-                                key={rol.value}
-                                className="flex items-center gap-2 text-sm text-gray-700"
-                            >
-                                <input
-                                    type="radio"
-                                    name="rol"
-                                    value={rol.value}
-                                    checked={data.rol === rol.value}
-                                    onChange={() => setData('rol', rol.value)}
-                                    className="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                    required
-                                />
-                                {rol.label}
-                            </label>
-                        ))}
-                    </div>
-
-                    <InputError message={errors.rol} className="mt-2" />
-                </fieldset>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <Link
-                        href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Already registered?
-                    </Link>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
+                <div className="pt-2">
+                    <BotonAuth disabled={processing}>Crear mi cuenta</BotonAuth>
                 </div>
             </form>
-        </GuestLayout>
+
+            <div className="mt-5">
+                <RedesProximamente accion="registrarte" />
+            </div>
+
+            <p className="mt-4 text-center text-sm text-slate-500">
+                ¿Ya tenés cuenta?{' '}
+                <Link
+                    href={route('login')}
+                    prefetch
+                    className="font-semibold text-marca-azul hover:underline"
+                >
+                    Ingresá
+                </Link>
+            </p>
+        </>
     );
 }
+
+// Layout persistente: no se desmonta al ir a /login y permite animar el cambio.
+Register.layout = (page: ReactNode) => <GuestLayout>{page}</GuestLayout>;

@@ -1,4 +1,4 @@
-import PrimaryButton from '@/Components/PrimaryButton';
+import { BotonAuth } from '@/Components/Auth/CampoAuth';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -14,37 +14,39 @@ export default function VerifyEmail({ status }: { status?: string }) {
 
     return (
         <GuestLayout>
-            <Head title="Email Verification" />
+            <Head title="Verificar correo" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Thanks for signing up! Before getting started, could you verify
-                your email address by clicking on the link we just emailed to
-                you? If you didn't receive the email, we will gladly send you
-                another.
-            </div>
+            <h1 className="font-display text-2xl font-extrabold tracking-tight">
+                ¡Gracias por registrarte!
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+                Antes de empezar, confirmá tu correo con el enlace que te
+                acabamos de mandar. Si no te llegó, te mandamos otro.
+            </p>
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address
-                    you provided during registration.
+                <div
+                    role="status"
+                    className="mt-4 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800"
+                >
+                    Te mandamos un enlace nuevo al correo con el que te
+                    registraste.
                 </div>
             )}
 
-            <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>
-                        Resend Verification Email
-                    </PrimaryButton>
+            <form onSubmit={submit} className="mt-6 space-y-4">
+                <BotonAuth disabled={processing}>
+                    Reenviar el correo de verificación
+                </BotonAuth>
 
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Log Out
-                    </Link>
-                </div>
+                <Link
+                    href={route('logout')}
+                    method="post"
+                    as="button"
+                    className="w-full rounded-xl py-2 text-center text-sm font-medium text-slate-500 hover:text-marca-tinta hover:underline"
+                >
+                    Cerrar sesión
+                </Link>
             </form>
         </GuestLayout>
     );
