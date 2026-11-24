@@ -11,13 +11,20 @@ import {
 import { DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 // Campo de fotos del formulario de publicación (KAN-205).
-// - Hasta MAX_FOTOS en total (las que ya tiene + las nuevas), como valida el backend.
+// - Hasta `maximo` fotos en total (las que ya tiene + las nuevas) y de hasta
+//   `tamanoMaxKb` cada una: son los límites que configura el admin (KAN-225) y que
+//   el backend usa para validar, así que nunca quedan desfasados.
 // - Las fotos se achican en el navegador antes de subirlas (utils/imagenes.ts).
 // - La primera es la portada. El backend agrega las nuevas DESPUÉS de las existentes
 //   y no permite reordenar las ya guardadas: por eso solo se ordenan las nuevas, y una
 //   nueva puede ser portada únicamente si no queda ninguna de las que ya estaban.
-export const MAX_FOTOS = 6;
 const FORMATOS = 'image/jpeg,image/png,image/webp';
+
+// 2048 -> "2 MB", 1536 -> "1,5 MB", 512 -> "512 KB" (igual que los mensajes del backend).
+const textoTamano = (kb: number) =>
+    kb < 1024
+        ? `${kb} KB`
+        : `${String(Math.round((kb / 1024) * 10) / 10).replace('.', ',')} MB`;
 
 export default function CampoFotos({
     existentes = [],
@@ -26,6 +33,8 @@ export default function CampoFotos({
     nuevas,
     onNuevasChange,
     errores,
+    maximo,
+    tamanoMaxKb,
 }: {
     existentes?: PublicacionFoto[];
     eliminar: number[];
@@ -33,6 +42,8 @@ export default function CampoFotos({
     nuevas: File[];
     onNuevasChange: (archivos: File[]) => void;
     errores: string[];
+    maximo: number;
+    tamanoMaxKb: number;
 }) {
     const input = useRef<HTMLInputElement>(null);
     const [procesando, setProcesando] = useState(false);
@@ -41,7 +52,7 @@ export default function CampoFotos({
 
     const quedan = existentes.filter((f) => !eliminar.includes(f.id));
     const total = quedan.length + nuevas.length;
-    const lugares = MAX_FOTOS - total;
+    const lugares = maximo - total;
 
     // Vistas previas de las nuevas. Se liberan (revokeObjectURL) cuando cambia la
     // lista o se desmonta el campo, para no dejar memoria tomada.
@@ -62,7 +73,7 @@ export default function CampoFotos({
 
         setAviso(
             archivos.length > lugares
-                ? `Se agregaron ${Math.max(lugares, 0)} de ${archivos.length}: el máximo es ${MAX_FOTOS} fotos por publicación.`
+                ? `Se agregaron ${Math.max(lugares, 0)} de ${archivos.length}: el máximo es ${maximo} fotos por publicación.`
                 : null,
         );
 
@@ -73,7 +84,18 @@ export default function CampoFotos({
         const comprimidas = await Promise.all(aSubir.map(comprimirImagen));
         setProcesando(false);
 
-        onNuevasChange([...nuevas, ...comprimidas]);
+        // Si alguna sigue pesando más que el límite después de achicarla (pasa con
+        // límites muy chicos o formatos que el navegador no puede recomprimir), no se
+        // agrega y se avisa ahora, en vez de esperar el error del servidor.
+        const entran = comprimidas.filter((a) => a.size <= tamanoMaxKb * 1024);
+        const noEntran = comprimidas.length - entran.length;
+        if (noEntran > 0) {
+            setAviso(
+                `${noEntran === 1 ? 'Una foto pesa' : `${noEntran} fotos pesan`} más de ${textoTamano(tamanoMaxKb)} y no se agregó. Probá con otra o recortala.`,
+            );
+        }
+
+        onNuevasChange([...nuevas, ...entran]);
     };
 
     const mover = (desde: number, hasta: number) => {
@@ -112,7 +134,7 @@ export default function CampoFotos({
                     Fotos (opcional)
                 </span>
                 <span className="text-xs text-gray-500">
-                    {total} de {MAX_FOTOS}
+                    {total} de {maximo}
                 </span>
             </div>
 
@@ -254,8 +276,8 @@ export default function CampoFotos({
                     </button>
                     <p id="fotos-ayuda" className="text-xs text-gray-500">
                         o arrastralas acá. JPG, PNG o WebP · hasta{' '}
-                        {lugares === MAX_FOTOS
-                            ? `${MAX_FOTOS} fotos`
+                        {lugares === maximo
+                            ? `${maximo} ${maximo === 1 ? 'foto' : 'fotos'}`
                             : `${lugares} más`}
                         . Las achicamos automáticamente para que suban rápido.
                     </p>

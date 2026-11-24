@@ -1,6 +1,7 @@
 import PublicacionCard, {
     PublicacionResumen,
 } from '@/Components/PublicacionCard';
+import SugeridosParaVos from '@/Components/SugeridosParaVos';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
@@ -43,35 +44,43 @@ export default function Index({
             <Head title="Publicaciones" />
 
             <div className="py-12">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    {/* Acá va el filtro por categoría (CategoriaFiltro, KAN-53). */}
+                <div className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
+                    {/* Sugeridos para vos (KAN-170): no aparece si no hay sugeridas. */}
+                    <SugeridosParaVos />
 
-                    {items.length === 0 ? (
-                        <div className="rounded-lg bg-white p-6 text-sm text-gray-600 shadow-sm">
-                            Todavía no hay publicaciones activas.
-                            {esProductor && (
-                                <>
-                                    {' '}
-                                    <Link
-                                        href={route('publicaciones.create')}
-                                        className="text-indigo-600 hover:underline"
-                                    >
-                                        Creá la primera.
-                                    </Link>
-                                </>
-                            )}
-                        </div>
-                    ) : (
-                        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {items.map((publicacion) => (
-                                <li key={publicacion.id}>
-                                    <PublicacionCard
-                                        publicacion={publicacion}
-                                    />
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    {/* Acá va el filtro por categoría (CategoriaFiltro, KAN-53). */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Todas las publicaciones
+                        </h3>
+
+                        {items.length === 0 ? (
+                            <div className="rounded-lg bg-white p-6 text-sm text-gray-600 shadow-sm">
+                                Todavía no hay publicaciones activas.
+                                {esProductor && (
+                                    <>
+                                        {' '}
+                                        <Link
+                                            href={route('publicaciones.create')}
+                                            className="text-indigo-600 hover:underline"
+                                        >
+                                            Creá la primera.
+                                        </Link>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                {items.map((publicacion) => (
+                                    <li key={publicacion.id}>
+                                        <PublicacionCard
+                                            publicacion={publicacion}
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

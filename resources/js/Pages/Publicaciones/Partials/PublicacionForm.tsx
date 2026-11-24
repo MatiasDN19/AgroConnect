@@ -2,7 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Categoria, PublicacionFoto } from '@/types';
+import { Categoria, LimitesFotos, PublicacionFoto } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { FormEventHandler } from 'react';
 import CampoFotos from './CampoFotos';
@@ -48,6 +48,7 @@ export default function PublicacionForm({
     onSubmit,
     textoBoton,
     fotosExistentes = [],
+    limitesFotos,
 }: {
     data: PublicacionFormData;
     setData: <K extends keyof PublicacionFormData>(
@@ -61,6 +62,8 @@ export default function PublicacionForm({
     onSubmit: FormEventHandler;
     textoBoton: string;
     fotosExistentes?: PublicacionFoto[];
+    // Configurables desde el panel admin (KAN-225); los manda el backend.
+    limitesFotos: LimitesFotos;
 }) {
     // Se pide antes del return temprano: los hooks no pueden ir después de un return.
     const referencia = usePrecioSugerido(data.categoria_id, data.unidad);
@@ -235,6 +238,8 @@ export default function PublicacionForm({
                 errores={Object.entries(errors)
                     .filter(([campo]) => campo.startsWith('fotos'))
                     .map(([, mensaje]) => mensaje as string)}
+                maximo={limitesFotos.maximo}
+                tamanoMaxKb={limitesFotos.tamano_max_kb}
             />
 
             <div className="flex justify-end">

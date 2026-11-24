@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Categoria, PageProps } from '@/types';
+import { Categoria, LimitesFotos, PageProps } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import PublicacionForm, {
@@ -8,7 +8,11 @@ import PublicacionForm, {
 
 export default function Create({
     categorias,
-}: PageProps<{ categorias: Pick<Categoria, 'id' | 'nombre'>[] }>) {
+    limites_fotos,
+}: PageProps<{
+    categorias: Pick<Categoria, 'id' | 'nombre'>[];
+    limites_fotos: LimitesFotos;
+}>) {
     const { data, setData, post, processing, errors } =
         useForm<PublicacionFormData>({
             categoria_id: '',
@@ -47,6 +51,7 @@ export default function Create({
                             errors={errors}
                             processing={processing}
                             categorias={categorias}
+                            limitesFotos={limites_fotos}
                             onSubmit={submit}
                             textoBoton="Publicar"
                         />

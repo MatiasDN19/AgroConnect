@@ -116,12 +116,16 @@ export default function Guest({ children }: PropsWithChildren) {
                             className={`flex flex-col gap-12 ${conPestanas ? '' : 'invisible'}`}
                         >
                             <PestanaLateral
+                                // La key cambia al activarse: así React la vuelve a crear y el
+                                // Link no recibe opciones de precarga de distinto tamaño entre renders.
+                                key={`ingresar-${modoVisual === 'ingreso'}`}
                                 href={route('login')}
                                 activa={modoVisual === 'ingreso'}
                                 Icono={LogIn}
                                 texto="Ingresar"
                             />
                             <PestanaLateral
+                                key={`registrarme-${modoVisual === 'registro'}`}
                                 href={route('register')}
                                 activa={modoVisual === 'registro'}
                                 Icono={UserPlus}
@@ -182,11 +186,13 @@ export default function Guest({ children }: PropsWithChildren) {
                             className={`mb-6 grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 lg:hidden ${conPestanas ? 'grid' : 'hidden'}`}
                         >
                             <PestanaCelular
+                                key={`ingresar-${modoVisual === 'ingreso'}`}
                                 href={route('login')}
                                 activa={modoVisual === 'ingreso'}
                                 texto="Ingresar"
                             />
                             <PestanaCelular
+                                key={`registrarme-${modoVisual === 'registro'}`}
                                 href={route('register')}
                                 activa={modoVisual === 'registro'}
                                 texto="Registrarme"

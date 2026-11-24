@@ -1,3 +1,4 @@
+import { ModalBloquear } from '@/Components/Admin/ModalesModeracion';
 import DenunciarPublicacion, {
     MiDenuncia,
 } from '@/Components/DenunciarPublicacion';
@@ -21,6 +22,7 @@ import {
 } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Ban, LockOpen, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
@@ -82,6 +84,25 @@ export default function Show({
     // (el backend lo rechaza) y el admin no compra.
     const puedeComprar = !esDueno && auth.user.rol !== 'admin';
 
+    // Moderación (KAN-222): un admin puede bloquear la publicación. Bloqueada, el dueño
+    // ve el motivo pero no puede cambiarle el estado (el backend lo rechaza).
+    const esAdmin = auth.user.rol === 'admin';
+    const bloqueada = publicacion.estado === 'bloqueada';
+    const [bloqueando, setBloqueando] = useState(false);
+    const [desbloqueando, setDesbloqueando] = useState(false);
+
+    const desbloquear = () => {
+        router.patch(
+            route('admin.publicaciones.desbloquear', publicacion.id),
+            {},
+            {
+                preserveScroll: true,
+                onStart: () => setDesbloqueando(true),
+                onFinish: () => setDesbloqueando(false),
+            },
+        );
+    };
+
     // Cambio de estado (KAN-47): PATCH /publicaciones/{id}/estado.
     const [procesando, setProcesando] = useState(false);
     const [confirmandoVendida, setConfirmandoVendida] = useState(false);
@@ -101,6 +122,39 @@ export default function Show({
         );
     };
 
+    // Bloqueada y quien mira no es el dueño ni un admin: no se muestra nada de la
+    // publicación (el listado ya la oculta, pero se puede llegar por un link viejo).
+    if (bloqueada && !puedeEditar) {
+        return (
+            <AuthenticatedLayout>
+                <Head title="Publicación no disponible" />
+                <div className="py-12">
+                    <div className="mx-auto max-w-xl px-4 sm:px-6">
+                        <div className="space-y-3 rounded-lg bg-white p-8 text-center shadow-sm">
+                            <ShieldAlert
+                                className="mx-auto h-10 w-10 text-slate-400"
+                                aria-hidden="true"
+                            />
+                            <h1 className="text-lg font-semibold text-gray-900">
+                                Esta publicación no está disponible
+                            </h1>
+                            <p className="text-sm text-gray-600">
+                                Puede que el productor la haya retirado o que
+                                esté en revisión.
+                            </p>
+                            <Link
+                                href={route('publicaciones.index')}
+                                className="inline-block text-sm font-semibold text-marca-azul hover:underline"
+                            >
+                                Ver otras publicaciones
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
+    }
+
     return (
         <AuthenticatedLayout
             header={
@@ -116,6 +170,39 @@ export default function Show({
                     {flash.success && (
                         <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
                             {flash.success}
+                        </div>
+                    )}
+
+                    {bloqueada && (
+                        <div
+                            role="status"
+                            className="flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900"
+                        >
+                            <ShieldAlert
+                                className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
+                                aria-hidden="true"
+                            />
+                            <div className="space-y-1">
+                                <p className="font-semibold">
+                                    Un administrador bloqueó esta publicación
+                                    {publicacion.bloqueada_at &&
+                                        ` el ${formatoFecha.format(new Date(publicacion.bloqueada_at))}`}
+                                    .
+                                </p>
+                                {publicacion.motivo_bloqueo && (
+                                    <p>
+                                        <span className="font-medium">
+                                            Motivo:
+                                        </span>{' '}
+                                        {publicacion.motivo_bloqueo}
+                                    </p>
+                                )}
+                                <p className="text-red-800/80">
+                                    {esAdmin
+                                        ? 'No aparece en el marketplace. Si se resolvió, podés desbloquearla: queda pausada y el productor decide cuándo reactivarla.'
+                                        : 'No aparece en el marketplace. Si creés que es un error, comunicate con el Consorcio.'}
+                                </p>
+                            </div>
                         </div>
                     )}
 
@@ -182,38 +269,42 @@ export default function Show({
                                 //   pausada -> Reactivar, Marcar vendida
                                 //   vendida -> Reactivar
                                 <div className="flex flex-wrap gap-3 border-t border-gray-100 pt-4">
-                                    {publicacion.estado !== 'activa' && (
-                                        <PrimaryButton
-                                            onClick={() =>
-                                                cambiarEstado('activa')
-                                            }
-                                            disabled={procesando}
-                                        >
-                                            Reactivar
-                                        </PrimaryButton>
-                                    )}
+                                    {/* Bloqueada: el estado solo lo cambia un admin desde la moderación. */}
+                                    {!bloqueada &&
+                                        publicacion.estado !== 'activa' && (
+                                            <PrimaryButton
+                                                onClick={() =>
+                                                    cambiarEstado('activa')
+                                                }
+                                                disabled={procesando}
+                                            >
+                                                Reactivar
+                                            </PrimaryButton>
+                                        )}
 
-                                    {publicacion.estado === 'activa' && (
-                                        <SecondaryButton
-                                            onClick={() =>
-                                                cambiarEstado('pausada')
-                                            }
-                                            disabled={procesando}
-                                        >
-                                            Pausar
-                                        </SecondaryButton>
-                                    )}
+                                    {!bloqueada &&
+                                        publicacion.estado === 'activa' && (
+                                            <SecondaryButton
+                                                onClick={() =>
+                                                    cambiarEstado('pausada')
+                                                }
+                                                disabled={procesando}
+                                            >
+                                                Pausar
+                                            </SecondaryButton>
+                                        )}
 
-                                    {publicacion.estado !== 'vendida' && (
-                                        <SecondaryButton
-                                            onClick={() =>
-                                                setConfirmandoVendida(true)
-                                            }
-                                            disabled={procesando}
-                                        >
-                                            Marcar como vendida
-                                        </SecondaryButton>
-                                    )}
+                                    {!bloqueada &&
+                                        publicacion.estado !== 'vendida' && (
+                                            <SecondaryButton
+                                                onClick={() =>
+                                                    setConfirmandoVendida(true)
+                                                }
+                                                disabled={procesando}
+                                            >
+                                                Marcar como vendida
+                                            </SecondaryButton>
+                                        )}
 
                                     <Link
                                         href={route(
@@ -223,6 +314,57 @@ export default function Show({
                                         className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                     >
                                         Editar
+                                    </Link>
+                                </div>
+                            )}
+
+                            {esAdmin && (
+                                // Moderación (KAN-222). Eliminar queda solo en el panel: el backend
+                                // vuelve a la página anterior y desde acá ya no existiría.
+                                <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-3">
+                                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        <ShieldCheck
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                        Moderación
+                                    </span>
+                                    {bloqueada ? (
+                                        <button
+                                            type="button"
+                                            onClick={desbloquear}
+                                            disabled={desbloqueando}
+                                            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-green-700 ring-1 ring-green-300 transition hover:bg-green-50 disabled:opacity-50"
+                                        >
+                                            <LockOpen
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            Desbloquear
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setBloqueando(true)}
+                                            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-300 transition hover:bg-red-50"
+                                        >
+                                            <Ban
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            Bloquear
+                                        </button>
+                                    )}
+                                    <Link
+                                        href={route(
+                                            'admin.publicaciones.index',
+                                            {
+                                                q: publicacion.titulo,
+                                            },
+                                        )}
+                                        className="ms-auto text-xs font-medium text-marca-azul hover:underline"
+                                    >
+                                        Moderar en el panel →
                                     </Link>
                                 </div>
                             )}
@@ -387,6 +529,10 @@ export default function Show({
                     </div>
                 </div>
             </Modal>
+            <ModalBloquear
+                publicacion={bloqueando ? publicacion : null}
+                onCerrar={() => setBloqueando(false)}
+            />
         </AuthenticatedLayout>
     );
 }

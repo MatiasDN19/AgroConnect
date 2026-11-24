@@ -1,5 +1,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Categoria, PageProps, Publicacion, PublicacionFoto } from '@/types';
+import {
+    Categoria,
+    LimitesFotos,
+    PageProps,
+    Publicacion,
+    PublicacionFoto,
+} from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import PublicacionForm, {
@@ -9,6 +15,7 @@ import PublicacionForm, {
 export default function Edit({
     publicacion,
     categorias,
+    limites_fotos,
 }: PageProps<{
     publicacion: Pick<
         Publicacion,
@@ -21,6 +28,7 @@ export default function Edit({
         | 'stock'
     > & { fotos: PublicacionFoto[] };
     categorias: Pick<Categoria, 'id' | 'nombre'>[];
+    limites_fotos: LimitesFotos;
 }>) {
     // Precargamos con los datos actuales. Los números se pasan a string
     // porque el formulario trabaja todo como texto (lo que dan los inputs).
@@ -67,6 +75,7 @@ export default function Edit({
                             errors={errors}
                             processing={processing}
                             categorias={categorias}
+                            limitesFotos={limites_fotos}
                             onSubmit={submit}
                             textoBoton="Guardar cambios"
                             fotosExistentes={publicacion.fotos}
