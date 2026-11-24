@@ -75,11 +75,46 @@
     }
 }
 
+/* --- Login y registro (KAN-231) ---
+   Al cambiar de pestaña, el formulario nuevo entra con el mismo movimiento que la
+   tarjeta de la foto: desde abajo al ir al registro y desde arriba al volver al login. */
+@keyframes auth-desde-abajo {
+    from {
+        opacity: 0;
+        transform: translateY(2rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes auth-desde-arriba {
+    from {
+        opacity: 0;
+        transform: translateY(-2rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.auth-entrar-desde-abajo {
+    animation: auth-desde-abajo 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+}
+
+.auth-entrar-desde-arriba {
+    animation: auth-desde-arriba 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+}
+
 /* Quien tiene activado "reducir movimiento" en su sistema ve todo sin animar. */
 @media (prefers-reduced-motion: reduce) {
     .aparecer,
     .flotar,
-    .trazo {
+    .trazo,
+    .auth-entrar-desde-abajo,
+    .auth-entrar-desde-arriba {
         animation: none;
     }
 

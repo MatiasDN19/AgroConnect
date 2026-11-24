@@ -1,11 +1,14 @@
+import {
+    BotonAuth,
+    CampoAuth,
+    CampoContrasena,
+} from '@/Components/Auth/CampoAuth';
+import RedesProximamente from '@/Components/Auth/RedesProximamente';
 import Checkbox from '@/Components/Checkbox';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { Mail } from 'lucide-react';
+import { FormEventHandler, ReactNode } from 'react';
 
 export default function Login({
     status,
@@ -29,51 +32,54 @@ export default function Login({
     };
 
     return (
-        <GuestLayout>
-            <Head title="Log in" />
+        <>
+            <Head title="Ingresar" />
+
+            <h1 className="font-display text-2xl font-extrabold tracking-tight">
+                Ingresá a tu cuenta
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+                Usá el correo y la contraseña con los que te registraste.
+            </p>
 
             {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
+                <div
+                    role="status"
+                    className="mt-4 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800"
+                >
                     {status}
                 </div>
             )}
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
+            <form onSubmit={submit} className="mt-6 space-y-4">
+                <CampoAuth
+                    id="email"
+                    etiqueta="Correo electrónico"
+                    type="email"
+                    name="email"
+                    value={data.email}
+                    autoComplete="username"
+                    placeholder="tucorreo@ejemplo.com"
+                    icono={Mail}
+                    enfocar
+                    error={errors.email}
+                    onChange={(e) => setData('email', e.target.value)}
+                    required
+                />
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
+                <CampoContrasena
+                    id="password"
+                    etiqueta="Contraseña"
+                    name="password"
+                    value={data.password}
+                    autoComplete="current-password"
+                    error={errors.password}
+                    onChange={(e) => setData('password', e.target.value)}
+                    required
+                />
 
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4 block">
-                    <label className="flex items-center">
+                <div className="flex items-center justify-between gap-4">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
                         <Checkbox
                             name="remember"
                             checked={data.remember}
@@ -84,27 +90,41 @@ export default function Login({
                                 )
                             }
                         />
-                        <span className="ms-2 text-sm text-gray-600">
-                            Remember me
-                        </span>
+                        Recordarme
                     </label>
-                </div>
 
-                <div className="mt-4 flex items-center justify-end">
                     {canResetPassword && (
                         <Link
                             href={route('password.request')}
-                            className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            className="rounded text-sm font-medium text-marca-azul hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
                         >
-                            Forgot your password?
+                            ¿Olvidaste tu contraseña?
                         </Link>
                     )}
+                </div>
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
+                <div className="pt-2">
+                    <BotonAuth disabled={processing}>Ingresar</BotonAuth>
                 </div>
             </form>
-        </GuestLayout>
+
+            <div className="mt-6">
+                <RedesProximamente accion="ingresar" />
+            </div>
+
+            <p className="mt-6 text-center text-sm text-slate-500">
+                ¿No tenés cuenta?{' '}
+                <Link
+                    href={route('register')}
+                    prefetch
+                    className="font-semibold text-marca-azul hover:underline"
+                >
+                    Registrate
+                </Link>
+            </p>
+        </>
     );
 }
+
+// Layout persistente: no se desmonta al ir a /register y permite animar el cambio.
+Login.layout = (page: ReactNode) => <GuestLayout>{page}</GuestLayout>;
