@@ -64,7 +64,7 @@ export default function Guest({ children }: PropsWithChildren) {
     // Animación optimista: apenas se hace clic en Ingresar/Registrarme, la tarjeta
     // empieza a deslizarse sin esperar la respuesta del servidor. Inertia avisa con
     // el evento "start"; con "finish" volvemos a seguir a la página real.
-    // (Además las pestañas precargan la otra página al pasar el mouse: prefetch.)
+    // (Además la otra pestaña ya está precargada: ver PRECARGA más abajo.)
     const [modoDestino, setModoDestino] = useState<Modo | null>(null);
     useEffect(() => {
         const rutaRegistro = new URL(route('register')).pathname;
@@ -210,6 +210,25 @@ export default function Guest({ children }: PropsWithChildren) {
     );
 }
 
+// Precarga de la OTRA pantalla de ingreso (fix de KAN-231).
+// - "mount": se pide apenas se abre la página, así en celular (donde no hay "pasar el
+//   mouse") y con clics rápidos ya está lista y no aparece la barra de carga.
+// - "hover": si venció, se vuelve a pedir al pasar el mouse.
+// - cacheFor: por defecto la precarga dura 30 s; estas páginas no tienen datos que
+//   cambien, así que dura 10 minutos (alguien puede tardar en completar el formulario).
+export const PRECARGA: {
+    prefetch: ('mount' | 'hover' | 'click')[];
+    cacheFor: string;
+} = {
+    prefetch: ['mount', 'hover'],
+    cacheFor: '10m',
+};
+
+// La pestaña activa es la página actual: no hace falta precargarla.
+function precargaPestana(activa: boolean) {
+    return activa ? {} : PRECARGA;
+}
+
 // Una escena de la tira: foto, degradé para que se lea el texto, título y bajada.
 function Escena({
     foto,
@@ -258,8 +277,7 @@ function PestanaLateral({
     return (
         <Link
             href={href}
-            // Precarga la página al pasar el mouse: al hacer clic ya está, sin esperar.
-            prefetch
+            {...precargaPestana(activa)}
             aria-current={activa ? 'page' : undefined}
             className={`relative flex flex-col items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
                 activa
@@ -292,8 +310,7 @@ function PestanaCelular({
     return (
         <Link
             href={href}
-            // Precarga la página al pasar el mouse: al hacer clic ya está, sin esperar.
-            prefetch
+            {...precargaPestana(activa)}
             aria-current={activa ? 'page' : undefined}
             className={`rounded-lg py-2 text-center text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
                 activa

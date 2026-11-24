@@ -5,7 +5,7 @@ import {
 } from '@/Components/Auth/CampoAuth';
 import RedesProximamente from '@/Components/Auth/RedesProximamente';
 import Checkbox from '@/Components/Checkbox';
-import GuestLayout from '@/Layouts/GuestLayout';
+import GuestLayout, { PRECARGA } from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { FormEventHandler, ReactNode } from 'react';
@@ -116,7 +116,7 @@ export default function Login({
                 ¿No tenés cuenta?{' '}
                 <Link
                     href={route('register')}
-                    prefetch
+                    {...PRECARGA}
                     className="font-semibold text-marca-azul hover:underline"
                 >
                     Registrate
