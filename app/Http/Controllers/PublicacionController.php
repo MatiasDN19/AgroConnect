@@ -7,11 +7,13 @@ use App\Http\Requests\StorePublicacionRequest;
 use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
 use App\Models\Publicacion;
+use App\Models\PublicacionFoto;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -59,7 +61,11 @@ class PublicacionController extends Controller
         }
 
         $publicaciones = $query
-            ->with(['categoria:id,nombre', 'usuario:id,name,socio_validado'])
+            ->with([
+                'categoria:id,nombre',
+                'usuario:id,name,socio_validado',
+                'fotos' => fn ($q) => $q->orderBy('orden')->limit(1),
+            ])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->get();
 
@@ -87,10 +93,25 @@ class PublicacionController extends Controller
      */
     public function store(StorePublicacionRequest $request): RedirectResponse
     {
+        $validated = $request->validated();
+        $fotos = $request->file('fotos', []);
+        unset($validated['fotos']);
+
         $publicacion = Publicacion::create([
-            ...$request->validated(),
+            ...$validated,
             'usuario_id' => $request->user()->id,
         ]);
+
+        if (! empty($fotos)) {
+            $orden = 0;
+            foreach ($fotos as $archivo) {
+                $ruta = $archivo->store("publicaciones/{$publicacion->id}", 'public');
+                $publicacion->fotos()->create([
+                    'ruta' => $ruta,
+                    'orden' => $orden++,
+                ]);
+            }
+        }
 
         return redirect()->route('publicaciones.show', $publicacion)
             ->with('success', 'Publicación creada exitosamente.');
@@ -105,6 +126,7 @@ class PublicacionController extends Controller
             'usuario:id,name,email,telefono,socio_validado',
             'categoria:id,nombre',
             'resenas.usuario:id,name',
+            'fotos' => fn ($q) => $q->orderBy('orden'),
         ]);
 
         // Denuncia del usuario logueado sobre esta publicación (KAN-65), para que el detalle
@@ -136,10 +158,15 @@ class PublicacionController extends Controller
      */
     public function edit(Publicacion $publicacion): InertiaResponse
     {
+        $publicacion->load(['fotos' => fn ($q) => $q->orderBy('orden')]);
+
         return Inertia::render('Publicaciones/Edit', [
-            'publicacion' => $publicacion->only([
-                'id', 'categoria_id', 'titulo', 'descripcion', 'precio', 'unidad', 'stock',
-            ]),
+            'publicacion' => [
+                ...$publicacion->only([
+                    'id', 'categoria_id', 'titulo', 'descripcion', 'precio', 'unidad', 'stock',
+                ]),
+                'fotos' => $publicacion->fotos,
+            ],
             'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
         ]);
     }
@@ -149,7 +176,33 @@ class PublicacionController extends Controller
      */
     public function update(UpdatePublicacionRequest $request, Publicacion $publicacion): RedirectResponse
     {
-        $publicacion->update($request->validated());
+        $validated = $request->validated();
+        $fotos = $request->file('fotos', []);
+        $fotosEliminar = $request->input('fotos_eliminar', []);
+        unset($validated['fotos'], $validated['fotos_eliminar']);
+
+        $publicacion->update($validated);
+
+        // Eliminar fotos seleccionadas
+        if (! empty($fotosEliminar)) {
+            $publicacion->fotos()->whereIn('id', $fotosEliminar)->get()->each(function (PublicacionFoto $foto) {
+                $foto->delete();
+            });
+        }
+
+        // Agregar nuevas fotos
+        if (! empty($fotos)) {
+            $ultimoOrden = (int) $publicacion->fotos()->max('orden');
+            $orden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+
+            foreach ($fotos as $archivo) {
+                $ruta = $archivo->store("publicaciones/{$publicacion->id}", 'public');
+                $publicacion->fotos()->create([
+                    'ruta' => $ruta,
+                    'orden' => $orden++,
+                ]);
+            }
+        }
 
         return redirect()->route('publicaciones.show', $publicacion)
             ->with('success', 'Publicación actualizada exitosamente.');

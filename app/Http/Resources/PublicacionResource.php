@@ -38,6 +38,7 @@ class PublicacionResource extends JsonResource
                 'socio_validado' => (bool) $this->usuario->socio_validado,
             ]),
             'categoria' => new CategoriaResource($this->whenLoaded('categoria')),
+            'fotos' => $this->whenLoaded('fotos'),
             'resenas' => $this->whenLoaded('resenas'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

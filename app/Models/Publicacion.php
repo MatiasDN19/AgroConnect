@@ -78,6 +78,12 @@ class Publicacion extends Model
         return $this->hasMany(SolicitudCompra::class, 'publicacion_id');
     }
 
+    /** @return HasMany<PublicacionFoto, $this> */
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(PublicacionFoto::class, 'publicacion_id')->orderBy('orden');
+    }
+
     public function puntuacionPromedio(): ?float
     {
         return $this->resenas()->avg('puntuacion');
