@@ -18,6 +18,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'unidad',
     'stock',
     'estado',
+    'motivo_bloqueo',
+    'bloqueada_por',
+    'bloqueada_at',
 ])]
 class Publicacion extends Model
 {
@@ -34,12 +37,26 @@ class Publicacion extends Model
 
     public const ESTADO_VENDIDA = 'vendida';
 
+    public const ESTADO_BLOQUEADA = 'bloqueada';
+
     protected function casts(): array
     {
         return [
             'precio' => 'decimal:2',
             'stock' => 'integer',
+            'bloqueada_at' => 'datetime',
         ];
+    }
+
+    public function estaBloqueada(): bool
+    {
+        return $this->estado === self::ESTADO_BLOQUEADA;
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function bloqueadaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'bloqueada_por');
     }
 
     /** @return BelongsTo<User, $this> */
