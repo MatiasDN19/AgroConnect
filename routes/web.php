@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\MetricasController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\AlertaController;
@@ -73,6 +74,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/socios', [SocioController::class, 'index'])->name('admin.socios.index');
     Route::match(['post', 'patch'], '/admin/socios/{usuario}/aceptar', [SocioController::class, 'aceptar'])->name('admin.socios.aceptar');
     Route::match(['post', 'patch'], '/admin/socios/{usuario}/rechazar', [SocioController::class, 'rechazar'])->name('admin.socios.rechazar');
+    Route::get('/admin/configuracion', [ConfiguracionController::class, 'edit'])->name('admin.configuracion.edit');
+    Route::put('/admin/configuracion', [ConfiguracionController::class, 'update'])->name('admin.configuracion.update');
 });
 
 require __DIR__.'/auth.php';
