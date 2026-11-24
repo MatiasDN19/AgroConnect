@@ -23,12 +23,15 @@ test('users can authenticate using the login screen', function () {
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
-    $this->post('/login', [
+    $response = $this->post('/login', [
         'email' => $user->email,
         'password' => 'wrong-password',
     ]);
 
     $this->assertGuest();
+    $response->assertSessionHasErrors([
+        'email' => 'Estas credenciales no coinciden con nuestros registros.',
+    ]);
 });
 
 test('users can logout', function () {
