@@ -300,9 +300,11 @@ class PublicacionController extends Controller
             $categoriasDeInteres = $categoriasFavoritos->merge($categoriasResenas)->unique();
         }
 
-        // 2. Construir la consulta de publicaciones sugeridas activas
+        // 2. Construir la consulta de publicaciones sugeridas activas.
+        // No se sugieren las publicaciones del propio usuario (KAN-170).
         $query = Publicacion::query()
-            ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA);
+            ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA)
+            ->when($user, fn ($q) => $q->where('publicaciones.usuario_id', '!=', $user->id));
 
         if ($categoriasDeInteres->isNotEmpty()) {
             $query->whereIn('publicaciones.categoria_id', $categoriasDeInteres);
@@ -314,7 +316,12 @@ class PublicacionController extends Controller
                 User::selectRaw('COALESCE(socio_validado, 0)')->whereColumn('users.id', 'publicaciones.usuario_id')
             )
             ->latest('publicaciones.created_at')
-            ->with(['categoria:id,nombre', 'usuario:id,name,socio_validado'])
+            ->with([
+                'categoria:id,nombre',
+                'usuario:id,name,socio_validado',
+                // Solo la portada, igual que el listado (KAN-170).
+                'fotos' => fn ($q) => $q->orderBy('orden')->limit(1),
+            ])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->paginate(10);
 
