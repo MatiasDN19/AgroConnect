@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Categoria, PageProps, Publicacion } from '@/types';
+import { Categoria, PageProps, Publicacion, PublicacionFoto } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import PublicacionForm, {
@@ -19,25 +19,33 @@ export default function Edit({
         | 'precio'
         | 'unidad'
         | 'stock'
-    >;
+    > & { fotos: PublicacionFoto[] };
     categorias: Pick<Categoria, 'id' | 'nombre'>[];
 }>) {
     // Precargamos con los datos actuales. Los números se pasan a string
     // porque el formulario trabaja todo como texto (lo que dan los inputs).
-    const { data, setData, put, processing, errors } =
-        useForm<PublicacionFormData>({
-            categoria_id: String(publicacion.categoria_id),
-            titulo: publicacion.titulo,
-            descripcion: publicacion.descripcion,
-            precio: String(publicacion.precio),
-            unidad: publicacion.unidad,
-            stock: String(publicacion.stock),
-        });
+    const { data, setData, post, processing, errors } = useForm<
+        PublicacionFormData & { _method: 'put' }
+    >({
+        categoria_id: String(publicacion.categoria_id),
+        titulo: publicacion.titulo,
+        descripcion: publicacion.descripcion,
+        precio: String(publicacion.precio),
+        unidad: publicacion.unidad,
+        stock: String(publicacion.stock),
+        fotos: [],
+        fotos_eliminar: [],
+        // Un PUT con archivos no le llega bien a PHP: se manda POST y Laravel
+        // lo toma como PUT gracias a _method ("method spoofing").
+        _method: 'put',
+    });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        put(route('publicaciones.update', publicacion.id));
+        post(route('publicaciones.update', publicacion.id), {
+            forceFormData: true,
+        });
     };
 
     return (
@@ -61,6 +69,7 @@ export default function Edit({
                             categorias={categorias}
                             onSubmit={submit}
                             textoBoton="Guardar cambios"
+                            fotosExistentes={publicacion.fotos}
                         />
                     </div>
                 </div>
