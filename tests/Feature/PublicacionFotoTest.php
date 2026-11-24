@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Categoria;
+use App\Models\Configuracion;
 use App\Models\Publicacion;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -202,4 +203,88 @@ test('al eliminar una publicacion se borran sus fotos asociadas del disco y base
 
     Storage::disk('public')->assertMissing($ruta1);
     Storage::disk('public')->assertMissing($ruta2);
+});
+
+// --- KAN-225: los límites de fotos salen de la configuración del panel admin ---
+
+function datosPublicacion(Categoria $categoria, array $fotos): array
+{
+    return [
+        'categoria_id' => $categoria->id,
+        'titulo' => 'Mangos de estación',
+        'descripcion' => 'Cosecha propia.',
+        'precio' => 1200,
+        'unidad' => 'kg',
+        'stock' => 10,
+        'fotos' => $fotos,
+    ];
+}
+
+test('el maximo de fotos configurado por el admin se aplica al crear una publicacion', function () {
+    Storage::fake('public');
+    Configuracion::fijar('fotos_maximo', 2);
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $categoria = Categoria::factory()->create();
+
+    $fotos = [
+        UploadedFile::fake()->image('1.jpg'),
+        UploadedFile::fake()->image('2.jpg'),
+        UploadedFile::fake()->image('3.jpg'),
+    ];
+
+    $this->actingAs($productor)
+        ->post(route('publicaciones.store'), datosPublicacion($categoria, $fotos))
+        ->assertSessionHasErrors(['fotos' => 'Podés subir como máximo 2 fotos.']);
+
+    expect(Publicacion::count())->toBe(0);
+});
+
+test('el tamano maximo de foto configurado por el admin se aplica y el mensaje lo muestra', function () {
+    Storage::fake('public');
+    Configuracion::fijar('fotos_tamano_max_kb', 512);
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $categoria = Categoria::factory()->create();
+
+    $pesada = UploadedFile::fake()->image('pesada.jpg')->size(600);
+
+    $this->actingAs($productor)
+        ->post(route('publicaciones.store'), datosPublicacion($categoria, [$pesada]))
+        ->assertSessionHasErrors(['fotos.0' => 'Cada foto no puede superar los 512 KB.']);
+});
+
+test('al editar el total de fotos respeta el maximo configurado', function () {
+    Storage::fake('public');
+    Configuracion::fijar('fotos_maximo', 1);
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+    $publicacion->fotos()->create(['ruta' => 'publicaciones/x/existente.jpg', 'orden' => 0]);
+
+    $this->actingAs($productor)
+        ->post(route('publicaciones.update', $publicacion), [
+            '_method' => 'put',
+            'fotos' => [UploadedFile::fake()->image('nueva.jpg')],
+        ])
+        ->assertSessionHasErrors(['fotos' => 'La publicación no puede tener más de 1 fotos en total.']);
+});
+
+test('los formularios de crear y editar reciben los limites de fotos configurados', function () {
+    Configuracion::fijar('fotos_maximo', 4);
+    Configuracion::fijar('fotos_tamano_max_kb', 1536);
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+
+    $this->actingAs($productor)
+        ->get(route('publicaciones.create'))
+        ->assertInertia(fn ($page) => $page
+            ->where('limites_fotos.maximo', 4)
+            ->where('limites_fotos.tamano_max_kb', 1536)
+        );
+
+    $this->actingAs($productor)
+        ->get(route('publicaciones.edit', $publicacion))
+        ->assertInertia(fn ($page) => $page->where('limites_fotos.maximo', 4));
 });

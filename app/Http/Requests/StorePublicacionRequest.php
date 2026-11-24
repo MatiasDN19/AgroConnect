@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Configuracion;
 use App\Models\Publicacion;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,8 +26,9 @@ class StorePublicacionRequest extends FormRequest
             'precio' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'unidad' => ['required', 'string', 'max:50'],
             'stock' => ['required', 'integer', 'min:0'],
-            'fotos' => ['nullable', 'array', 'max:6'],
-            'fotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            // Límites configurables desde el panel admin (KAN-225).
+            'fotos' => ['nullable', 'array', 'max:'.Configuracion::limitesFotos()['maximo']],
+            'fotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:'.Configuracion::limitesFotos()['tamano_max_kb']],
             'estado' => ['sometimes', Rule::in([
                 Publicacion::ESTADO_ACTIVA,
                 Publicacion::ESTADO_PAUSADA,
@@ -46,10 +48,10 @@ class StorePublicacionRequest extends FormRequest
             'titulo.required' => 'El título es obligatorio.',
             'precio.min' => 'El precio no puede ser negativo.',
             'stock.min' => 'El stock no puede ser negativo.',
-            'fotos.max' => 'Podés subir como máximo 6 fotos.',
+            'fotos.max' => 'Podés subir como máximo '.Configuracion::limitesFotos()['maximo'].' fotos.',
             'fotos.*.image' => 'Cada archivo debe ser una imagen válida.',
             'fotos.*.mimes' => 'Las fotos deben ser formato JPG, PNG o WEBP.',
-            'fotos.*.max' => 'Cada foto no puede superar los 2 MB.',
+            'fotos.*.max' => 'Cada foto no puede superar los '.Configuracion::textoTamano(Configuracion::limitesFotos()['tamano_max_kb']).'.',
         ];
     }
 }

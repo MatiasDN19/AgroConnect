@@ -27,4 +27,24 @@ class UpdateConfiguracionRequest extends FormRequest
             'fotos_tamano_max_kb' => ['nullable', 'integer', 'min:512', 'max:10240'],
         ];
     }
+
+    /**
+     * Nombres legibles para los mensajes de error ("El campo Instagram debe ser una URL
+     * válida." en lugar de "El campo red instagram…"). KAN-225.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'contacto_email' => 'email de contacto',
+            'contacto_whatsapp' => 'WhatsApp de contacto',
+            'contacto_direccion' => 'dirección',
+            'red_facebook' => 'Facebook',
+            'red_instagram' => 'Instagram',
+            'precio_sugerido_minimo' => 'publicaciones mínimas para el precio de referencia',
+            'fotos_maximo' => 'fotos por publicación',
+            'fotos_tamano_max_kb' => 'tamaño máximo por foto',
+        ];
+    }
 }

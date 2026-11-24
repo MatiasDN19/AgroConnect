@@ -58,6 +58,34 @@ class Configuracion extends Model
     /**
      * Limpiar la caché automáticamente al guardar o eliminar.
      */
+    /**
+     * Límites de las fotos de publicación (KAN-224/225). Los usan las validaciones de
+     * crear/editar y el formulario del frontend, así nunca quedan desfasados.
+     *
+     * @return array{maximo: int, tamano_max_kb: int}
+     */
+    public static function limitesFotos(): array
+    {
+        return [
+            'maximo' => (int) static::obtener('fotos_maximo', 6),
+            'tamano_max_kb' => (int) static::obtener('fotos_tamano_max_kb', 2048),
+        ];
+    }
+
+    /**
+     * Tamaño legible para los mensajes: 2048 -> "2 MB", 1536 -> "1,5 MB", 512 -> "512 KB".
+     */
+    public static function textoTamano(int $kb): string
+    {
+        if ($kb < 1024) {
+            return "{$kb} KB";
+        }
+
+        $mb = round($kb / 1024, 1);
+
+        return str_replace('.', ',', (string) $mb).' MB';
+    }
+
     protected static function booted(): void
     {
         static::saved(function (Configuracion $configuracion) {

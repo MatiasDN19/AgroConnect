@@ -10,11 +10,13 @@ return [
     | o si el valor configurado es nulo.
     |
     */
-    'contacto_email' => 'soporte@agroconnect.test',
-    'contacto_whatsapp' => '+54 9 3718 123456',
-    'contacto_direccion' => 'Av. San Martín s/n, Laguna Naineck, Formosa, Argentina',
-    'red_facebook' => 'https://facebook.com/agroconnect.naineck',
-    'red_instagram' => 'https://instagram.com/agroconnect.naineck',
+    // Contacto y redes: vacíos hasta que el admin cargue los datos reales del Consorcio
+    // (KAN-225). Así el footer público nunca muestra datos de ejemplo como si fueran reales.
+    'contacto_email' => null,
+    'contacto_whatsapp' => null,
+    'contacto_direccion' => null,
+    'red_facebook' => null,
+    'red_instagram' => null,
 
     'precio_sugerido_minimo' => 3,
     'fotos_maximo' => 6,

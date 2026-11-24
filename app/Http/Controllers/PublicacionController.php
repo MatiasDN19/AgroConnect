@@ -6,6 +6,7 @@ use App\Http\Requests\CambiarEstadoPublicacionRequest;
 use App\Http\Requests\StorePublicacionRequest;
 use App\Http\Requests\UpdatePublicacionRequest;
 use App\Models\Categoria;
+use App\Models\Configuracion;
 use App\Models\Publicacion;
 use App\Models\PublicacionFoto;
 use App\Models\User;
@@ -85,6 +86,8 @@ class PublicacionController extends Controller
     {
         return Inertia::render('Publicaciones/Create', [
             'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            // Límites de fotos configurables (KAN-225), para que el formulario use los mismos.
+            'limites_fotos' => Configuracion::limitesFotos(),
         ]);
     }
 
@@ -171,6 +174,7 @@ class PublicacionController extends Controller
                 'fotos' => $publicacion->fotos,
             ],
             'categorias' => Categoria::orderBy('nombre')->get(['id', 'nombre']),
+            'limites_fotos' => Configuracion::limitesFotos(),
         ]);
     }
 
