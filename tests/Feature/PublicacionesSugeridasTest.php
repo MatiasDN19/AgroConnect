@@ -176,3 +176,35 @@ test('los invitados no autenticados son redirigidos al login o reciben 401 en su
     $this->getJson(route('publicaciones.sugeridas'))
         ->assertUnauthorized();
 });
+
+// --- KAN-170: sin publicaciones propias y con la portada ---
+
+test('un productor no recibe sus propias publicaciones entre las sugeridas', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+
+    Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+    $ajena = Publicacion::factory()->create(['estado' => Publicacion::ESTADO_ACTIVA]);
+
+    $this->actingAs($productor)
+        ->getJson(route('publicaciones.sugeridas'))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $ajena->id);
+});
+
+test('las sugeridas incluyen solo la foto de portada de cada publicacion', function () {
+    $usuario = User::factory()->create();
+    $publicacion = Publicacion::factory()->create(['estado' => Publicacion::ESTADO_ACTIVA]);
+
+    $publicacion->fotos()->create(['ruta' => 'publicaciones/x/segunda.jpg', 'orden' => 1]);
+    $publicacion->fotos()->create(['ruta' => 'publicaciones/x/portada.jpg', 'orden' => 0]);
+
+    $this->actingAs($usuario)
+        ->getJson(route('publicaciones.sugeridas'))
+        ->assertOk()
+        ->assertJsonCount(1, 'data.0.fotos')
+        ->assertJsonPath('data.0.fotos.0.ruta', 'publicaciones/x/portada.jpg');
+});
