@@ -300,12 +300,12 @@ test('el listado y detalle de publicaciones incluyen socio_validado del producto
     $responseIndex->assertOk();
     $responseIndex->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->where('publicaciones.0.id', $pubSocio->id)
-        ->where('publicaciones.0.usuario.socio_validado', true)
-        ->missing('publicaciones.0.usuario.numero_socio')
-        ->where('publicaciones.1.id', $pubNoSocio->id)
-        ->where('publicaciones.1.usuario.socio_validado', false)
-        ->missing('publicaciones.1.usuario.numero_socio')
+        ->where('publicaciones.data.0.id', $pubSocio->id)
+        ->where('publicaciones.data.0.usuario.socio_validado', true)
+        ->missing('publicaciones.data.0.usuario.numero_socio')
+        ->where('publicaciones.data.1.id', $pubNoSocio->id)
+        ->where('publicaciones.data.1.usuario.socio_validado', false)
+        ->missing('publicaciones.data.1.usuario.numero_socio')
     );
 
     $responseShowSocio = $this->actingAs($lector)->get(route('publicaciones.show', $pubSocio));

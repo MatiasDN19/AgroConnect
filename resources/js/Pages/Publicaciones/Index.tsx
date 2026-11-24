@@ -5,9 +5,19 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 
+interface Paginator<T> {
+    data: T[];
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
+}
+
 export default function Index({
     publicaciones,
-}: PageProps<{ publicaciones: PublicacionResumen[] }>) {
+}: PageProps<{
+    publicaciones: PublicacionResumen[] | Paginator<PublicacionResumen>;
+}>) {
+    const items = Array.isArray(publicaciones)
+        ? publicaciones
+        : publicaciones?.data ?? [];
     const { auth } = usePage().props;
     const esProductor = auth.user.rol === 'productor';
 
@@ -36,7 +46,7 @@ export default function Index({
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     {/* Acá va el filtro por categoría (CategoriaFiltro, KAN-53). */}
 
-                    {publicaciones.length === 0 ? (
+                    {items.length === 0 ? (
                         <div className="rounded-lg bg-white p-6 text-sm text-gray-600 shadow-sm">
                             Todavía no hay publicaciones activas.
                             {esProductor && (
@@ -53,7 +63,7 @@ export default function Index({
                         </div>
                     ) : (
                         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {publicaciones.map((publicacion) => (
+                            {items.map((publicacion) => (
                                 <li key={publicacion.id}>
                                     <PublicacionCard
                                         publicacion={publicacion}

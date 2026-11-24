@@ -3,6 +3,7 @@
 use App\Models\Categoria;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
+use App\Models\SolicitudCompra;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -497,9 +498,9 @@ test('el listado de publicaciones solo muestra publicaciones activas', function 
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.titulo', $activa2->titulo)
-        ->where('publicaciones.1.titulo', $activa1->titulo)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.titulo', $activa2->titulo)
+        ->where('publicaciones.data.1.titulo', $activa1->titulo)
     );
 });
 
@@ -536,7 +537,7 @@ test('el listado de publicaciones incluye las relaciones y puntuacion promedio',
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->has('publicaciones', 1, fn (Assert $item) => $item
+        ->has('publicaciones.data', 1, fn (Assert $item) => $item
             ->where('id', $publicacion->id)
             ->where('titulo', 'Zanahorias frescas')
             ->where('categoria.id', $categoria->id)
@@ -729,9 +730,9 @@ test('el listado de publicaciones filtra por categoria_id devolviendo solo las p
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
         ->where('categoria_id', (string) $categoriaVerduras->id)
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.categoria.id', $categoriaVerduras->id)
-        ->where('publicaciones.1.categoria.id', $categoriaVerduras->id)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.categoria.id', $categoriaVerduras->id)
+        ->where('publicaciones.data.1.categoria.id', $categoriaVerduras->id)
     );
 });
 
@@ -766,7 +767,7 @@ test('el listado de publicaciones devuelve todas las activas si no se envía cat
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
         ->where('categoria_id', null)
-        ->has('publicaciones', 2)
+        ->has('publicaciones.data', 2)
     );
 });
 
@@ -788,7 +789,7 @@ test('el listado de publicaciones devuelve un arreglo vacío si no hay publicaci
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
         ->where('categoria_id', (string) $categoriaVacia->id)
-        ->has('publicaciones', 0)
+        ->has('publicaciones.data', 0)
     );
 });
 
@@ -831,9 +832,9 @@ test('el listado de publicaciones devuelve primero las de socios validados aunqu
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.id', $pubSocioVieja->id)
-        ->where('publicaciones.1.id', $pubNoSocioReciente->id)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.id', $pubSocioVieja->id)
+        ->where('publicaciones.data.1.id', $pubNoSocioReciente->id)
     );
 });
 
@@ -885,9 +886,9 @@ test('la prioridad de socios validados se mantiene cuando se filtra por categori
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
         ->where('categoria_id', (string) $categoriaFrutas->id)
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.id', $pubSocioFruta->id)
-        ->where('publicaciones.1.id', $pubNoSocioFruta->id)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.id', $pubSocioFruta->id)
+        ->where('publicaciones.data.1.id', $pubNoSocioFruta->id)
     );
 });
 
@@ -919,8 +920,170 @@ test('dentro del mismo estado de socio validado se respeta el orden cronologico 
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.id', $pubSocioNueva->id)
-        ->where('publicaciones.1.id', $pubSocioVieja->id)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.id', $pubSocioNueva->id)
+        ->where('publicaciones.data.1.id', $pubSocioVieja->id)
+    );
+});
+
+// --- Búsqueda, paginación, categorías con conteo y resumen del productor (KAN-209 / KAN-212) ---
+
+test('la busqueda por q filtra por titulo o descripcion y respeta estado activo', function () {
+    $usuario = User::factory()->create();
+
+    $pub1 = Publicacion::factory()->create([
+        'titulo' => 'Mandarinas dulces de Naineck',
+        'descripcion' => 'Cosecha fresca',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now()->subHour(),
+    ]);
+
+    $pub2 = Publicacion::factory()->create([
+        'titulo' => 'Pomelos',
+        'descripcion' => 'Fruta de calidad mandarinas en oferta',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+        'created_at' => now(),
+    ]);
+
+    $pub3 = Publicacion::factory()->create([
+        'titulo' => 'Lechugas',
+        'descripcion' => 'Verdura de huerta',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $pubPausada = Publicacion::factory()->create([
+        'titulo' => 'Mandarinas pausadas',
+        'descripcion' => 'No disponible',
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index', ['q' => 'mandarinas']));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones.data', 2)
+        ->where('filtros.q', 'mandarinas')
+        ->where('publicaciones.data.0.id', $pub2->id)
+        ->where('publicaciones.data.1.id', $pub1->id)
+    );
+});
+
+test('el catalogo pagina a 12 publicaciones por pagina y conserva los query strings', function () {
+    $usuario = User::factory()->create();
+
+    Publicacion::factory()->count(15)->create([
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index', ['q' => 'test']));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones.data', 0) // Ninguna coincide con 'test'
+        ->where('publicaciones.per_page', 12)
+    );
+
+    // Sin filtro de texto devuelve 12 en la primera página
+    $responseGeneral = $this->actingAs($usuario)->get(route('publicaciones.index'));
+    $responseGeneral->assertOk();
+    $responseGeneral->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones.data', 12)
+        ->where('publicaciones.total', 15)
+        ->where('publicaciones.current_page', 1)
+        ->where('publicaciones.last_page', 2)
+    );
+});
+
+test('las categorias enviadas al listado traen el conteo de publicaciones activas ordenadas por nombre', function () {
+    $usuario = User::factory()->create();
+
+    $catB = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $catA = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    Publicacion::factory()->count(3)->create([
+        'categoria_id' => $catA->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $catA->id,
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+
+    Publicacion::factory()->create([
+        'categoria_id' => $catB->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('categorias', 2)
+        ->where('categorias.0.nombre', 'Frutas')
+        ->where('categorias.0.publicaciones_count', 3)
+        ->where('categorias.1.nombre', 'Verduras')
+        ->where('categorias.1.publicaciones_count', 1)
+    );
+});
+
+test('el resumen es null para compradores y trae el conteo para productores', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $otroProductor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+
+    // Publicaciones de este productor
+    $pubActiva = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+    Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_PAUSADA,
+    ]);
+    Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_VENDIDA,
+    ]);
+
+    // Solicitud pendiente sobre su publicación
+    $pubActiva->solicitudesCompra()->create([
+        'usuario_id' => $comprador->id,
+        'estado' => SolicitudCompra::ESTADO_PENDIENTE,
+    ]);
+
+    // Solicitud ya resuelta no debe sumar a pendientes
+    $pubActiva->solicitudesCompra()->create([
+        'usuario_id' => $comprador->id,
+        'estado' => SolicitudCompra::ESTADO_ACEPTADA,
+    ]);
+
+    // Publicaciones de otro productor
+    Publicacion::factory()->create([
+        'usuario_id' => $otroProductor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    // 1. Caso Comprador: resumen debe ser null
+    $resComprador = $this->actingAs($comprador)->get(route('publicaciones.index'));
+    $resComprador->assertOk();
+    $resComprador->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('resumen', null)
+    );
+
+    // 2. Caso Productor: resumen con conteos de sus publicaciones y solicitudes
+    $resProductor = $this->actingAs($productor)->get(route('publicaciones.index'));
+    $resProductor->assertOk();
+    $resProductor->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('resumen.activas', 1)
+        ->where('resumen.pausadas', 1)
+        ->where('resumen.vendidas', 1)
+        ->where('resumen.solicitudes_pendientes', 1)
     );
 });
