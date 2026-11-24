@@ -24,7 +24,7 @@ test('un productor recibe admin como null en los datos compartidos de inertia', 
 
     $response = $this
         ->actingAs($productor)
-        ->get(route('dashboard'));
+        ->get(route('publicaciones.index'));
 
     $response->assertOk();
     $response->assertInertia(fn (Assert $page) => $page
@@ -43,7 +43,7 @@ test('un comprador recibe admin como null en los datos compartidos de inertia', 
 
     $response = $this
         ->actingAs($comprador)
-        ->get(route('dashboard'));
+        ->get(route('publicaciones.index'));
 
     $response->assertOk();
     $response->assertInertia(fn (Assert $page) => $page
