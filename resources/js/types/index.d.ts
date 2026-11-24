@@ -82,4 +82,31 @@ export type PageProps<
     admin?: {
         denuncias_pendientes: number;
     } | null;
+    // Datos públicos de contacto que carga el admin en Configuración (KAN-224/225).
+    // Vacíos (null o "") hasta que se carguen: no hay datos de ejemplo.
+    contacto: ContactoPlataforma;
 };
+
+export type ContactoPlataforma = {
+    email: string | null;
+    whatsapp: string | null;
+    direccion: string | null;
+    facebook: string | null;
+    instagram: string | null;
+};
+
+// Lo que manda ConfiguracionController::edit(). Los valores llegan como string
+// (se guardan como texto) o como número si vienen de los valores por defecto.
+export type Configuracion = {
+    contacto_email: string | null;
+    contacto_whatsapp: string | null;
+    contacto_direccion: string | null;
+    red_facebook: string | null;
+    red_instagram: string | null;
+    precio_sugerido_minimo: string | number | null;
+    fotos_maximo: string | number | null;
+    fotos_tamano_max_kb: string | number | null;
+};
+
+// Límites de fotos que el backend aplica y le pasa al formulario (KAN-225).
+export type LimitesFotos = { maximo: number; tamano_max_kb: number };
