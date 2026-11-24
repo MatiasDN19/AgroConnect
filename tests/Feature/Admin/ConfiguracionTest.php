@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Cache;
 test('sin configuracion guardada en base de datos se usan los valores por defecto', function () {
     Cache::flush();
 
-    expect(Configuracion::obtener('contacto_email'))->toBe('soporte@agroconnect.test');
+    // Contacto vacío por defecto: el footer no muestra datos de ejemplo (KAN-225).
+    expect(Configuracion::obtener('contacto_email'))->toBeNull();
     expect(Configuracion::obtener('precio_sugerido_minimo'))->toBe(3);
     expect(Configuracion::obtener('fotos_maximo'))->toBe(6);
 });

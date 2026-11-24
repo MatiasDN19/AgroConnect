@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Configuracion;
 use App\Models\Publicacion;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,8 +35,9 @@ class UpdatePublicacionRequest extends FormRequest
             'precio' => ['sometimes', 'required', 'numeric', 'min:0', 'max:9999999.99'],
             'unidad' => ['sometimes', 'required', 'string', 'max:50'],
             'stock' => ['sometimes', 'required', 'integer', 'min:0'],
-            'fotos' => ['nullable', 'array', 'max:6'],
-            'fotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            // Límites configurables desde el panel admin (KAN-225).
+            'fotos' => ['nullable', 'array', 'max:'.Configuracion::limitesFotos()['maximo']],
+            'fotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:'.Configuracion::limitesFotos()['tamano_max_kb']],
             'fotos_eliminar' => ['nullable', 'array'],
             'fotos_eliminar.*' => ['integer', 'exists:publicacion_fotos,id'],
             'estado' => ['sometimes', 'required', Rule::in([
@@ -47,7 +49,24 @@ class UpdatePublicacionRequest extends FormRequest
     }
 
     /**
-     * Configurar el validador para verificar que el total de fotos finales no supere 6.
+     * Mismos mensajes de fotos que al crear (con los límites configurados, KAN-225).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $limites = Configuracion::limitesFotos();
+
+        return [
+            'fotos.max' => "Podés subir como máximo {$limites['maximo']} fotos.",
+            'fotos.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'fotos.*.mimes' => 'Las fotos deben ser formato JPG, PNG o WEBP.',
+            'fotos.*.max' => 'Cada foto no puede superar los '.Configuracion::textoTamano($limites['tamano_max_kb']).'.',
+        ];
+    }
+
+    /**
+     * Configurar el validador para verificar que el total de fotos finales no supere el máximo configurado.
      */
     public function withValidator(Validator $validator): void
     {
@@ -65,8 +84,10 @@ class UpdatePublicacionRequest extends FormRequest
 
             $totalFinal = ($fotosActuales - $fotosAEliminar) + $fotosNuevas;
 
-            if ($totalFinal > 6) {
-                $validator->errors()->add('fotos', 'La publicación no puede tener más de 6 fotos en total.');
+            $maximo = Configuracion::limitesFotos()['maximo'];
+
+            if ($totalFinal > $maximo) {
+                $validator->errors()->add('fotos', "La publicación no puede tener más de {$maximo} fotos en total.");
             }
         });
     }
