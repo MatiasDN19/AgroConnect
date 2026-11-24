@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Configuracion;
 use App\Models\Denuncia;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -44,6 +45,14 @@ class HandleInertiaRequests extends Middleware
             'admin' => fn () => $request->user()?->esAdmin()
                 ? ['denuncias_pendientes' => Denuncia::where('estado', Denuncia::ESTADO_PENDIENTE)->count()]
                 : null,
+            // Datos públicos de contacto y redes de la plataforma
+            'contacto' => fn () => [
+                'email' => Configuracion::obtener('contacto_email'),
+                'whatsapp' => Configuracion::obtener('contacto_whatsapp'),
+                'direccion' => Configuracion::obtener('contacto_direccion'),
+                'facebook' => Configuracion::obtener('red_facebook'),
+                'instagram' => Configuracion::obtener('red_instagram'),
+            ],
         ];
     }
 }

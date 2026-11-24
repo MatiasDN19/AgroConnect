@@ -91,11 +91,13 @@ class Publicacion extends Model
 
     /**
      * Calcula el precio promedio sugerido para una categoría basado en publicaciones activas.
-     * Retorna null si no se alcanza el mínimo de publicaciones representativas (por defecto 3).
+     * Retorna null si no se alcanza el mínimo de publicaciones representativas.
      */
-    public static function calcularPrecioPromedioPorCategoria(int $categoriaId, int $minimoPublicaciones = 3): ?float
+    public static function calcularPrecioPromedioPorCategoria(int $categoriaId, ?int $minimoPublicaciones = null): ?float
     {
-        return static::estadisticasPrecio($categoriaId, null, $minimoPublicaciones)['promedio'] ?? null;
+        $minimo = $minimoPublicaciones ?? (int) Configuracion::obtener('precio_sugerido_minimo', 3);
+
+        return static::estadisticasPrecio($categoriaId, null, $minimo)['promedio'] ?? null;
     }
 
     /**
@@ -108,8 +110,9 @@ class Publicacion extends Model
      *
      * @return array{promedio: float, mediana: float, minimo: float, maximo: float, cantidad: int}|null
      */
-    public static function estadisticasPrecio(int $categoriaId, ?string $unidad = null, int $minimoPublicaciones = 3): ?array
+    public static function estadisticasPrecio(int $categoriaId, ?string $unidad = null, ?int $minimoPublicaciones = null): ?array
     {
+        $minimo = $minimoPublicaciones ?? (int) Configuracion::obtener('precio_sugerido_minimo', 3);
         $unidad = $unidad !== null ? mb_strtolower(trim($unidad)) : null;
 
         $precios = static::query()
@@ -123,7 +126,7 @@ class Publicacion extends Model
 
         $cantidad = $precios->count();
 
-        if ($cantidad < $minimoPublicaciones) {
+        if ($cantidad < $minimo) {
             return null;
         }
 
