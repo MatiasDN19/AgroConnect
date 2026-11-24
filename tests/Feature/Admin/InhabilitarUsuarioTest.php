@@ -10,12 +10,12 @@ test('un admin puede inhabilitar a otro usuario', function () {
 
     $response = $this
         ->actingAs($admin)
-        ->from(route('dashboard'))
+        ->from(route('publicaciones.index'))
         ->patch(route('admin.usuarios.inhabilitar', $otroUsuario));
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('dashboard'))
+        ->assertRedirect(route('publicaciones.index'))
         ->assertSessionHas('success', 'Usuario inhabilitado correctamente.');
 
     $otroUsuario->refresh();
@@ -37,12 +37,12 @@ test('un admin puede reactivar a un usuario inhabilitado', function () {
 
     $response = $this
         ->actingAs($admin)
-        ->from(route('dashboard'))
+        ->from(route('publicaciones.index'))
         ->patch(route('admin.usuarios.inhabilitar', $otroUsuario));
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('dashboard'))
+        ->assertRedirect(route('publicaciones.index'))
         ->assertSessionHas('success', 'Usuario reactivado correctamente.');
 
     $otroUsuario->refresh();

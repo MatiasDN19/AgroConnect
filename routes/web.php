@@ -16,13 +16,8 @@ use App\Http\Controllers\SocioController;
 use App\Http\Controllers\SolicitudCompraController;
 use App\Models\Publicacion;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/categorias/disponibles', [CategoriaController::class, 'listado'])->name('categorias.disponibles');

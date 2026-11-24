@@ -18,7 +18,7 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertRedirect(route('publicaciones.index', absolute: false));
 });
 
 test('registration saves the chosen role (productor)', function () {
@@ -31,7 +31,7 @@ test('registration saves the chosen role (productor)', function () {
     ]);
 
     $response->assertSessionHasNoErrors();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertRedirect(route('publicaciones.index', absolute: false));
 
     $this->assertDatabaseHas('users', [
         'email' => 'productor@example.com',
@@ -54,7 +54,7 @@ test('registration saves the chosen role (comprador)', function () {
     ]);
 
     $response->assertSessionHasNoErrors();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertRedirect(route('publicaciones.index', absolute: false));
 
     $this->assertDatabaseHas('users', [
         'email' => 'comprador@example.com',
