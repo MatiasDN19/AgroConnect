@@ -208,6 +208,155 @@ Relacionada: KAN-231 (la misma Historia, versión Web) y KAN-85 (selector de rol
 
 </details>
 
+### KAN-235 — Ver los mensajes de error y avisos del sistema en castellano
+
+> Como usuario, quiero que los mensajes de error y avisos que genera el sistema (login incorrecto, campos obligatorios, recuperación de contraseña) estén en castellano, para entender qué pasó sin saber inglés.
+>
+> Criterios de aceptación:
+>
+> * El login incorrecto, las validaciones de los formularios y los correos y avisos de recuperación de contraseña se muestran en castellano rioplatense.
+> * Los mensajes personalizados que ya están en castellano en los FormRequest no cambian.
+> * Los tests existentes siguen pasando.
+
+<details>
+<summary>**KAN-236** [backend] — Backend: configurar el idioma español y agregar las traducciones de Laravel</summary>
+
+Archivos a crear/modificar:
+
+* `.env.example` y `config/app.php` — `APP_LOCALE=es` (y `APP_FALLBACK_LOCALE=en`).
+* `lang/es/auth.php`, `lang/es/passwords.php`, `lang/es/validation.php`, `lang/es/pagination.php` (crear; se pueden publicar con `php artisan lang:publish` y traducir, o tomar una traducción comunitaria revisándola).
+* `lang/es.json` (textos sueltos de Breeze, por ejemplo los del correo de recuperación de contraseña).
+
+Guía:
+
+1. Publicar los archivos de idioma y traducirlos al castellano rioplatense (vos/tenés).
+2. En `validation.php`, completar `attributes` con los nombres de los campos en castellano (email → correo electrónico, password → contraseña, name → nombre, etc.).
+3. Revisar los tests que comparen mensajes en inglés de Laravel y actualizarlos si hace falta.
+4. Cada integrante agrega `APP_LOCALE=es` a su `.env` local.
+
+</details>
+
+<details>
+<summary>**KAN-237** [backend] — Tests: verificar que los mensajes de autenticación y validación salen en castellano</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Auth/AuthenticationTest.php` y `tests/Feature/Auth/RegistrationTest.php` (agregar casos).
+
+Guía:
+
+1. Login con contraseña incorrecta → el error de `email` está en castellano.
+2. Registro con campos vacíos → los errores de validación están en castellano.
+
+Relacionada: KAN-231 (rediseño del login y registro web, ya en castellano del lado del frontend).
+
+</details>
+
+### KAN-238 — Ingresar o registrarme con mi cuenta de Google, Facebook o Apple
+
+> Como usuario, quiero ingresar o registrarme con mi cuenta de Google, Facebook o Apple, para no tener que crear y recordar otra contraseña.
+>
+> Criterios de aceptación:
+>
+> * Los botones de Google, Facebook y Apple de las pantallas de ingreso (hoy deshabilitados como "próximamente", ver KAN-231) funcionan.
+> * Si es la primera vez, se crea la cuenta y se le pide al usuario elegir su rol (productor o comprador), igual que en el registro común.
+> * Si ya existe un usuario con ese correo, se vincula la red social a esa cuenta en lugar de duplicarla.
+> * Los usuarios inhabilitados no pueden ingresar por esta vía.
+
+<details>
+<summary>**KAN-239** [backend] — Backend: ingreso con redes sociales usando Laravel Socialite</summary>
+
+Archivos a crear/modificar:
+
+* `composer.json` — agregar `laravel/socialite` (consultarlo con el equipo antes de instalar).
+* Migración nueva para guardar el proveedor y el id externo del usuario (por ejemplo, tabla `cuentas_sociales` con `usuario_id`, `proveedor`, `proveedor_id`).
+* `app/Http/Controllers/Auth/SocialController.php` (nuevo): `redirigir($proveedor)` y `callback($proveedor)`.
+* `routes/auth.php` — rutas de redirección y callback.
+* `config/services.php` y `.env.example` — credenciales de cada proveedor.
+
+Guía:
+
+1. Empezar por Google (el más simple de configurar); Facebook y Apple después, cada uno necesita su cuenta de desarrollador.
+2. Si el correo ya existe, vincular; si no, crear el usuario y redirigir a elegir el rol.
+3. Respetar el bloqueo de usuarios inhabilitados.
+
+</details>
+
+<details>
+<summary>**KAN-240** [frontend] — Frontend Web: conectar los botones de redes sociales y elegir el rol después del primer ingreso</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/Auth/RedesProximamente.tsx` — pasar de botones deshabilitados a links a las rutas de redirección (y renombrar el componente).
+* `resources/js/Pages/Auth/ElegirRol.tsx` (nuevo) — elegir productor o comprador después del primer ingreso con una red social, reusando las tarjetas de rol del registro.
+
+Guía:
+
+1. Mostrar habilitados solo los proveedores que ya estén configurados en el backend.
+2. Mostrar un error claro si el proveedor rechaza el ingreso o el usuario cancela.
+
+</details>
+
+<details>
+<summary>**KAN-241** [backend] — Tests: ingreso con redes sociales (creación, vinculación y usuario inhabilitado)</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/Auth/SocialLoginTest.php` (nuevo), mockeando Socialite.
+
+Guía:
+
+1. Primer ingreso crea el usuario y pide el rol.
+2. Correo existente vincula la cuenta sin duplicarla.
+3. Usuario inhabilitado no puede ingresar.
+
+Relacionada: KAN-231 (botones visibles como "próximamente").
+
+</details>
+
+### KAN-242 — Leer los términos y condiciones y la política de privacidad
+
+> Como usuario, quiero poder leer los términos y condiciones y cómo se usan mis datos, para saber a qué me comprometo al registrarme (Ley 25.326 de Protección de Datos Personales).
+>
+> Criterios de aceptación:
+>
+> * Hay una página pública con los términos y condiciones y la política de privacidad, accesible desde el login, el registro y el pie de la landing.
+> * El texto está revisado por el equipo y aprobado por el Consorcio antes de publicarse.
+> * En el registro queda claro que al crear la cuenta se aceptan los términos (con un link a la página).
+
+<details>
+<summary>**KAN-243** [backend] — Redactar los términos y condiciones y la política de privacidad</summary>
+
+Archivos a crear/modificar:
+
+* `docs/terminos-y-condiciones.md` (borrador del texto).
+
+Guía:
+
+1. Cubrir: qué es AgroConnect, compra directa sin pasarela de pago (el acuerdo se cierra entre las partes), responsabilidades de productores y compradores, denuncias y moderación, datos que se guardan y para qué (Ley 25.326), y cómo pedir la baja de la cuenta.
+2. Hacerlo revisar por el equipo y aprobar por el Consorcio.
+
+</details>
+
+<details>
+<summary>**KAN-244** [frontend] — Frontend Web: página de términos y condiciones y links desde login, registro y landing</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Terminos.tsx` (nuevo) y su ruta pública en `routes/web.php`.
+* `resources/js/Layouts/GuestLayout.tsx` — reemplazar "Términos y condiciones · Próximamente" por el link (ver KAN-231).
+* `resources/js/Pages/Auth/Register.tsx` — texto "Al crear tu cuenta aceptás los términos y condiciones" con link.
+* `resources/js/Components/Landing/Pie.tsx` — link en el pie.
+
+Guía:
+
+1. Depende de la Subtarea "Redactar los términos y condiciones y la política de privacidad" (el texto aprobado).
+2. Misma identidad visual que la landing, legible en celular.
+
+Relacionada: KAN-231.
+
+</details>
+
 ---
 
 ## Epic: KAN-5 — Categorías
