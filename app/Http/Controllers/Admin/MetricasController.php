@@ -32,7 +32,23 @@ class MetricasController extends Controller
         }
 
         return Inertia::render('Admin/Metricas/Index', [
-            'metricas' => $metricas,
+            // Para el resumen del panel se suman las solicitudes de socio sin validar
+            // (misma consulta que el panel de Socios). La respuesta JSON no cambia. KAN-159.
+            'metricas' => [
+                ...$metricas,
+                'total_socios_pendientes' => User::whereNotNull('numero_socio')
+                    ->where('socio_validado', false)
+                    ->count(),
+            ],
+            // Columna "últimas denuncias" del resumen (KAN-159): las 5 pendientes más
+            // recientes, solo con lo que se muestra (motivo, fecha y publicación).
+            'ultimas_denuncias' => Denuncia::query()
+                ->where('estado', Denuncia::ESTADO_PENDIENTE)
+                ->with('publicacion:id,titulo')
+                ->latest()
+                ->latest('id')
+                ->limit(5)
+                ->get(['id', 'publicacion_id', 'motivo', 'created_at']),
         ]);
     }
 }
