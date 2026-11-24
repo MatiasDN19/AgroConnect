@@ -148,3 +148,49 @@ test('los usuarios invitados no autenticados son redirigidos al login al intenta
     $this->getJson(route('admin.resumen'))
         ->assertUnauthorized();
 });
+
+// --- KAN-159: socios pendientes y últimas denuncias para el resumen del panel ---
+
+test('el resumen incluye el conteo de solicitudes de socio pendientes', function () {
+    $admin = User::factory()->create(['rol' => User::ROL_ADMIN]);
+
+    User::factory()->create(['rol' => User::ROL_PRODUCTOR, 'numero_socio' => 'CPL-1', 'socio_validado' => false]);
+    User::factory()->create(['rol' => User::ROL_PRODUCTOR, 'numero_socio' => 'CPL-2', 'socio_validado' => true]);
+    User::factory()->create(['rol' => User::ROL_PRODUCTOR, 'numero_socio' => null]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.resumen'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('metricas.total_socios_pendientes', 1));
+});
+
+test('el resumen muestra las 5 denuncias pendientes mas recientes con su publicacion', function () {
+    $admin = User::factory()->create(['rol' => User::ROL_ADMIN]);
+    $publicacion = Publicacion::factory()->create(['titulo' => 'Zapallo de prueba']);
+
+    // 6 pendientes (una más vieja que queda afuera) y una revisada que no cuenta.
+    $this->travel(-10)->days();
+    Denuncia::factory()->create(['estado' => Denuncia::ESTADO_PENDIENTE, 'motivo' => 'La más vieja']);
+    $this->travelBack();
+    foreach (range(1, 5) as $i) {
+        $this->travel($i)->minutes();
+        Denuncia::factory()->create([
+            'estado' => Denuncia::ESTADO_PENDIENTE,
+            'publicacion_id' => $publicacion->id,
+            'motivo' => "Motivo {$i}",
+        ]);
+    }
+    Denuncia::factory()->create(['estado' => Denuncia::ESTADO_REVISADA, 'motivo' => 'Ya revisada']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.resumen'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('ultimas_denuncias', 5)
+            ->where('ultimas_denuncias.0.motivo', 'Motivo 5')
+            ->where('ultimas_denuncias.0.publicacion.titulo', 'Zapallo de prueba')
+            // Solo viaja lo que se muestra: ni la descripción ni quién denunció.
+            ->missing('ultimas_denuncias.0.descripcion')
+            ->missing('ultimas_denuncias.0.usuario_id')
+        );
+});
