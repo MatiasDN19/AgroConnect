@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Denuncia, EstadoDenuncia } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Check, RotateCcw, X } from 'lucide-react';
+import { Check, RotateCcw, ShieldAlert, X } from 'lucide-react';
 import { CSSProperties, useState } from 'react';
 
 // Pestañas de filtro (?estado=). Sin parámetro, el backend muestra las pendientes.
@@ -210,6 +210,26 @@ export default function Index({
                                                                     ?.name ??
                                                                     'usuario desconocido'}
                                                             </p>
+                                                            {/* Atajo a la moderación (KAN-222): abre la sección de
+                                                                Publicaciones ya filtrada por esta publicación. */}
+                                                            <Link
+                                                                href={route(
+                                                                    'admin.publicaciones.index',
+                                                                    {
+                                                                        q: denuncia
+                                                                            .publicacion
+                                                                            .titulo,
+                                                                    },
+                                                                )}
+                                                                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline"
+                                                            >
+                                                                <ShieldAlert
+                                                                    className="h-3.5 w-3.5"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                Moderar
+                                                                publicación
+                                                            </Link>
                                                         </>
                                                     ) : (
                                                         <span className="text-slate-400">

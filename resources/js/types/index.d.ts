@@ -19,11 +19,17 @@ export interface Publicacion {
     precio: string; // viene como "1234.50" por el cast decimal:2 de Laravel
     unidad: string;
     stock: number;
-    estado?: 'activa' | 'pausada' | 'vendida';
+    estado?: EstadoPublicacion;
+    // Moderación (KAN-221/222). El backend los manda solo al dueño y al admin.
+    motivo_bloqueo?: string | null;
+    bloqueada_at?: string | null;
     // Ordenadas por "orden": la primera es la portada (KAN-204/205).
     // En el listado viene solo la portada; en el detalle y la edición, todas.
     fotos?: PublicacionFoto[];
 }
+
+// "bloqueada" la pone solo un admin; el dueño no puede cambiarla (KAN-221).
+export type EstadoPublicacion = 'activa' | 'pausada' | 'vendida' | 'bloqueada';
 
 export interface PublicacionFoto {
     id: number;
