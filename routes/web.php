@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\MetricasController;
+use App\Http\Controllers\Admin\PublicacionModeracionController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\CategoriaController;
@@ -76,6 +77,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::match(['post', 'patch'], '/admin/socios/{usuario}/rechazar', [SocioController::class, 'rechazar'])->name('admin.socios.rechazar');
     Route::get('/admin/configuracion', [ConfiguracionController::class, 'edit'])->name('admin.configuracion.edit');
     Route::put('/admin/configuracion', [ConfiguracionController::class, 'update'])->name('admin.configuracion.update');
+    Route::get('/admin/publicaciones', [PublicacionModeracionController::class, 'index'])->name('admin.publicaciones.index');
+    Route::patch('/admin/publicaciones/{publicacion}/bloquear', [PublicacionModeracionController::class, 'bloquear'])->name('admin.publicaciones.bloquear');
+    Route::patch('/admin/publicaciones/{publicacion}/desbloquear', [PublicacionModeracionController::class, 'desbloquear'])->name('admin.publicaciones.desbloquear');
+    Route::delete('/admin/publicaciones/{publicacion}', [PublicacionModeracionController::class, 'destroy'])->name('admin.publicaciones.destroy');
 });
 
 require __DIR__.'/auth.php';

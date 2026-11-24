@@ -144,8 +144,11 @@ class PublicacionController extends Controller
             ->latest('id')
             ->first(['estado', 'created_at']);
 
+        $user = $request->user();
+        $esDuenioOAdmin = $user && ($user->id === $publicacion->usuario_id || $user->esAdmin());
+
         return Inertia::render('Publicaciones/Show', [
-            'publicacion' => $publicacion,
+            'publicacion' => $publicacion->makeHidden($esDuenioOAdmin ? [] : ['motivo_bloqueo', 'bloqueada_por', 'bloqueada_at']),
             'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
             'mi_denuncia' => $miDenuncia,
             'mi_solicitud' => $miSolicitud,

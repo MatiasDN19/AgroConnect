@@ -19,8 +19,8 @@ class PublicacionObserver
      */
     public function updating(Publicacion $publicacion): void
     {
-        // Si el estado es "vendida", no se altera automáticamente por stock.
-        if ($publicacion->estado === Publicacion::ESTADO_VENDIDA) {
+        // Si el estado es "vendida" o "bloqueada", no se altera automáticamente por stock.
+        if (in_array($publicacion->estado, [Publicacion::ESTADO_VENDIDA, Publicacion::ESTADO_BLOQUEADA])) {
             return;
         }
 

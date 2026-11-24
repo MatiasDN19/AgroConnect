@@ -13,6 +13,11 @@ class CambiarEstadoPublicacionRequest extends FormRequest
         /** @var Publicacion $publicacion */
         $publicacion = $this->route('publicacion');
 
+        // Si la publicación está bloqueada por un administrador, el dueño no puede cambiar el estado
+        if ($publicacion && $publicacion->estaBloqueada()) {
+            return false;
+        }
+
         return $this->user()->can('update', $publicacion);
     }
 
