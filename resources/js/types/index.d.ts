@@ -20,6 +20,16 @@ export interface Publicacion {
     unidad: string;
     stock: number;
     estado?: 'activa' | 'pausada' | 'vendida';
+    // Ordenadas por "orden": la primera es la portada (KAN-204/205).
+    // En el listado viene solo la portada; en el detalle y la edición, todas.
+    fotos?: PublicacionFoto[];
+}
+
+export interface PublicacionFoto {
+    id: number;
+    ruta: string;
+    orden: number;
+    url: string; // URL pública lista para el <img> (Storage::url)
 }
 
 export interface Resena {

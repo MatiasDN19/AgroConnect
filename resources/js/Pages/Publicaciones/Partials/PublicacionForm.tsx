@@ -2,14 +2,16 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Categoria } from '@/types';
+import { Categoria, PublicacionFoto } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { FormEventHandler } from 'react';
+import CampoFotos from './CampoFotos';
 import usePrecioSugerido from './usePrecioSugerido';
 
 // Campos del formulario de publicación, compartidos por Create y Edit.
-// Los valores van como string porque es lo que devuelven los inputs;
+// Los valores de texto van como string porque es lo que devuelven los inputs;
 // Laravel los valida como numéricos/enteros del lado del servidor.
+// Con archivos en "fotos", useForm manda el formulario como multipart/form-data.
 export type PublicacionFormData = {
     categoria_id: string;
     titulo: string;
@@ -17,6 +19,8 @@ export type PublicacionFormData = {
     precio: string;
     unidad: string;
     stock: string;
+    fotos: File[]; // fotos nuevas, ya achicadas (KAN-205)
+    fotos_eliminar: number[]; // ids de fotos guardadas a quitar (solo en Edit)
 };
 
 // Sugerencias para el campo unidad (se puede escribir otra).
@@ -43,14 +47,20 @@ export default function PublicacionForm({
     categorias,
     onSubmit,
     textoBoton,
+    fotosExistentes = [],
 }: {
     data: PublicacionFormData;
-    setData: (campo: keyof PublicacionFormData, valor: string) => void;
-    errors: Partial<Record<keyof PublicacionFormData, string>>;
+    setData: <K extends keyof PublicacionFormData>(
+        campo: K,
+        valor: PublicacionFormData[K],
+    ) => void;
+    // Record<string, ...> porque los errores de cada foto llegan como "fotos.0", "fotos.1"...
+    errors: Partial<Record<string, string>>;
     processing: boolean;
     categorias: Pick<Categoria, 'id' | 'nombre'>[];
     onSubmit: FormEventHandler;
     textoBoton: string;
+    fotosExistentes?: PublicacionFoto[];
 }) {
     // Se pide antes del return temprano: los hooks no pueden ir después de un return.
     const referencia = usePrecioSugerido(data.categoria_id, data.unidad);
@@ -214,6 +224,18 @@ export default function PublicacionForm({
                     <InputError className="mt-2" message={errors.stock} />
                 </div>
             </div>
+
+            <CampoFotos
+                existentes={fotosExistentes}
+                eliminar={data.fotos_eliminar}
+                onEliminarChange={(ids) => setData('fotos_eliminar', ids)}
+                nuevas={data.fotos}
+                onNuevasChange={(archivos) => setData('fotos', archivos)}
+                // "fotos" (cantidad total) y "fotos.N" (tamaño o formato de cada una)
+                errores={Object.entries(errors)
+                    .filter(([campo]) => campo.startsWith('fotos'))
+                    .map(([, mensaje]) => mensaje as string)}
+            />
 
             <div className="flex justify-end">
                 <PrimaryButton disabled={processing}>

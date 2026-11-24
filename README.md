@@ -41,7 +41,10 @@ composer install
 # 5. Migrar y cargar datos de ejemplo (categorías + usuarios de prueba)
 ./vendor/bin/sail artisan migrate --seed
 
-# 6. Dependencias de JS y build del frontend
+# 6. Enlazar el almacenamiento público (sin esto no se ven las fotos de las publicaciones)
+./vendor/bin/sail artisan storage:link
+
+# 7. Dependencias de JS y build del frontend
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run dev
 ```

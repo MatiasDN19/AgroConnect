@@ -2,6 +2,7 @@ import DenunciarPublicacion, {
     MiDenuncia,
 } from '@/Components/DenunciarPublicacion';
 import Estrellas from '@/Components/Estrellas';
+import GaleriaFotos from '@/Components/GaleriaFotos';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import ResenaForm from '@/Components/ResenaForm';
@@ -10,7 +11,14 @@ import SocioBadge from '@/Components/SocioBadge';
 import SolicitarCompra, { MiSolicitud } from '@/Components/SolicitarCompra';
 import WhatsappButton from '@/Components/WhatsappButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Categoria, PageProps, Publicacion, Resena, User } from '@/types';
+import {
+    Categoria,
+    PageProps,
+    Publicacion,
+    PublicacionFoto,
+    Resena,
+    User,
+} from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -20,6 +28,7 @@ type PublicacionDetalle = Publicacion & {
     categoria: Pick<Categoria, 'id' | 'nombre'>;
     usuario: Pick<User, 'id' | 'name' | 'telefono' | 'socio_validado'>;
     resenas: Resena[];
+    fotos: PublicacionFoto[];
 };
 
 const formatoFecha = new Intl.DateTimeFormat('es-AR', {
@@ -119,6 +128,12 @@ export default function Show({
                     <div className="grid gap-6 lg:grid-cols-3">
                         {/* Datos de la publicación */}
                         <section className="space-y-4 bg-white p-6 shadow-sm sm:rounded-lg lg:col-span-2">
+                            <GaleriaFotos
+                                fotos={publicacion.fotos ?? []}
+                                titulo={publicacion.titulo}
+                                categoria={publicacion.categoria.nombre}
+                            />
+
                             <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
                                 {publicacion.categoria.nombre}
                             </span>

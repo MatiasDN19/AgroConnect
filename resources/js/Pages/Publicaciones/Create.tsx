@@ -17,11 +17,14 @@ export default function Create({
             precio: '',
             unidad: '',
             stock: '',
+            fotos: [],
+            fotos_eliminar: [],
         });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
+        // Si hay fotos, useForm lo manda solo como multipart/form-data.
         post(route('publicaciones.store'));
     };
 
