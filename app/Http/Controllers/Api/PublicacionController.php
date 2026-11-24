@@ -56,7 +56,11 @@ class PublicacionController extends Controller
         }
 
         $publicaciones = $query
-            ->with(['categoria:id,nombre', 'usuario:id,name,telefono,lat,lng,socio_validado'])
+            ->with([
+                'categoria:id,nombre',
+                'usuario:id,name,telefono,lat,lng,socio_validado',
+                'fotos' => fn ($q) => $q->orderBy('orden')->limit(1),
+            ])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
             ->get();
 
@@ -72,6 +76,7 @@ class PublicacionController extends Controller
             'usuario:id,name,email,telefono,lat,lng,socio_validado',
             'categoria:id,nombre,descripcion',
             'resenas.usuario:id,name',
+            'fotos' => fn ($q) => $q->orderBy('orden'),
         ]);
 
         return new PublicacionResource($publicacion);
