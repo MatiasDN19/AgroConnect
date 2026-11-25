@@ -407,6 +407,31 @@ Depende de: la tarea de backend de esta historia.
 
 </details>
 
+<details>
+<summary>**KAN-329** [frontend] — Frontend Flutter: manejo de errores de la API (sin conexión, sesión vencida, cuenta inhabilitada)</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/services/api_client.dart` (o el cliente HTTP que use la app) — interceptor de errores.
+* `lib/widgets/estado_error.dart` (nuevo) — pantalla/estado de error reutilizable.
+
+Guía:
+
+1. Interceptor central que lea el `code` de las respuestas de error de la API (KAN-311):
+
+    * `no_autenticado` (401): borrar el token guardado y volver al login con "Tu sesión venció, ingresá de nuevo".
+    * `cuenta_inhabilitada` (403): borrar el token y mostrar "Tu cuenta fue inhabilitada".
+    * `email_no_verificado` (409): llevar a la pantalla de verificación de email.
+    * `demasiados_intentos` (429): mostrar "Demasiados intentos, probá en un rato".
+    * 500/503: "Algo salió mal, probá de nuevo" con botón "Reintentar".
+    
+2. Sin conexión: detectar el error de red y mostrar "Sin conexión" con "Reintentar" (importante en zonas rurales).
+3. Un widget de error reutilizable para todas las pantallas.
+
+Depende de: KAN-311 (formato de errores de la API).
+
+</details>
+
 ## Epic: KAN-5 — Categorías
 
 _ABM de categorías para que el admin organice el catálogo, y su uso para navegar/filtrar publicaciones. El modelo Categoria ya existe en la base de datos._
@@ -1320,6 +1345,25 @@ Depende de: la tarea de backend de esta historia (ruta `publicaciones.mias`).
 
 </details>
 
+<details>
+<summary>**KAN-326** [frontend] — Frontend Flutter: pantalla "Mis publicaciones"</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/screens/mis_publicaciones_screen.dart` (nuevo).
+* `lib/services/publicacion_service.dart` — método `misPublicaciones(estado)`.
+
+Guía:
+
+1. Arriba el resumen (activas, pausadas, vendidas, bloqueadas, solicitudes pendientes) y pestañas por estado.
+2. Lista de publicaciones con su estado en un chip y acciones: editar, pausar/reactivar, marcar vendida (endpoint de cambio de estado que ya existe). Las bloqueadas muestran el motivo.
+3. Scroll infinito con la paginación de la API.
+4. Acceso desde el menú principal (solo productores).
+
+Depende de: KAN-310 (endpoint `GET /api/mis-publicaciones`). Versión web: KAN-259.
+
+</details>
+
 ---
 
 ### KAN-254 — Ver el perfil público de un productor
@@ -1386,6 +1430,25 @@ Guía:
 4. Mismo estilo que el Inicio (KAN-211).
 
 Depende de: la tarea de backend de esta historia (ruta `productores.show`).
+
+</details>
+
+<details>
+<summary>**KAN-327** [frontend] — Frontend Flutter: pantalla del perfil público del productor</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/screens/perfil_productor_screen.dart` (nuevo).
+* `lib/services/productor_service.dart` (nuevo).
+* Pantalla de detalle de publicación (KAN-118) — tocar el nombre del productor lleva a su perfil.
+
+Guía:
+
+1. Cabecera con iniciales, nombre, insignia de socio, localidad, "En AgroConnect desde …" y promedio de reseñas.
+2. Grilla de sus publicaciones activas con scroll infinito.
+3. Estado vacío si no tiene publicaciones activas.
+
+Depende de: KAN-310 (endpoint `GET /api/productores/{usuario}`). Versión web: KAN-262.
 
 </details>
 
@@ -1527,6 +1590,74 @@ Guía:
 2. Listá las reseñas (puntuación, comentario, nombre de quien la dejó) debajo de los datos de la publicación.
 3. Mostrá la puntuación promedio arriba del listado.
 4. Si no hay reseñas todavía, mostrá un estado vacío claro.
+
+</details>
+
+---
+
+### KAN-286 — Ver qué reseñas son de compras verificadas
+
+> Como comprador, quiero distinguir las reseñas de personas que realmente le compraron al productor, para confiar más en ellas y evitar reseñas falsas o de la competencia.
+>
+> Criterios de aceptación:
+>
+> * Una reseña lleva la insignia "Compra verificada" si su autor tuvo una solicitud de compra **aceptada** sobre esa publicación.
+> * Las demás reseñas se siguen mostrando normalmente (no se bloquean).
+> * La insignia se ve en el detalle de la publicación, en la web y en la app móvil.
+
+<details>
+<summary>**KAN-304** [backend] — Backend: marcar las reseñas de compras verificadas</summary>
+
+Archivos a crear/modificar:
+
+* `app/Models/Resena.php` — atributo calculado o método `esCompraVerificada()`.
+* `app/Http/Controllers/PublicacionController.php` — en `show()`, mandar `compra_verificada` en cada reseña.
+* `app/Http/Controllers/Api/ResenaController.php` y su Resource — lo mismo en la API.
+* `tests/Feature/ResenaControllerTest.php` — agregar casos.
+
+Guía:
+
+1. Una reseña es de compra verificada si su autor tiene una `SolicitudCompra` en estado `aceptada` sobre esa misma publicación.
+2. Calcularlo sin consultas por reseña (N+1): por ejemplo, traer en una sola consulta los `usuario_id` con solicitud aceptada en esa publicación y marcar cada reseña con `in_array`.
+3. No cambia quién puede reseñar: todas las reseñas se siguen aceptando y mostrando.
+4. Tests: la reseña de un comprador con solicitud aceptada sale con `compra_verificada = true`; con solicitud pendiente, rechazada o sin solicitud, `false`.
+
+Relacionada: tareas de frontend web y Flutter de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-317** [frontend] — Frontend Web: insignia "Compra verificada" en las reseñas</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Show.tsx` — listado de reseñas.
+* `resources/js/types/index.d.ts` — `compra_verificada` en `Resena`.
+
+Guía:
+
+1. Si `compra_verificada` es `true`, mostrar al lado del nombre un chip verde con ícono de check: "Compra verificada", con un `title` que explique "Le compró a este productor por AgroConnect".
+2. Opcional: un filtro "Solo compras verificadas" arriba de las reseñas, si hay más de 3.
+3. Mismo estilo que la insignia de socio (`SocioBadge`), pero en verde para que no se confundan.
+
+Depende de: KAN-304.
+
+</details>
+
+<details>
+<summary>**KAN-332** [frontend] — Frontend Flutter: insignia "Compra verificada" en las reseñas</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* Listado de reseñas del detalle (KAN-127).
+* Modelo de reseña — campo `compraVerificada`.
+
+Guía:
+
+1. Si la reseña trae `compra_verificada = true`, mostrar al lado del nombre un chip verde con ícono de check: "Compra verificada".
+2. Mismo estilo que la insignia de socio de la app (KAN-176), pero en verde.
+
+Depende de: KAN-304. Versión web: KAN-317.
 
 </details>
 
@@ -2251,6 +2382,212 @@ Guía:
 
 ---
 
+### KAN-289 — Exponer API REST de perfil
+
+> Como usuario de la app móvil, quiero ver y editar mi perfil desde la app, para cargar mi teléfono, mi ubicación, mi preferencia de mails y mi número de socio sin entrar a la web.
+>
+> Criterios de aceptación:
+>
+> * La API permite ver el perfil propio y editar nombre, teléfono, ubicación (lat/lng), localidad y preferencia de mail.
+> * La API permite solicitar la validación como socio del Consorcio y ver el estado.
+> * Las validaciones y los mensajes son los mismos que en la web.
+>
+> Destraba: KAN-88, KAN-125, KAN-136 y KAN-143 (Flutter).
+
+<details>
+<summary>**KAN-306** [backend] — Backend: endpoints de la API para ver y editar el perfil y solicitar socio</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/PerfilController.php` (nuevo) — `show()`, `update()`, `solicitarSocio()`.
+* `app/Http/Resources/UsuarioResource.php` (nuevo) — qué datos del usuario devuelve la API.
+* `routes/api.php` — `GET /api/perfil`, `PATCH /api/perfil`, `PATCH /api/perfil/socio`.
+* `tests/Feature/Api/PerfilApiTest.php` (nuevo).
+
+Guía:
+
+1. Reusar las validaciones de la web: `ProfileUpdateRequest` (nombre, email, teléfono, lat/lng, localidad, `notificar_por_mail`) y la del socio de `ProfileController::updateSocio()`, para que las reglas y los mensajes sean idénticos.
+2. `UsuarioResource`: id, nombre, email, rol, teléfono, lat/lng, localidad, `notificar_por_mail`, número de socio y `socio_validado`, `email_verified_at`. Usarlo también en `GET /api/user`.
+3. Si cambia el email, `email_verified_at` vuelve a null (igual que la web).
+4. Tests: ver y editar el perfil propio, errores 422 con mensajes en castellano, solicitar socio deja el estado pendiente, invitado da 401.
+
+Destraba: KAN-88, KAN-125, KAN-136, KAN-143 (Flutter).
+
+</details>
+
+---
+
+### KAN-290 — Exponer API REST de solicitudes de compra
+
+> Como usuario de la app móvil, quiero solicitar compras y gestionar las solicitudes desde la app, igual que en la web.
+>
+> Criterios de aceptación:
+>
+> * La API permite crear una solicitud (con cantidad y mensaje), listar las recibidas (productor), aceptarlas o rechazarlas, listar las enviadas (comprador) y cancelar una pendiente.
+> * Expone la cantidad de solicitudes pendientes del productor (para el número en la app).
+> * Las reglas son las mismas que en la web: stock, una pendiente por publicación, contacto solo en las aceptadas.
+>
+> Destraba: KAN-120 y KAN-155 (Flutter) y las pantallas nuevas de solicitudes enviadas.
+
+<details>
+<summary>**KAN-307** [backend] — Backend: endpoints de la API de solicitudes de compra (crear, recibidas, responder, enviadas, cancelar)</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/SolicitudCompraController.php` (nuevo).
+* `app/Http/Resources/SolicitudCompraResource.php` (nuevo).
+* `routes/api.php`.
+* `tests/Feature/Api/SolicitudCompraApiTest.php` (nuevo).
+
+Guía:
+
+1. Endpoints:
+
+    * `POST /api/publicaciones/{publicacion}/solicitudes-compra` — crear (cantidad, mensaje). Reusar `StoreSolicitudCompraRequest`.
+    * `GET /api/solicitudes-compra/recibidas` — del productor, paginadas, filtro `?estado=`.
+    * `PATCH /api/solicitudes-compra/{solicitud}` — aceptar/rechazar (descuenta stock igual que la web, KAN-251).
+    * `GET /api/solicitudes-compra/enviadas` — del comprador.
+    * `PATCH /api/solicitudes-compra/{solicitud}/cancelar` — si ya existe la cancelación web (historia "Cancelar una solicitud de compra pendiente").
+    * `GET /api/solicitudes-compra/pendientes/cantidad` — número de pendientes del productor.
+    
+2. **No duplicar la lógica**: mover lo que hoy está en `SolicitudCompraController` web (crear, aceptar con descuento de stock en transacción, alertas de KAN-250, cancelar) a un servicio (ej. `app/Services/SolicitudCompraService.php`) que usen los dos controladores.
+3. El contacto (teléfono/email) solo en las aceptadas, igual que la web.
+4. Tests: cada endpoint, permisos (un productor no ve las de otro, un comprador no puede aceptar), stock insuficiente da 422.
+
+Destraba: KAN-120 y KAN-155 (Flutter) y la pantalla Flutter de solicitudes enviadas.
+
+</details>
+
+---
+
+### KAN-291 — Exponer API REST de favoritos
+
+> Como usuario de la app móvil, quiero marcar publicaciones como favoritas y ver mis favoritos desde la app.
+>
+> Criterios de aceptación:
+>
+> * La API permite listar mis favoritos, marcar y desmarcar una publicación.
+> * El detalle de una publicación en la API indica si es favorita del usuario (`es_favorito`).
+>
+> Destraba: KAN-191 (Flutter).
+
+<details>
+<summary>**KAN-308** [backend] — Backend: endpoints de la API de favoritos y es_favorito en el detalle</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/FavoritoController.php` (nuevo).
+* `app/Http/Controllers/Api/PublicacionController.php` — en `show()`, sumar `es_favorito`.
+* `routes/api.php` — `GET /api/favoritos`, `POST /api/publicaciones/{publicacion}/favorito`, `DELETE /api/publicaciones/{publicacion}/favorito`.
+* `tests/Feature/Api/FavoritoApiTest.php` (nuevo).
+
+Guía:
+
+1. Mismo comportamiento que las rutas web de `FavoritoController` (KAN-185/247): marcar dos veces no duplica; desmarcar una que no es favorita no da error.
+2. `GET /api/favoritos`: publicaciones favoritas del usuario con los datos de la tarjeta (portada, categoría, precio, promedio), paginadas.
+3. `es_favorito` en el detalle de la API, con el mismo cálculo que la web (KAN-247).
+4. Tests: marcar, desmarcar, listar; `es_favorito` correcto; solo se ven los favoritos propios.
+
+Destraba: KAN-191 (Flutter).
+
+</details>
+
+---
+
+### KAN-292 — Completar la API REST de publicaciones
+
+> Como usuario de la app móvil, quiero tener en la app todo lo que ofrece el marketplace web: fotos, búsqueda, cercanía, precio sugerido, mapa, mis publicaciones y el perfil de los productores.
+>
+> Criterios de aceptación:
+>
+> * Crear y editar publicaciones con fotos (mismos límites que la web).
+> * El listado acepta búsqueda, categoría, cercanía y paginación, igual que la web, y trae las categorías con su cantidad.
+> * Endpoints de precio sugerido, mapa, "mis publicaciones" (con resumen) y perfil público del productor.
+> * Las respuestas no exponen datos privados (email, ubicación exacta).
+>
+> Destraba: KAN-97, KAN-102, KAN-206, KAN-113, KAN-115, KAN-137, KAN-153 y KAN-175 (Flutter) y las pantallas nuevas de mis publicaciones y perfil público.
+
+<details>
+<summary>**KAN-309** [backend] — Backend: fotos, búsqueda, cercanía y paginación en la API de publicaciones</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/PublicacionController.php` — `index()`, `store()`, `update()`.
+* `app/Http/Resources/PublicacionResource.php` — fotos (url, orden) y distancia.
+* `tests/Feature/Api/PublicacionApiTest.php` — agregar casos.
+
+Guía:
+
+1. `index()`: aceptar `q`, `categoria_id`, `lat`/`lng` (cercanía) y paginar de a 12, igual que `PublicacionController::index()` web (KAN-209/171). Mover la consulta a un método compartido (scope o servicio) para no tener dos versiones distintas de la misma lógica.
+2. Devolver también las categorías con su cantidad de publicaciones activas (para el filtro de la app).
+3. `store()`/`update()`: aceptar fotos (`multipart/form-data`) con las mismas reglas que la web (`StorePublicacionRequest`/`UpdatePublicacionRequest`, límites de KAN-225), incluyendo ordenar y borrar fotos al editar.
+4. El resource incluye las fotos con su URL pública y, al ordenar por cercanía, la distancia.
+5. Tests: búsqueda, filtro, cercanía y paginación; crear con 3 fotos; foto inválida da 422.
+
+Destraba: KAN-97, KAN-102, KAN-206, KAN-113, KAN-115 y KAN-175 (Flutter).
+
+</details>
+
+<details>
+<summary>**KAN-310** [backend] — Backend: precio sugerido, mapa, mis publicaciones y perfil público en la API</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/PublicacionController.php` y/o controladores nuevos en `app/Http/Controllers/Api/`.
+* `routes/api.php`.
+* `tests/Feature/Api/` — agregar casos.
+
+Guía:
+
+1. `GET /api/categorias/{categoria}/precio-sugerido?unidad=` — mismo cálculo que la web (KAN-132).
+2. `GET /api/publicaciones/mapa` — mismo que la web (`publicaciones.mapa`), sin exponer la ubicación exacta si se decide mostrar zonas (coordinar con KAN-272).
+3. `GET /api/mis-publicaciones?estado=` — mismo que `publicaciones.mias` (KAN-257) con el resumen.
+4. `GET /api/productores/{usuario}` — mismo que el perfil público web (KAN-260), solo datos públicos.
+5. Reusar la lógica de los controladores web (métodos o servicios compartidos), no copiarla.
+6. Tests: cada endpoint devuelve lo mismo que su versión web; el perfil público no incluye email, teléfono ni lat/lng.
+
+Depende de: KAN-257 y KAN-260 (versiones web). Destraba: KAN-137 y KAN-153 (Flutter) y las pantallas Flutter de mis publicaciones y perfil público.
+
+</details>
+
+---
+
+### KAN-293 — Exponer API REST de la cuenta (verificación y contraseña)
+
+> Como usuario de la app móvil, quiero verificar mi email, recuperar mi contraseña y cambiarla desde la app, y que la app me avise claramente si mi cuenta fue inhabilitada o mi sesión venció.
+>
+> Criterios de aceptación:
+>
+> * La API permite reenviar el mail de verificación, pedir el link para recuperar la contraseña y cambiar la contraseña (pidiendo la actual).
+> * Si la cuenta está inhabilitada o el token venció, la API responde con un código y un mensaje claros para que la app cierre la sesión.
+> * Mismas reglas de contraseña que la web.
+>
+> Destraba: las pantallas de Flutter de verificación de email, login/registro y manejo de errores.
+
+<details>
+<summary>**KAN-311** [backend] — Backend: endpoints de la API para verificar el email y gestionar la contraseña</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Api/CuentaController.php` (nuevo).
+* `routes/api.php`.
+* `bootstrap/app.php` — formato de los errores 401/403/409/429 de la API.
+* `tests/Feature/Api/CuentaApiTest.php` (nuevo).
+
+Guía:
+
+1. `POST /api/email/reenviar-verificacion` — reenvía el mail (con límite de 1 por minuto).
+2. `POST /api/contrasena/olvide` — manda el link para restablecerla (mismo mail que la web; el link abre la web).
+3. `PUT /api/contrasena` — cambiar la contraseña pidiendo la actual; mismas reglas que la web (`Password::defaults()`); revoca los otros tokens.
+4. Respuestas de error uniformes para que la app sepa qué hacer: `{ "message": "...", "code": "..." }` con `code` = `no_autenticado` (401, token vencido o inválido), `cuenta_inhabilitada` (403), `email_no_verificado` (409), `demasiados_intentos` (429).
+5. Tests: cada endpoint y cada formato de error.
+
+Relacionada: KAN-294, KAN-295, KAN-296 y KAN-299 (generan esos errores). Destraba: las pantallas Flutter de verificación de email y de manejo de errores.
+
+</details>
+
+---
+
 ## Epic: KAN-83 — Geolocalización
 
 _Agregar ubicación geográfica a usuarios y publicaciones, mostrarlas en un mapa (Google Maps), ordenar resultados por cercanía y permitir marcar favoritos. Hoy no existe ningún campo de ubicación (lat/lng) en el modelo de datos ni tabla de favoritos — hay que crear las migraciones, el backend y el frontend (Web + Flutter) de cero._
@@ -2285,19 +2622,23 @@ Guía:
 </details>
 
 <details>
-<summary>**KAN-121** [frontend] — Frontend Web: selector de ubicación en el perfil (Google Maps JS)</summary>
+<summary>**KAN-121** [frontend] — Frontend Web: selector de ubicación en el perfil con mapa (Leaflet + OpenStreetMap)</summary>
 
 Archivos a crear/modificar:
 
-* `resources/js/Pages/Profile/Edit.tsx` (o el componente de edición de perfil que ya exista) — agregar el selector de ubicación.
 * `resources/js/Components/MapaSelectorUbicacion.tsx` (nuevo).
+* La sección de ubicación del perfil (KAN-273).
+* `package.json` — dependencia `leaflet`, la misma de KAN-148. **Consultar al equipo antes de instalarla.**
 
 Guía:
 
-1. Agregá la librería de Google Maps JS (`@googlemaps/js-api-loader` o similar) al proyecto.
-2. El componente nuevo muestra un mapa con un marker arrastrable; al moverlo, actualiza `lat`/`lng` en el formulario (`useForm` de Inertia).
-3. Sumá también un input de texto para buscar una dirección (Geocoding API) que centre el mapa, como alternativa a arrastrar el marker a mano.
-4. Es opcional: si el usuario no toca nada, no se manda lat/lng y el perfil queda sin ubicación.
+1. **Cambio respecto de la versión original (2026-11-26):** en vez de Google Maps se usa Leaflet con OpenStreetMap (gratis, sin API key).
+2. Suma un mapa a la sección de ubicación que arma KAN-273 (que solo tiene el botón "Usar mi ubicación actual"): un marcador que se puede arrastrar para ajustar el punto de la chacra o del punto de venta, y que actualiza `lat`/`lng` del formulario.
+3. El mapa arranca centrado en Laguna Naineck si el usuario todavía no tiene ubicación.
+4. Búsqueda por dirección: opcional. Si se hace, con el servicio gratuito Nominatim de OpenStreetMap, respetando su límite de uso (1 pedido por segundo).
+5. Sigue siendo opcional: si el usuario no toca nada, el perfil queda sin ubicación.
+
+Depende de: KAN-273.
 
 </details>
 
@@ -2395,6 +2736,23 @@ Depende de: la tarea de backend de la localidad y la distancia (esta historia).
 
 </details>
 
+<details>
+<summary>**KAN-335** [frontend] — Frontend Flutter: localidad y distancia del productor en el detalle</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* Pantalla de detalle de publicación (KAN-118).
+
+Guía:
+
+1. Debajo del nombre del productor: ícono de ubicación + "Laguna Naineck · a 12 km".
+2. Sin distancia (el usuario no tiene ubicación), solo la localidad; sin localidad, solo la distancia; sin ninguna, nada.
+3. Mismo criterio de redondeo que la web: sin decimales desde 10 km, "a menos de 1 km" si es menor a 1.
+
+Depende de: KAN-272 y que la API del detalle mande `localidad` y `distancia_km` (KAN-309). Versión web: KAN-274.
+
+</details>
+
 ### KAN-95 — Ver productores y publicaciones en un mapa
 
 > Como comprador, quiero ver en un mapa las publicaciones y productores cercanos, para elegir con quién contactarme según la distancia.
@@ -2422,17 +2780,21 @@ Guía:
 </details>
 
 <details>
-<summary>**KAN-148** [frontend] — Frontend Web: vista de mapa con markers de publicaciones (Google Maps JS)</summary>
+<summary>**KAN-148** [frontend] — Frontend Web: vista de mapa con las publicaciones (Leaflet + OpenStreetMap)</summary>
 
 Archivos a crear/modificar:
 
 * `resources/js/Pages/Publicaciones/Mapa.tsx` (nuevo).
+* `package.json` — dependencia `leaflet` (y `react-leaflet` si conviene). **Consultar al equipo antes de instalarla.**
 
 Guía:
 
-1. Pedí al endpoint de `mapa()` (backend) las publicaciones con ubicación y pintá un marker por cada una.
-2. Al clickear un marker, mostrá un popup/infowindow con título y precio, y un link al detalle (KAN-56).
-3. Agregá el link a esta vista desde el listado de publicaciones (KAN-50), como un botón "Ver en mapa".
+1. **Cambio respecto de la versión original (2026-11-26):** en vez de Google Maps se usa Leaflet con los mapas de OpenStreetMap. Es gratis y no necesita API key, que era lo que tenía bloqueada esta tarea.
+2. Pedir al endpoint `publicaciones.mapa` las publicaciones con ubicación y mostrar un marcador por cada una, agrupando los cercanos para que no se superpongan.
+3. Por privacidad, mostrar la **zona aproximada** del productor (redondear la ubicación o usar un círculo), no el punto exacto de la chacra (decisión de KAN-272).
+4. Al tocar un marcador: tarjeta con la foto, el título, el precio y un link al detalle.
+5. Botón "Ver en mapa" en el catálogo del Inicio (KAN-211).
+6. Respetar la atribución de OpenStreetMap que pide su licencia ("© OpenStreetMap contributors").
 
 </details>
 
@@ -3173,6 +3535,24 @@ Depende de: KAN-275 (prop `solicitudes_pendientes`).
 
 </details>
 
+<details>
+<summary>**KAN-334** [frontend] — Frontend Flutter: número de solicitudes pendientes en el menú</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* Menú principal / barra de navegación de la app.
+* `lib/services/solicitud_compra_service.dart` — método `cantidadPendientes()`.
+
+Guía:
+
+1. Para productores, un globito ámbar con el número de solicitudes pendientes al lado de "Solicitudes recibidas" ("9+" si pasa de 9; oculto si es 0).
+2. Actualizarlo al volver a la pantalla, al hacer pull-to-refresh y al llegar una notificación push de solicitud nueva.
+3. Mismo estilo que el contador de la campanita de la app (KAN-138).
+
+Depende de: KAN-307 (endpoint de cantidad de pendientes). Versión web: KAN-276.
+
+</details>
+
 ### KAN-168 — Contactar al productor por WhatsApp desde la publicación
 
 > Como comprador, quiero contactar directamente al productor por WhatsApp desde la publicación o su perfil, para coordinar la compra sin depender de mensajería interna.
@@ -3333,6 +3713,101 @@ Guía:
 Depende de: la tarea de backend de esta historia (ruta `solicitudes-compra.enviadas`).
 
 </details>
+
+<details>
+<summary>**KAN-328** [frontend] — Frontend Flutter: pantalla "Mis solicitudes" enviadas</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/screens/mis_solicitudes_screen.dart` (nuevo).
+* `lib/services/solicitud_compra_service.dart` — método `listarEnviadas()`.
+
+Guía:
+
+1. Lista de las solicitudes que envió el usuario: foto y título de la publicación, productor, cantidad con unidad, mensaje, fecha y estado en un chip de color.
+2. En las aceptadas, botón de WhatsApp del productor (mismo armado que KAN-182).
+3. Tocar una lleva al detalle de la publicación.
+4. Pull-to-refresh y scroll infinito.
+
+Depende de: KAN-307 (endpoint `GET /api/solicitudes-compra/enviadas`). Versión web: KAN-265.
+
+</details>
+
+### KAN-285 — Cancelar una solicitud de compra pendiente
+
+> Como comprador, quiero poder cancelar una solicitud de compra que todavía está pendiente, para avisarle al productor que ya no la necesito (por ejemplo, si conseguí el producto en otro lado).
+>
+> Criterios de aceptación:
+>
+> * Solo se pueden cancelar las solicitudes propias en estado "pendiente".
+> * La solicitud pasa al estado "cancelada" y el productor ya no puede aceptarla ni rechazarla.
+> * El productor recibe una notificación de que el comprador canceló.
+> * Después de cancelar, el comprador puede volver a solicitar esa publicación.
+> * Funciona en la web y en la app móvil.
+
+<details>
+<summary>**KAN-303** [backend] — Backend: cancelar una solicitud de compra pendiente</summary>
+
+Archivos a crear/modificar:
+
+* `app/Models/SolicitudCompra.php` — constante `ESTADO_CANCELADA`.
+* `app/Policies/SolicitudCompraPolicy.php` — método `cancelar()`.
+* `app/Http/Controllers/SolicitudCompraController.php` — método `cancelar()`.
+* `routes/web.php` — `PATCH /mis-solicitudes/{solicitud}/cancelar` (`solicitudes-compra.cancelar`).
+* `tests/Feature/SolicitudCompraTest.php` — agregar casos.
+
+Guía:
+
+1. Solo el comprador que la creó puede cancelarla, y solo si está `pendiente`.
+2. Pasa a `cancelada` (revisar si la columna `estado` es un enum en la migración; si lo es, agregar el valor con una migración nueva).
+3. No toca el stock (en pendiente todavía no se descontó).
+4. Notificar al productor con una alerta `solicitud_compra_cancelada` (mismo patrón que KAN-250: alerta + mail + push).
+5. El panel del productor (`index()`) y "Mis solicitudes" (`enviadas()`) deben mostrar las canceladas; `resolve()` tiene que rechazar las canceladas (ya lo hace porque no están pendientes).
+6. Después de cancelar, el comprador puede volver a solicitar (la regla de "una pendiente por publicación" ya lo permite).
+7. Tests: el comprador cancela su pendiente; no puede cancelar la de otro (403) ni una aceptada; el productor recibe la alerta.
+
+La versión de la API va en la historia "Exponer API REST de solicitudes de compra".
+
+</details>
+
+<details>
+<summary>**KAN-316** [frontend] — Frontend Web: botón "Cancelar solicitud" en "Mis solicitudes"</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/SolicitudesCompra/Enviadas.tsx` — botón en las pendientes.
+* `resources/js/Components/SolicitarCompra.tsx` — estado "cancelada" en el aviso del detalle.
+* `resources/js/Pages/SolicitudesCompra/Index.tsx` — mostrar las canceladas en el panel del productor.
+
+Guía:
+
+1. En cada solicitud pendiente, "Cancelar solicitud" abre un modal de confirmación ("El productor va a ver que la cancelaste. Podés volver a solicitar cuando quieras.").
+2. Chip gris "Cancelada" en las canceladas, tanto en "Mis solicitudes" como en el panel del productor (pestaña o dentro de "Rechazadas", a definir).
+3. En el detalle de la publicación, si la última solicitud fue cancelada, permitir volver a solicitar (como con las rechazadas).
+
+Depende de: KAN-303 y KAN-265 (la página "Mis solicitudes").
+
+</details>
+
+<details>
+<summary>**KAN-333** [frontend] — Frontend Flutter: cancelar una solicitud de compra pendiente</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* Pantalla "Mis solicitudes" (subtarea Flutter de KAN-255) y detalle de la publicación (KAN-118/120).
+* `lib/services/solicitud_compra_service.dart` — método `cancelar(id)`.
+
+Guía:
+
+1. En cada solicitud pendiente, botón "Cancelar solicitud" con un diálogo de confirmación.
+2. Chip gris "Cancelada" en las canceladas.
+3. En el detalle, si la última solicitud fue cancelada, permitir volver a solicitar.
+
+Depende de: KAN-307 (endpoint de cancelar). Versión web: KAN-316.
+
+</details>
+
+---
 
 ## Epic: KAN-87 — Panel de Administración
 
@@ -3773,6 +4248,61 @@ Guía:
 
 ---
 
+### KAN-287 — Exportar datos del Consorcio a CSV
+
+> Como administrador del Consorcio, quiero descargar en una planilla el padrón de socios, los usuarios y las solicitudes de compra, para usarlos en la gestión administrativa del Consorcio.
+>
+> Criterios de aceptación:
+>
+> * Desde el panel admin se descargan en CSV (se abre en Excel): socios validados, usuarios (con rol y estado) y solicitudes de compra (con fecha, estado, cantidad y publicación).
+> * Los archivos respetan los filtros que haya en pantalla y se abren bien en Excel en castellano (acentos y separador).
+> * Solo los administradores pueden descargarlos.
+
+<details>
+<summary>**KAN-305** [backend] — Backend: exportar socios, usuarios y solicitudes a CSV</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/Admin/ExportacionController.php` (nuevo) — métodos `socios()`, `usuarios()`, `solicitudes()`.
+* `routes/web.php` — `GET /admin/exportar/{tipo}` dentro del grupo `admin`.
+* `tests/Feature/Admin/ExportacionTest.php` (nuevo).
+
+Guía:
+
+1. Sin librerías: `response()->streamDownload()` con `fputcsv`, recorriendo con `lazy()` o `cursor()` para no cargar todo en memoria.
+2. Para que Excel en castellano lo abra bien: escribir el BOM UTF-8 (`"\xEF\xBB\xBF"`) al principio y usar `;` como separador.
+3. Columnas:
+
+    * Socios validados: nombre, email, teléfono, número de socio, fecha de validación.
+    * Usuarios: nombre, email, rol, estado (habilitado/inhabilitado), socio, fecha de alta. Respeta los filtros del listado (`q`, `rol`, `inhabilitado`).
+    * Solicitudes de compra: fecha, estado, publicación, cantidad y unidad, comprador, productor.
+    
+4. Nombre del archivo con la fecha: `agroconnect-socios-2026-11-26.csv`.
+5. Tests: un admin descarga cada CSV con el encabezado correcto y una fila por registro; un no-admin recibe 403.
+
+Relacionada: tarea de frontend web de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-318** [frontend] — Frontend Web: botones "Exportar a CSV" en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Socios/Index.tsx`, `Admin/Usuarios/Index.tsx` y el panel de solicitudes o el resumen (`Admin/Metricas/Index.tsx`).
+
+Guía:
+
+1. Botón secundario "Exportar a CSV" (ícono de descarga) arriba de cada listado. Es un link común (`<a href download>`), no Inertia, porque baja un archivo.
+2. El link arma la URL con los filtros que hay en pantalla, así se exporta lo mismo que se ve.
+3. Mientras se prepara la descarga, el botón muestra "Preparando…" un par de segundos.
+
+Depende de: KAN-305.
+
+</details>
+
+---
+
 ## Epic: KAN-93 — Inteligencia y notificaciones avanzadas
 
 _Matching y sugerencia de productos/productores relevantes (priorizando socios del Consorcio), precio sugerido/promedio por categoría y zona, y notificaciones push (Firebase Cloud Messaging) ante alertas de disponibilidad. Son reglas de negocio y agregaciones sobre los datos existentes (no un modelo de IA/ML entrenado), tal como lo describe el plan de trabajo en la sección "Inteligencia y Notificaciones". Algunas Historias dependen de las Epics de Geolocalización (zona/ubicación) y Socios del Consorcio (socio_validado)._
@@ -4067,3 +4597,554 @@ Guía:
 </details>
 
 ---
+### KAN-288 — Una experiencia consistente en toda la web
+
+> Como usuario, quiero que todas las pantallas de AgroConnect tengan el mismo diseño cuidado que el Inicio, para que la plataforma se sienta profesional y fácil de usar de punta a punta.
+>
+> Criterios de aceptación:
+>
+> * Los mensajes de éxito y error aparecen siempre igual, como avisos flotantes.
+> * Publicar, el detalle de la publicación, el perfil, las notificaciones y las secciones del panel admin usan el sistema visual del Inicio (KAN-211): tipografía, colores, tarjetas, botones y estados vacíos.
+> * Todo funciona bien en celular, tablet y escritorio.
+> * Las páginas principales tienen un puntaje de Lighthouse de 90 o más en accesibilidad y rendimiento.
+
+<details>
+<summary>**KAN-319** [frontend] — Frontend Web: avisos flotantes (toasts) para los mensajes de éxito y error</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/Avisos/` (nuevo) — contenedor y aviso.
+* `resources/js/Layouts/AuthenticatedLayout.tsx`, `AdminLayout.tsx` y `GuestLayout.tsx` — montar el contenedor.
+* Las 7 páginas que hoy muestran `flash.success`/`flash.error` con su propio cartel: sacar esos carteles.
+
+Guía:
+
+1. Sin librerías: un contenedor abajo a la derecha (abajo al centro en el celu) que escucha `flash.success` y `flash.error` en cada visita de Inertia (`router.on('success')`) y los muestra como avisos apilados.
+2. Entran desde abajo con `translateY` + opacidad (200 ms, `ease-out`, transiciones y no keyframes para que se puedan interrumpir); se van solos a los 4 s (los de error, a los 6 s); pausa al pasar el mouse; botón ✕; se pueden descartar deslizando en el celu.
+3. Colores e íconos por tipo (éxito verde, error rojo, info azul). `role="status"` para éxito y `role="alert"` para error.
+4. Con "reducir movimiento": solo fundido, sin desplazamiento.
+5. Exportar un `avisar(tipo, texto)` para mostrar avisos desde el frontend (ej. "Link copiado").
+
+</details>
+
+<details>
+<summary>**KAN-320** [frontend] — Frontend Web: publicar en pasos con vista previa de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Create.tsx` y `Edit.tsx`.
+* `resources/js/Pages/Publicaciones/Partials/PublicacionForm.tsx` y `CampoFotos.tsx` — pasarlos al sistema visual nuevo.
+
+Guía:
+
+1. Crear en 3 pasos con una barra de progreso arriba: **1. Qué vendés** (título, categoría, descripción) → **2. Fotos** → **3. Precio y stock** (con el precio sugerido de KAN-132). Botones "Atrás" / "Siguiente"; cada paso valida sus campos antes de avanzar.
+2. A la derecha en escritorio (abajo en el celu), una **vista previa en vivo** de cómo va a quedar la tarjeta en el marketplace (`PublicacionCard` con los datos que se van cargando).
+3. Editar usa el mismo formulario, pero todo en una página (sin pasos), con la vista previa.
+4. Si se va de la página con cambios sin guardar, preguntar antes de salir.
+5. Transición entre pasos corta (deslizamiento de 200 ms), respetando "reducir movimiento".
+6. Mantener lo que ya funciona: compresión de fotos, orden y portada (KAN-205), límites de fotos (KAN-225).
+
+</details>
+
+<details>
+<summary>**KAN-321** [frontend] — Frontend Web: rediseño del detalle de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Show.tsx`.
+* `resources/js/Components/GaleriaFotos.tsx`.
+
+Guía:
+
+1. Escritorio: galería grande a la izquierda (con miniaturas y pantalla completa al tocar la foto) y a la derecha una tarjeta **fija al hacer scroll** con precio, stock, productor (insignia de socio, localidad y distancia) y las acciones (WhatsApp, Solicitar compra, favorito, compartir).
+2. Celular: galería deslizable a lo ancho y una **barra fija abajo** con el precio y los botones "WhatsApp" y "Solicitar".
+3. Debajo: descripción, reseñas (con el promedio en grande y la distribución de estrellas) y "Más de este productor" (fila deslizable, como "Sugeridos para vos").
+4. Botón "Compartir": usa `navigator.share` en el celu y copia el link en escritorio (con un aviso flotante).
+5. Respetar todo lo que hoy muestra el detalle: avisos de bloqueada, estado de mi solicitud, denunciar, acciones del dueño y del admin.
+6. Coordinar con KAN-271, KAN-274 y KAN-317, que tocan el mismo archivo: conviene hacer este rediseño antes o después de ellas, no en paralelo.
+
+</details>
+
+<details>
+<summary>**KAN-322** [frontend] — Frontend Web: rediseño del perfil</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Profile/Edit.tsx` y `Profile/Partials/*`.
+
+Guía:
+
+1. Cabecera con el avatar de iniciales, el nombre, el rol, la insignia de socio y "En AgroConnect desde …".
+2. Secciones en tarjetas con el estilo nuevo, navegables con un índice lateral en escritorio (pestañas en el celu): **Datos de la cuenta**, **Ubicación** (KAN-273), **Socio del Consorcio**, **Notificaciones** (KAN-77), **Seguridad** (cambiar contraseña) y **Eliminar cuenta** (en rojo, al final).
+3. Cada sección guarda por separado y avisa con un aviso flotante.
+4. Coordinar con KAN-77 y KAN-273, que agregan secciones al perfil: hacer este rediseño primero, así esas tareas ya entran con el estilo nuevo.
+
+</details>
+
+<details>
+<summary>**KAN-323** [frontend] — Frontend Web: rediseño de la página de notificaciones</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Alertas/Index.tsx`.
+
+Guía:
+
+1. Lista agrupada por día ("Hoy", "Ayer", "Esta semana", "Antes"), con un ícono y color según el tipo de alerta (reseña, denuncia, solicitud recibida/aceptada/rechazada/cancelada, socio).
+2. Las no leídas con un punto azul y fondo suave; al tocarla se marca como leída y lleva a lo que corresponda (la publicación, el panel de solicitudes, etc.).
+3. Botón "Marcar todas como leídas" y filtro "Todas / No leídas".
+4. Estado vacío ilustrado: "No tenés notificaciones".
+5. Coordinar con KAN-80 (panel desplegable de la campanita): reusar el mismo componente de ítem de notificación en los dos lugares.
+
+</details>
+
+<details>
+<summary>**KAN-324** [frontend] — Frontend Web: rediseño de Socios y Categorías en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Socios/Index.tsx`.
+* `resources/js/Pages/Categorias/Index.tsx` (y moverla a `Admin/` si corresponde, para que use el `AdminLayout`).
+
+Guía:
+
+1. Mismo sistema visual que Denuncias y Publicaciones del panel (KAN-222): tabla en escritorio y tarjetas en el celu, buscador, filtros en chips, chips de estado de color, acciones con confirmación en un modal.
+2. Socios: pestañas "Pendientes / Validados / Rechazados" con contadores (hoy el panel no muestra los validados).
+3. Categorías: el ícono de cada categoría (`estiloCategoria`, KAN-211) y la cantidad de publicaciones; no permitir borrar una categoría con publicaciones (avisar cuántas tiene).
+4. Estados vacíos y avisos flotantes en las acciones.
+
+</details>
+
+<details>
+<summary>**KAN-325** [frontend] — Frontend Web: pasada final de accesibilidad y rendimiento</summary>
+
+Archivos a crear/modificar:
+
+* Las páginas que lo necesiten, según lo que marque el relevamiento.
+* `README.md` o un documento aparte — dejar los puntajes y capturas para la defensa.
+
+Guía:
+
+1. Correr Lighthouse (en modo incógnito, perfil celular) en: landing, login, Inicio, detalle de publicación, publicar, perfil y el resumen del panel admin. Objetivo: **90 o más** en Accesibilidad, Buenas prácticas y SEO, y lo más alto posible en Rendimiento.
+2. Revisar con el teclado (Tab) que todo se pueda usar y que el foco se vea siempre; contraste de colores; textos alternativos de las fotos; títulos de página (`<Head>`) en todas.
+3. Rendimiento: imágenes con `loading="lazy"` y tamaño fijo (evitar saltos), dividir el código de las páginas pesadas, revisar el tamaño del build.
+4. Probar con "reducir movimiento" activado y con el zoom del navegador al 200%.
+5. Guardar los puntajes finales (capturas) para mostrarlos en la presentación.
+
+Hacerla al final, cuando el resto de la historia esté terminada.
+
+</details>
+
+---
+
+## Epic: KAN-277 — Seguridad y cuentas
+
+_Reforzar la seguridad de AgroConnect y de las cuentas de usuario: cortar el acceso de cuentas inhabilitadas, limitar intentos y abusos, cabeceras de seguridad, dependencias sin vulnerabilidades, verificación de email, contraseñas seguras con validación en vivo, verificación en dos pasos para administradores y registro de la actividad de los administradores._
+
+### KAN-278 — Cortar el acceso de una cuenta inhabilitada al instante
+
+> Como administrador, quiero que cuando inhabilito una cuenta el usuario pierda el acceso en ese mismo momento, para que no pueda seguir usando la plataforma con una sesión o un token que ya tenía abiertos.
+>
+> Criterios de aceptación:
+>
+> * Si un usuario inhabilitado hace cualquier pedido (web o API), se le cierra la sesión y ve el aviso "Tu cuenta fue inhabilitada".
+> * Al inhabilitar una cuenta se borran sus tokens de la API y sus sesiones web abiertas.
+> * Los tokens de la API vencen a los 30 días y se revocan al cambiar la contraseña.
+
+<details>
+<summary>**KAN-294** [backend] — Backend: cortar el acceso de cuentas inhabilitadas y cerrar sus sesiones y tokens</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Middleware/AsegurarCuentaHabilitada.php` (nuevo).
+* `bootstrap/app.php` — registrarlo en los grupos `web` y `api`.
+* `app/Http/Controllers/Admin/UsuarioController.php` — en `toggleInhabilitado()`.
+* `tests/Feature/Admin/InhabilitarUsuarioTest.php` — agregar casos.
+
+Guía:
+
+1. Hoy `estaInhabilitado()` solo se revisa al loguearse (`LoginRequest`, `Api\AuthController`, `SocialController`): un usuario ya logueado sigue usando la plataforma después de que el admin lo inhabilita.
+2. Middleware: si `$request->user()?->estaInhabilitado()`:
+
+    * web: `Auth::logout()`, `session()->invalidate()`, `regenerateToken()` y redirigir al login con el mensaje "Tu cuenta fue inhabilitada. Si creés que es un error, escribinos.";
+    * API: borrar el token actual y responder 403 JSON con `{ "message": "...", "code": "cuenta_inhabilitada" }`.
+    
+3. Al inhabilitar en `toggleInhabilitado()`: `$usuario->tokens()->delete()` y borrar sus sesiones web (`DB::table('sessions')->where('user_id', $usuario->id)->delete()`; el driver es `database`).
+4. Tests: un usuario logueado que es inhabilitado es expulsado en el próximo pedido (web y API); al inhabilitar se borran sus tokens y sesiones; un usuario habilitado no se ve afectado.
+
+Relacionada: KAN-218/KAN-119 (inhabilitar desde el panel).
+
+</details>
+
+<details>
+<summary>**KAN-295** [backend] — Backend: vencimiento de los tokens de la API y revocarlos al cambiar la contraseña</summary>
+
+Archivos a crear/modificar:
+
+* `config/sanctum.php` — `expiration`.
+* `app/Http/Controllers/Auth/PasswordController.php` y `NewPasswordController.php`.
+* `routes/console.php` — programar `sanctum:prune-expired`.
+* `tests/Feature/Api/` — agregar casos.
+
+Guía:
+
+1. Hoy `'expiration' => null`: los tokens de la app móvil no vencen nunca. Pasarlo a 30 días (`60 * 24 * 30`), configurable por `.env` (`SANCTUM_EXPIRATION`).
+2. Al cambiar la contraseña (perfil) o restablecerla (link del mail), borrar todos los tokens del usuario (`$user->tokens()->delete()`), así un teléfono perdido pierde el acceso.
+3. Programar `php artisan sanctum:prune-expired --hours=24` una vez por día para limpiar la tabla.
+4. Tests: un token con más de 30 días da 401; al cambiar la contraseña los tokens dejan de funcionar.
+
+Relacionada: KAN-89 (Sanctum).
+
+</details>
+
+---
+
+### KAN-279 — Limitar intentos y abusos
+
+> Como responsable de la plataforma, quiero limitar la cantidad de intentos de ingreso, registros y envíos por minuto, para evitar ataques de fuerza bruta y el spam de reseñas, denuncias y solicitudes.
+>
+> Criterios de aceptación:
+>
+> * El login y el registro (web y API) tienen un límite de intentos por minuto; al superarlo se responde 429 con un mensaje en castellano.
+> * Crear reseñas, denuncias y solicitudes de compra también tiene un límite razonable por usuario.
+> * El uso normal de la plataforma no se ve afectado.
+
+<details>
+<summary>**KAN-296** [backend] — Backend: límite de intentos en login, registro y envíos (web y API)</summary>
+
+Archivos a crear/modificar:
+
+* `app/Providers/AppServiceProvider.php` — definir los limitadores con `RateLimiter::for(...)`.
+* `routes/api.php`, `routes/auth.php`, `routes/web.php` — aplicar `throttle:...`.
+* `lang/es/` — mensaje de "demasiados intentos" en castellano si hace falta.
+* `tests/Feature/` — agregar casos.
+
+Guía:
+
+1. API: `POST /api/login` y `/api/register` hoy no tienen límite. Aplicar un limitador por email + IP (ej. 5 por minuto), igual que el login web.
+2. Web: el registro (`POST /register`) también, por IP (ej. 5 por minuto).
+3. Envíos: crear reseñas, denuncias y solicitudes de compra (web y API), por usuario (ej. 10 por minuto). No aplicar a las lecturas.
+4. Al superarlo: 429 con mensaje en castellano ("Demasiados intentos. Probá de nuevo en X segundos."); en la web, que se vea como error del formulario.
+5. Tests: el sexto intento de login por API en un minuto da 429; el uso normal sigue funcionando.
+
+Relacionada: KAN-94 (registro por API).
+
+</details>
+
+---
+
+### KAN-280 — Endurecer la aplicación (cabeceras y dependencias)
+
+> Como responsable de la plataforma, quiero que las respuestas tengan las cabeceras de seguridad recomendadas y que las dependencias no tengan vulnerabilidades conocidas, para cumplir las buenas prácticas de OWASP.
+>
+> Criterios de aceptación:
+>
+> * Todas las respuestas web incluyen `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y, en producción, `Strict-Transport-Security`.
+> * `composer audit` y `npm audit` no reportan vulnerabilidades.
+
+<details>
+<summary>**KAN-297** [backend] — Backend: cabeceras de seguridad HTTP</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Middleware/CabecerasSeguridad.php` (nuevo).
+* `bootstrap/app.php` — registrarlo (`append` global).
+* `tests/Feature/CabecerasSeguridadTest.php` (nuevo).
+
+Guía:
+
+1. Agregar a todas las respuestas: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y `Permissions-Policy: camera=(), microphone=(), geolocation=(self)` (la geolocalización se usa en el orden por cercanía).
+2. `Strict-Transport-Security: max-age=31536000; includeSubDomains` solo si `app()->isProduction()` y el pedido es HTTPS.
+3. **No** agregar todavía una `Content-Security-Policy` estricta: rompe el servidor de Vite en desarrollo y los estilos inline. Si se quiere, dejarla en modo `Content-Security-Policy-Report-Only`.
+4. Test: una respuesta de `/` y otra de `/api/categorias` traen las cabeceras.
+
+Relacionada: auditoría de seguridad (informe de Iván).
+
+</details>
+
+<details>
+<summary>**KAN-298** [backend] — Backend: actualizar las dependencias con vulnerabilidades conocidas</summary>
+
+Archivos a crear/modificar:
+
+* `composer.lock` (y `composer.json` solo si hace falta subir una versión mínima).
+* `.github/workflows/` — opcional: sumar `composer audit` al CI.
+
+Guía:
+
+1. `composer audit` hoy reporta 7 avisos en `symfony/http-foundation`, `symfony/http-kernel`, `symfony/routing` y `symfony/yaml` (CVE-2026-121619, 135802, 135801, 118514, 123339, 118516 y 123792).
+2. Actualizar solo esos paquetes dentro de las versiones permitidas: `composer update symfony/http-foundation symfony/http-kernel symfony/routing symfony/yaml --with-dependencies`.
+3. Correr toda la suite de tests y probar la app a mano (login, publicar, panel admin).
+4. Verificar que `composer audit` y `npm audit --omit=dev` queden limpios.
+5. Opcional: agregar `composer audit` como paso del CI para enterarse de las próximas.
+
+Avisar al equipo en la PR que después del merge hay que correr `composer install`.
+
+</details>
+
+---
+
+### KAN-281 — Verificar el email al registrarse
+
+> Como responsable de la plataforma, quiero que los usuarios verifiquen su email antes de publicar, solicitar compras o reseñar, para evitar cuentas falsas y asegurar que les lleguen las notificaciones.
+>
+> Criterios de aceptación:
+>
+> * Al registrarse llega un mail con un link de verificación (en castellano).
+> * Sin verificar se puede navegar el marketplace, pero no publicar, solicitar compras, reseñar ni denunciar; se muestra un aviso con un botón para reenviar el mail.
+> * Funciona igual en la web y en la app móvil.
+> * Los usuarios que ingresan con Google/Facebook quedan verificados automáticamente.
+
+<details>
+<summary>**KAN-299** [backend] — Backend: exigir email verificado para publicar, solicitar, reseñar y denunciar</summary>
+
+Archivos a crear/modificar:
+
+* `app/Models/User.php` — implementar `MustVerifyEmail` (hoy está comentado).
+* `routes/web.php` y `routes/api.php` — middleware `verified` en las acciones.
+* `app/Notifications/` o `lang/es/` — mail de verificación en castellano con la identidad de AgroConnect.
+* `app/Http/Controllers/Auth/SocialController.php` — marcar verificados a los que entran con Google/Facebook.
+* `tests/Feature/Auth/EmailVerificationTest.php` — agregar casos.
+
+Guía:
+
+1. Con `MustVerifyEmail`, Laravel manda el mail al registrarse (las rutas `verification.*` ya existen en `routes/auth.php`).
+2. Middleware `verified` **solo** en las acciones: crear/editar publicaciones, solicitar compra, reseñar, denunciar. Navegar el marketplace no lo exige.
+3. En la API, `verified` responde 409 JSON con `code: "email_no_verificado"`.
+4. Usuarios de Google/Facebook: `email_verified_at = now()` al crearlos.
+5. **Usuarios que ya existen**: una migración que marque como verificados a los actuales, así nadie queda bloqueado.
+6. Tests: un usuario sin verificar no puede publicar (redirige al aviso) pero sí ver el listado; al verificar, puede.
+
+Relacionada: tareas de frontend web y Flutter de esta historia. En local el mail va al log (`MAIL_MAILER=log`).
+
+</details>
+
+<details>
+<summary>**KAN-312** [frontend] — Frontend Web: pantalla "Verificá tu email" y aviso para cuentas sin verificar</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Auth/VerifyEmail.tsx` — rediseño con el `GuestLayout` del login (KAN-231).
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — franja de aviso para usuarios sin verificar.
+* `resources/js/types/index.d.ts` — `email_verified_at` ya está en `User`.
+
+Guía:
+
+1. Pantalla "Verificá tu email": ícono de sobre, el email al que se mandó, botón "Reenviar el mail" (con aviso de que se mandó y un tiempo de espera de 60 s para no reenviar en loop) y "Cerrar sesión".
+2. Franja arriba del contenido (debajo del navbar) si `auth.user.email_verified_at` es null: "Verificá tu email para publicar y solicitar compras · Reenviar". Que se pueda cerrar por esa visita.
+3. Los botones de publicar, solicitar compra, reseñar y denunciar llevan a la verificación si no está verificado (el backend igual lo bloquea).
+
+Depende de: KAN-299.
+
+</details>
+
+<details>
+<summary>**KAN-330** [frontend] — Frontend Flutter: pantalla "Verificá tu email"</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/screens/verificar_email_screen.dart` (nuevo).
+* `lib/services/cuenta_service.dart` — `reenviarVerificacion()`.
+
+Guía:
+
+1. Se muestra después de registrarse y cuando la API responde `email_no_verificado`.
+2. Texto con el email al que se mandó, botón "Reenviar el mail" (espera de 60 s entre reenvíos) y "Ya lo verifiqué" (vuelve a pedir el perfil y, si ya está verificado, sigue).
+3. Botón "Abrir mi correo" si el dispositivo lo permite.
+4. Aviso suave en la pantalla de inicio mientras no esté verificado.
+
+Depende de: KAN-299 y KAN-311. Versión web: KAN-312.
+
+</details>
+
+---
+
+### KAN-282 — Usar contraseñas seguras con validación en vivo
+
+> Como usuario, quiero que los formularios me muestren en el momento si lo que escribo es válido y qué le falta a mi contraseña, para registrarme sin errores y con una contraseña segura.
+>
+> Criterios de aceptación:
+>
+> * La contraseña exige mínimo 8 caracteres, letras y números, y no puede ser una contraseña filtrada conocida.
+> * En registro, login, recuperar y cambiar contraseña, cada campo se marca en verde si es válido y en rojo con el motivo si no, mientras se escribe.
+> * La contraseña muestra la lista de reglas que se van cumpliendo y un medidor de fortaleza; la confirmación avisa si coincide.
+> * Funciona en la web y en la app móvil.
+
+<details>
+<summary>**KAN-300** [backend] — Backend: reglas de contraseña más fuertes</summary>
+
+Archivos a crear/modificar:
+
+* `app/Providers/AppServiceProvider.php` — `Password::defaults(...)`.
+* `lang/es/validation.php` — mensajes de las reglas nuevas en castellano.
+* `tests/Feature/Auth/RegistrationTest.php` y `PasswordUpdateTest.php` — agregar casos.
+
+Guía:
+
+1. Hoy `Password::defaults()` no está configurado: solo exige 8 caracteres. Registro, reset y cambio de contraseña ya lo usan, así que alcanza con definirlo una vez.
+2. `Password::defaults(fn () => Password::min(8)->letters()->numbers()->uncompromised())`. `uncompromised()` consulta la base de contraseñas filtradas de Have I Been Pwned por k-anonimidad (no manda la contraseña); en `testing` desactivarlo o simularlo para que los tests no dependan de internet.
+3. Mensajes en castellano ("La contraseña debe tener al menos una letra y un número", "Esta contraseña apareció en una filtración de datos, elegí otra").
+4. Que la API (registro y cambio de contraseña) use las mismas reglas.
+5. Tests: "12345678" y "abcdefgh" fallan; "agro2026campo" pasa.
+
+Relacionada: tarea de frontend web de esta historia (las reglas que se muestran en vivo tienen que ser las mismas).
+
+</details>
+
+<details>
+<summary>**KAN-313** [frontend] — Frontend Web: validación en vivo en los formularios de cuenta (verde/rojo y fortaleza de contraseña)</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/Formulario/CampoValidado.tsx` (nuevo) — input con estado válido/inválido, ícono ✓/✕ y mensaje.
+* `resources/js/Components/Formulario/ReglasContrasena.tsx` (nuevo) — lista de reglas + medidor de fortaleza.
+* `resources/js/utils/validaciones.ts` (nuevo) — reglas de email, teléfono, nombre y contraseña (las mismas que el backend, KAN-300).
+* `resources/js/Pages/Auth/Register.tsx`, `Login.tsx`, `ResetPassword.tsx` y `Profile/Partials/UpdatePasswordForm.tsx`.
+
+Guía:
+
+1. Validar mientras se escribe pero **mostrar el error recién al salir del campo** (o al enviar), para no marcar en rojo algo que la persona todavía está escribiendo. El verde sí puede aparecer en vivo.
+2. Contraseña: lista "8 caracteres · una letra · un número" que se va tildando y un medidor de 4 niveles (débil/aceptable/buena/fuerte) con color. "Repetir contraseña" avisa si coincide.
+3. Email con formato válido; teléfono reusando `numeroWhatsapp` (KAN-178); nombre no vacío.
+4. Los errores del backend siguen teniendo prioridad (ej. "ese email ya está registrado").
+5. Accesible: `aria-invalid`, `aria-describedby` con el mensaje, y que no dependa solo del color (ícono + texto).
+6. Animación corta (150 ms) en el cambio de estado, respetando "reducir movimiento".
+
+Relacionada: KAN-300 (reglas del backend).
+
+</details>
+
+<details>
+<summary>**KAN-331** [frontend] — Frontend Flutter: validación en vivo en login y registro</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/widgets/campo_validado.dart` y `lib/widgets/reglas_contrasena.dart` (nuevos).
+* `lib/utils/validaciones.dart` (nuevo).
+* Pantallas de login y registro (KAN-232).
+
+Guía:
+
+1. Mismas reglas que la web (KAN-300/313): email con formato válido, teléfono argentino, contraseña de 8+ caracteres con letras y números.
+2. Cada campo en verde con ✓ si es válido y en rojo con el motivo si no; el error se muestra al salir del campo, el verde en vivo.
+3. Contraseña con la lista de reglas que se van tildando y medidor de fortaleza; "repetir contraseña" avisa si coincide.
+4. Los errores que devuelve la API siguen teniendo prioridad.
+
+Depende de: KAN-300. Versión web: KAN-313.
+
+</details>
+
+---
+
+### KAN-283 — Verificación en dos pasos para administradores
+
+> Como administrador, quiero que al ingresar se me pida un código enviado a mi email además de la contraseña, para que nadie pueda entrar al panel aunque conozca mi contraseña.
+>
+> Criterios de aceptación:
+>
+> * Al ingresar con una cuenta de administrador, después de la contraseña se pide un código de 6 dígitos enviado por mail.
+> * El código vence a los 10 minutos y se bloquea después de 5 intentos fallidos; se puede pedir uno nuevo.
+> * Productores y compradores no se ven afectados.
+> * Es solo web: el panel de administración no está en la app móvil.
+
+<details>
+<summary>**KAN-301** [backend] — Backend: código de verificación por email al ingresar como administrador</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_create_codigos_verificacion_table.php` (nuevo) — `usuario_id`, `codigo` (hasheado), `expira_at`, `intentos`.
+* `app/Http/Controllers/Auth/DosPasosController.php` (nuevo) — mostrar el formulario, verificar y reenviar.
+* `app/Http/Middleware/AsegurarDosPasos.php` (nuevo) — en el grupo `admin`.
+* `app/Mail/CodigoVerificacionMail.php` (nuevo).
+* `app/Http/Controllers/Auth/AuthenticatedSessionController.php` — después del login.
+* `tests/Feature/Auth/DosPasosTest.php` (nuevo).
+
+Guía:
+
+1. Si el que ingresa es admin, después de la contraseña generar un código de 6 dígitos (`random_int`), guardarlo **hasheado** con vencimiento a 10 minutos, mandarlo por mail y redirigir a `/dos-pasos` (Inertia `Auth/DosPasos`).
+2. Hasta verificar, marcar la sesión como pendiente (`session('dos_pasos_pendiente')`): el middleware no deja entrar al panel admin.
+3. Verificar: comparar con `Hash::check`; a los 5 intentos fallidos, invalidar el código y pedir uno nuevo. Reenviar: máximo 1 por minuto.
+4. Sin dependencias nuevas (no Fortify): todo con lo que ya tiene Laravel.
+5. Tests: un admin no entra al panel sin el código; con el código correcto sí; código vencido o 5 intentos fallidos lo bloquean; productores y compradores no pasan por este paso.
+
+Relacionada: tarea de frontend web de esta historia (pantalla del código). En local el mail va al log.
+
+</details>
+
+<details>
+<summary>**KAN-314** [frontend] — Frontend Web: pantalla para ingresar el código de verificación del administrador</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Auth/DosPasos.tsx` (nuevo), con el `GuestLayout` del login.
+* `resources/js/Components/Auth/CampoCodigo.tsx` (nuevo).
+
+Guía:
+
+1. Texto: "Te mandamos un código de 6 dígitos a m***@agroconnect.test" (el backend manda el email enmascarado).
+2. 6 casilleros, uno por dígito: avanzan solos al escribir, retroceden con Backspace, y se puede pegar el código completo. `inputMode="numeric"` y `autoComplete="one-time-code"` (en el celu sugiere el código).
+3. Se envía solo al completar el sexto dígito.
+4. Error: los casilleros tiemblan una vez (solo si no está activado "reducir movimiento") y se muestra cuántos intentos quedan.
+5. "Reenviar código" con cuenta regresiva de 60 s; "Volver al inicio de sesión".
+
+Depende de: KAN-301.
+
+</details>
+
+---
+
+### KAN-284 — Registro de actividad de los administradores
+
+> Como administrador del Consorcio, quiero ver un registro de las acciones que hicieron los administradores, para saber quién hizo qué y cuándo (por ejemplo, quién validó a un socio o inhabilitó una cuenta).
+>
+> Criterios de aceptación:
+>
+> * Se registran: inhabilitar/reactivar cuentas, cambiar roles, validar/rechazar socios, resolver denuncias y bloquear/desbloquear/eliminar publicaciones.
+> * Cada registro guarda el administrador, la acción, a quién o qué afectó, la IP y la fecha y hora.
+> * En el panel admin hay una sección "Actividad" con el listado, filtrable por tipo de acción.
+> * Los registros no se pueden editar ni borrar desde la plataforma.
+
+<details>
+<summary>**KAN-302** [backend] — Backend: tabla de auditoría y registro de las acciones de los administradores</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_create_auditorias_table.php` (nuevo) — `admin_id`, `accion`, `auditable_type`/`auditable_id` (a qué afectó), `detalle` (json), `ip`, `created_at`.
+* `app/Models/Auditoria.php` (nuevo) y un helper o servicio `Auditoria::registrar(...)`.
+* Controladores de admin: `UsuarioController`, `SocioController`, `DenunciaController`, `PublicacionModeracionController`.
+* `app/Http/Controllers/Admin/ActividadController.php` (nuevo) — listado paginado con filtro por acción.
+* `routes/web.php` — `GET /admin/actividad` (`admin.actividad.index`).
+* `tests/Feature/Admin/AuditoriaTest.php` (nuevo).
+
+Guía:
+
+1. Registrar: `inhabilitar_usuario`, `reactivar_usuario`, `cambiar_rol` (rol anterior y nuevo en `detalle`), `validar_socio`, `rechazar_socio`, `resolver_denuncia`, `bloquear_publicacion` (con motivo), `desbloquear_publicacion`, `eliminar_publicacion` (guardar el título en `detalle`, porque la publicación deja de existir).
+2. La tabla no tiene `updated_at` ni rutas para editar o borrar.
+3. `index()` devuelve `Inertia::render('Admin/Actividad/Index', ...)` con los registros (admin, acción, detalle, fecha), paginados y filtrables por `?accion=`.
+4. Tests: cada acción deja su registro con el admin y la IP; un no-admin recibe 403 en `/admin/actividad`.
+
+Relacionada: tarea de frontend web de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-315** [frontend] — Frontend Web: sección "Actividad" en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Actividad/Index.tsx` (nuevo).
+* `resources/js/utils/panelAdmin.ts` — sumar la sección "Actividad" al menú del panel.
+
+Guía:
+
+1. Línea de tiempo agrupada por día ("Hoy", "Ayer", "24 de noviembre"), cada registro con un ícono y color según la acción, el texto armado ("Nadia validó a Juan Pérez como socio"), la hora y, al desplegar, el detalle (motivo, rol anterior → nuevo).
+2. Filtro por tipo de acción (chips) y paginación (`Components/Paginacion.tsx`).
+3. Mismo estilo que el resto del panel (KAN-159/222).
+4. Estado vacío: "Todavía no hay actividad registrada".
+
+Depende de: KAN-302.
+
+</details>
+
+---
+
