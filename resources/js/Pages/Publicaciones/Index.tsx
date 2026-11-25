@@ -1,3 +1,4 @@
+import OrdenCercania from '@/Components/OrdenCercania';
 import PublicacionCard, {
     PublicacionResumen,
 } from '@/Components/PublicacionCard';
@@ -8,7 +9,15 @@ import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Index({
     publicaciones,
-}: PageProps<{ publicaciones: PublicacionResumen[] }>) {
+    categoria_id,
+    lat,
+    lng,
+}: PageProps<{
+    publicaciones: PublicacionResumen[];
+    categoria_id?: string | null;
+    lat?: string | null;
+    lng?: string | null;
+}>) {
     const { auth } = usePage().props;
     const esProductor = auth.user.rol === 'productor';
 
@@ -40,9 +49,16 @@ export default function Index({
 
                     {/* Acá va el filtro por categoría (CategoriaFiltro, KAN-53). */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                            Todas las publicaciones
-                        </h3>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Todas las publicaciones
+                            </h3>
+                            {/* KAN-171: el orden activo sale de la URL (lat/lng). */}
+                            <OrdenCercania
+                                activo={lat != null && lng != null}
+                                categoriaId={categoria_id}
+                            />
+                        </div>
 
                         {publicaciones.length === 0 ? (
                             <div className="rounded-lg bg-white p-6 text-sm text-gray-600 shadow-sm">

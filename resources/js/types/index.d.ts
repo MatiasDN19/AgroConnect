@@ -8,6 +8,9 @@ export interface User {
     // Socio del Consorcio (KAN-92): sin número = sin solicitar.
     numero_socio?: string | null;
     socio_validado?: boolean;
+    // Ubicación del perfil (KAN-90). Llega como "-26.1849000" por el cast decimal:7.
+    lat?: string | null;
+    lng?: string | null;
 }
 
 export interface Publicacion {

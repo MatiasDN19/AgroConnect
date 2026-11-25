@@ -4,6 +4,7 @@ import SocioBadge from '@/Components/SocioBadge';
 import { Categoria, Publicacion, PublicacionFoto, User } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
 import { Link } from '@inertiajs/react';
+import { MapPin } from 'lucide-react';
 
 // Lo mínimo que necesita la tarjeta. Coincide con lo que manda
 // PublicacionController::index() (y sirve para otros listados, ej. sugeridos).
@@ -17,7 +18,16 @@ export type PublicacionResumen = Pick<
     puntuacion_promedio: number | string | null;
     // El listado manda solo la portada (KAN-204). Otros listados pueden no mandarla.
     fotos?: Pick<PublicacionFoto, 'url'>[];
+    // Solo al ordenar por cercanía (KAN-171), en km. null si el productor no
+    // tiene ubicación. Puede llegar como string según el motor de base de datos.
+    distancia?: number | string | null;
 };
+
+// Las coordenadas viajan redondeadas (~1 km), así que no mostramos decimales.
+function textoDistancia(km: number): string {
+    if (km < 1) return 'A menos de 1 km';
+    return `A ${Math.round(km).toLocaleString('es-AR')} km`;
+}
 
 export default function PublicacionCard({
     publicacion,
@@ -30,6 +40,9 @@ export default function PublicacionCard({
             : Number(publicacion.puntuacion_promedio);
 
     const portada = publicacion.fotos?.[0]?.url;
+
+    const distancia =
+        publicacion.distancia == null ? null : Number(publicacion.distancia);
 
     return (
         // Toda la tarjeta es un link al detalle.
@@ -54,9 +67,20 @@ export default function PublicacionCard({
             )}
 
             <div className="flex flex-1 flex-col gap-3 p-5">
-                <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                    {publicacion.categoria.nombre}
-                </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                        {publicacion.categoria.nombre}
+                    </span>
+                    {distancia !== null && (
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <MapPin
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                            {textoDistancia(distancia)}
+                        </span>
+                    )}
+                </div>
 
                 <h3 className="line-clamp-2 text-lg font-semibold text-gray-900">
                     {publicacion.titulo}
