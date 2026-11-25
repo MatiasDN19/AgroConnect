@@ -1,8 +1,14 @@
 <?php
 
+use App\Mail\NuevaAlertaMail;
+use App\Models\Alerta;
 use App\Models\Publicacion;
 use App\Models\SolicitudCompra;
 use App\Models\User;
+use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('los invitados no autenticados son redirigidos al login al intentar crear una solicitud de compra', function () {
@@ -427,4 +433,177 @@ test('el listado de recibidas solo incluye el contacto del comprador en las soli
             ->where('solicitudes.1.usuario.email', 'comprador@agroconnect.test')
             ->where('solicitudes.1.usuario.telefono', '3704111222')
         );
+});
+
+// --- KAN-250: alertas, mail y push al recibir y responder solicitudes de compra ---
+
+test('al crear una solicitud de compra se genera una alerta y correo para el productor dueno de la publicacion', function () {
+    Mail::fake();
+    Http::fake([
+        'https://fcm.googleapis.com/fcm/send' => Http::response(['success' => 1], 200),
+    ]);
+
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'fcm_token' => 'fcm_token_productor_123',
+    ]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'titulo' => 'Mandarinas Criollas',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion), [
+            'mensaje' => 'Quiero 10 cajones de mandarinas.',
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    // El productor recibe la alerta
+    $this->assertDatabaseHas('alertas', [
+        'usuario_id' => $productor->id,
+        'tipo' => 'nueva_solicitud_compra',
+        'leida' => false,
+    ]);
+
+    // El comprador no debe recibir alerta
+    $this->assertDatabaseMissing('alertas', [
+        'usuario_id' => $comprador->id,
+    ]);
+
+    // Se envía correo al productor
+    Mail::assertSent(NuevaAlertaMail::class, function (NuevaAlertaMail $mail) use ($productor, $publicacion) {
+        return $mail->hasTo($productor->email)
+            && $mail->alerta->tipo === 'nueva_solicitud_compra'
+            && str_contains($mail->alerta->mensaje, $publicacion->titulo);
+    });
+
+    // Se envía push notification
+    Http::assertSent(function (ClientRequest $request) use ($publicacion) {
+        return $request->url() === 'https://fcm.googleapis.com/fcm/send'
+            && $request['to'] === 'fcm_token_productor_123'
+            && str_contains($request['notification']['body'], $publicacion->titulo);
+    });
+});
+
+test('al aceptar una solicitud de compra se genera una alerta y correo para el comprador', function () {
+    Mail::fake();
+    Http::fake([
+        'https://fcm.googleapis.com/fcm/send' => Http::response(['success' => 1], 200),
+    ]);
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create([
+        'rol' => User::ROL_COMPRADOR,
+        'fcm_token' => 'fcm_token_comprador_456',
+    ]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'titulo' => 'Pomelos Rosados',
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_ACEPTADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('solicitudes-compra.index'));
+
+    // El comprador recibe la alerta
+    $this->assertDatabaseHas('alertas', [
+        'usuario_id' => $comprador->id,
+        'tipo' => 'solicitud_compra_aceptada',
+        'leida' => false,
+    ]);
+
+    // El productor no debe recibir alerta
+    $this->assertDatabaseMissing('alertas', [
+        'usuario_id' => $productor->id,
+    ]);
+
+    // Se envía correo al comprador
+    Mail::assertSent(NuevaAlertaMail::class, function (NuevaAlertaMail $mail) use ($comprador, $publicacion) {
+        return $mail->hasTo($comprador->email)
+            && $mail->alerta->tipo === 'solicitud_compra_aceptada'
+            && str_contains($mail->alerta->mensaje, $publicacion->titulo)
+            && str_contains($mail->alerta->mensaje, 'aceptada');
+    });
+
+    // Se envía push notification
+    Http::assertSent(function (ClientRequest $request) use ($publicacion) {
+        return $request->url() === 'https://fcm.googleapis.com/fcm/send'
+            && $request['to'] === 'fcm_token_comprador_456'
+            && str_contains($request['notification']['body'], $publicacion->titulo);
+    });
+});
+
+test('al rechazar una solicitud de compra se genera una alerta y correo para el comprador', function () {
+    Mail::fake();
+
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'titulo' => 'Batatas Coloradas',
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_RECHAZADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('solicitudes-compra.index'));
+
+    $this->assertDatabaseHas('alertas', [
+        'usuario_id' => $comprador->id,
+        'tipo' => 'solicitud_compra_rechazada',
+        'leida' => false,
+    ]);
+
+    Mail::assertSent(NuevaAlertaMail::class, function (NuevaAlertaMail $mail) use ($comprador, $publicacion) {
+        return $mail->hasTo($comprador->email)
+            && $mail->alerta->tipo === 'solicitud_compra_rechazada'
+            && str_contains($mail->alerta->mensaje, $publicacion->titulo)
+            && str_contains($mail->alerta->mensaje, 'rechazada');
+    });
+});
+
+test('no se envia correo de solicitud de compra si el usuario desactivo notificaciones por mail', function () {
+    if (! Schema::hasColumn('users', 'notificar_por_mail')) {
+        $this->markTestSkipped('La columna notificar_por_mail se agrega en KAN-77.');
+    }
+
+    Mail::fake();
+
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'notificar_por_mail' => false,
+    ]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'titulo' => 'Zapallitos',
+    ]);
+
+    $this->actingAs($comprador)
+        ->post(route('solicitudes-compra.store', $publicacion), [
+            'mensaje' => 'Quiero comprar zapallitos.',
+        ]);
+
+    Mail::assertNothingSent();
 });

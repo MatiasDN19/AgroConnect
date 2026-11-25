@@ -4,10 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ResolveSolicitudCompraRequest;
 use App\Http\Requests\StoreSolicitudCompraRequest;
+use App\Mail\NuevaAlertaMail;
+use App\Models\Alerta;
 use App\Models\Publicacion;
 use App\Models\SolicitudCompra;
+use App\Models\User;
+use App\Services\PushNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -59,6 +64,16 @@ class SolicitudCompraController extends Controller
             'estado' => SolicitudCompra::ESTADO_PENDIENTE,
         ]);
 
+        // Generar alerta para el productor dueño de la publicación (KAN-250)
+        $productor = $publicacion->usuario;
+        if ($productor) {
+            $this->notificarUsuario(
+                $productor,
+                'nueva_solicitud_compra',
+                "Recibiste una solicitud de compra por '{$publicacion->titulo}'."
+            );
+        }
+
         return back()->with('success', 'Solicitud de compra enviada exitosamente.');
     }
 
@@ -80,6 +95,40 @@ class SolicitudCompraController extends Controller
 
         $accion = $solicitud->estado === SolicitudCompra::ESTADO_ACEPTADA ? 'aceptada' : 'rechazada';
 
+        // Generar alerta para el comprador que realizó la solicitud (KAN-250)
+        $comprador = $solicitud->usuario;
+        $tituloPublicacion = $solicitud->publicacion?->titulo ?? 'la publicación';
+        $tipoAlerta = $solicitud->estado === SolicitudCompra::ESTADO_ACEPTADA
+            ? 'solicitud_compra_aceptada'
+            : 'solicitud_compra_rechazada';
+
+        if ($comprador) {
+            $this->notificarUsuario(
+                $comprador,
+                $tipoAlerta,
+                "Tu solicitud por '{$tituloPublicacion}' fue {$accion}."
+            );
+        }
+
         return back()->with('success', "Solicitud de compra {$accion} exitosamente.");
+    }
+
+    /**
+     * Notificar al usuario mediante alerta en el sistema, correo y notificación push.
+     */
+    private function notificarUsuario(User $usuario, string $tipo, string $mensaje): void
+    {
+        $alerta = Alerta::create([
+            'usuario_id' => $usuario->id,
+            'tipo' => $tipo,
+            'mensaje' => $mensaje,
+            'leida' => false,
+        ]);
+
+        if ($usuario->notificar_por_mail ?? true) {
+            Mail::to($usuario)->send(new NuevaAlertaMail($alerta));
+        }
+
+        app(PushNotificationService::class)->sendPush($usuario, $alerta);
     }
 }
