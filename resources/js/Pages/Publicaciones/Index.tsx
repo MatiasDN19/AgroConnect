@@ -7,17 +7,23 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 
+interface Paginator<T> {
+    data: T[];
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
+}
+
 export default function Index({
     publicaciones,
-    categoria_id,
     lat,
     lng,
 }: PageProps<{
-    publicaciones: PublicacionResumen[];
-    categoria_id?: string | null;
+    publicaciones: PublicacionResumen[] | Paginator<PublicacionResumen>;
     lat?: string | null;
     lng?: string | null;
 }>) {
+    const items = Array.isArray(publicaciones)
+        ? publicaciones
+        : (publicaciones?.data ?? []);
     const { auth } = usePage().props;
     const esProductor = auth.user.rol === 'productor';
 
@@ -56,11 +62,10 @@ export default function Index({
                             {/* KAN-171: el orden activo sale de la URL (lat/lng). */}
                             <OrdenCercania
                                 activo={lat != null && lng != null}
-                                categoriaId={categoria_id}
                             />
                         </div>
 
-                        {publicaciones.length === 0 ? (
+                        {items.length === 0 ? (
                             <div className="rounded-lg bg-white p-6 text-sm text-gray-600 shadow-sm">
                                 Todavía no hay publicaciones activas.
                                 {esProductor && (
@@ -77,7 +82,7 @@ export default function Index({
                             </div>
                         ) : (
                             <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {publicaciones.map((publicacion) => (
+                                {items.map((publicacion) => (
                                     <li key={publicacion.id}>
                                         <PublicacionCard
                                             publicacion={publicacion}

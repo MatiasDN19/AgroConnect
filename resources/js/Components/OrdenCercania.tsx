@@ -13,13 +13,7 @@ import { useState } from 'react';
 
 const redondear = (valor: number) => Math.round(valor * 100) / 100;
 
-export default function OrdenCercania({
-    activo,
-    categoriaId,
-}: {
-    activo: boolean;
-    categoriaId?: string | null;
-}) {
+export default function OrdenCercania({ activo }: { activo: boolean }) {
     const { auth } = usePage<PageProps>().props;
     const [buscando, setBuscando] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -31,12 +25,20 @@ export default function OrdenCercania({
     // Sin ubicación posible no tiene sentido ofrecer la opción.
     if (!tienePerfil && !hayNavegador) return null;
 
-    // Mantiene el filtro de categoría (KAN-53) al cambiar el orden.
+    // Conserva los demás filtros de la URL (búsqueda, categoría: KAN-209/53) y
+    // vuelve a la página 1, porque con otro orden la página actual ya no sirve.
     const recargar = (ubicacion?: { lat: number; lng: number }) => {
+        const parametros = Object.fromEntries(
+            new URLSearchParams(window.location.search),
+        );
+        delete parametros.lat;
+        delete parametros.lng;
+        delete parametros.page;
+
         router.get(
             route('publicaciones.index'),
             {
-                ...(categoriaId ? { categoria_id: categoriaId } : {}),
+                ...parametros,
                 ...(ubicacion
                     ? {
                           lat: redondear(ubicacion.lat),

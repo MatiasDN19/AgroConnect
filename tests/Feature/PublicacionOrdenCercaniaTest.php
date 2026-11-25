@@ -86,11 +86,11 @@ test('con lat y lng el listado devuelve las publicaciones ordenadas de más cerc
         ->component('Publicaciones/Index')
         ->where('lat', (string) $userLat)
         ->where('lng', (string) $userLng)
-        ->has('publicaciones', 4)
-        ->where('publicaciones.0.id', $pubCercana->id)
-        ->where('publicaciones.1.id', $pubMedia->id)
-        ->where('publicaciones.2.id', $pubLejana->id)
-        ->where('publicaciones.3.id', $pubSinUbicacion->id)
+        ->has('publicaciones.data', 4)
+        ->where('publicaciones.data.0.id', $pubCercana->id)
+        ->where('publicaciones.data.1.id', $pubMedia->id)
+        ->where('publicaciones.data.2.id', $pubLejana->id)
+        ->where('publicaciones.data.3.id', $pubSinUbicacion->id)
     );
 });
 
@@ -122,10 +122,10 @@ test('sin lat ni lng el listado se comporta igual que antes ordenando por fecha 
         ->component('Publicaciones/Index')
         ->where('lat', null)
         ->where('lng', null)
-        ->has('publicaciones', 3)
-        ->where('publicaciones.0.id', $pub3->id)
-        ->where('publicaciones.1.id', $pub2->id)
-        ->where('publicaciones.2.id', $pub1->id)
+        ->has('publicaciones.data', 3)
+        ->where('publicaciones.data.0.id', $pub3->id)
+        ->where('publicaciones.data.1.id', $pub2->id)
+        ->where('publicaciones.data.2.id', $pub1->id)
     );
 });
 
@@ -191,8 +191,8 @@ test('se puede combinar el orden por cercania con el filtro de categoria', funct
         ->where('lat', (string) $userLat)
         ->where('lng', (string) $userLng)
         ->where('categoria_id', (string) $catVerduras->id)
-        ->has('publicaciones', 2)
-        ->where('publicaciones.0.id', $pubVerduraMedia->id)
-        ->where('publicaciones.1.id', $pubVerduraLejana->id)
+        ->has('publicaciones.data', 2)
+        ->where('publicaciones.data.0.id', $pubVerduraMedia->id)
+        ->where('publicaciones.data.1.id', $pubVerduraLejana->id)
     );
 });
