@@ -10,6 +10,8 @@ import {
     CheckCircle2,
     Clock,
     LucideIcon,
+    Minus,
+    Plus,
     ShoppingCart,
     XCircle,
 } from 'lucide-react';
@@ -51,15 +53,20 @@ const AVISO_ESTADO: Record<
     },
 };
 
-// Botón "Solicitar compra" + modal con el mensaje opcional (KAN-116).
+// Botón "Solicitar compra" + modal con la cantidad y el mensaje opcional (KAN-116/252).
 // POST /publicaciones/{id}/solicitudes-compra. Si el usuario ya solicitó, muestra en qué
 // quedó su última solicitud; con una pendiente no deja mandar otra (el backend tampoco).
+// La cantidad va de 1 al stock disponible: el backend valida lo mismo (KAN-251) y,
+// al aceptar, la descuenta del stock.
 export default function SolicitarCompra({
     publicacion,
     miSolicitud,
     disponible,
 }: {
-    publicacion: Pick<Publicacion, 'id' | 'titulo' | 'precio' | 'unidad'>;
+    publicacion: Pick<
+        Publicacion,
+        'id' | 'titulo' | 'precio' | 'unidad' | 'stock'
+    >;
     miSolicitud: MiSolicitud | null;
     // false si la publicación está pausada o vendida: se ve el estado, pero no se puede pedir.
     disponible: boolean;
@@ -67,7 +74,10 @@ export default function SolicitarCompra({
     const [abierto, setAbierto] = useState(false);
 
     const { data, setData, post, processing, errors, reset, clearErrors } =
-        useForm({ mensaje: '' });
+        useForm({ cantidad: 1, mensaje: '' });
+
+    const maximo = Math.max(1, publicacion.stock);
+    const subtotal = Number(publicacion.precio) * data.cantidad;
 
     // 'publicacion' no es un campo del formulario: lo agrega StoreSolicitudCompraRequest::withValidator.
     const errorGeneral = (errors as Record<string, string | undefined>)
@@ -153,6 +163,40 @@ export default function SolicitarCompra({
                     </div>
 
                     <div>
+                        <InputLabel htmlFor="cantidad" value="Cantidad" />
+                        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <SelectorCantidad
+                                valor={data.cantidad}
+                                maximo={maximo}
+                                unidad={publicacion.unidad}
+                                onCambiar={(valor) =>
+                                    setData('cantidad', valor)
+                                }
+                            />
+                            <span className="text-sm text-gray-500">
+                                Disponibles:{' '}
+                                {publicacion.stock.toLocaleString('es-AR')}{' '}
+                                {publicacion.unidad}
+                            </span>
+                        </div>
+                        <InputError
+                            className="mt-2"
+                            message={errors.cantidad}
+                        />
+
+                        {/* Referencia: el precio final lo acuerdan entre ustedes. */}
+                        <p
+                            aria-live="polite"
+                            className="mt-3 flex items-baseline justify-between rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-900"
+                        >
+                            <span>Subtotal estimado</span>
+                            <span className="text-base font-semibold">
+                                {formatearPrecio(subtotal)}
+                            </span>
+                        </p>
+                    </div>
+
+                    <div>
                         <InputLabel
                             htmlFor="mensaje"
                             value="Mensaje para el productor (opcional)"
@@ -164,7 +208,7 @@ export default function SolicitarCompra({
                             value={data.mensaje}
                             onChange={(e) => setData('mensaje', e.target.value)}
                             maxLength={MAX_MENSAJE}
-                            placeholder="Por ejemplo: necesito 3 cajones, ¿puedo retirar el sábado a la mañana?"
+                            placeholder="Por ejemplo: ¿puedo retirar el sábado a la mañana?"
                         />
                         <div className="mt-1 flex justify-between gap-4">
                             <InputError message={errors.mensaje} />
@@ -193,6 +237,73 @@ export default function SolicitarCompra({
                     </div>
                 </form>
             </Modal>
+        </div>
+    );
+}
+
+// Cantidad con botones − / + y un campo que también se puede escribir (KAN-252).
+// Mientras se escribe se permite dejarlo vacío; al salir del campo se acomoda
+// entre 1 y el máximo para que nunca quede un valor inválido.
+function SelectorCantidad({
+    valor,
+    maximo,
+    unidad,
+    onCambiar,
+}: {
+    valor: number;
+    maximo: number;
+    unidad: string;
+    onCambiar: (valor: number) => void;
+}) {
+    const [texto, setTexto] = useState(String(valor));
+
+    const fijar = (nuevo: number) => {
+        const acotado = Math.min(maximo, Math.max(1, nuevo));
+        onCambiar(acotado);
+        setTexto(String(acotado));
+    };
+
+    const claseBoton =
+        'flex h-10 w-10 items-center justify-center text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40';
+
+    return (
+        <div className="inline-flex items-center overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm">
+            <button
+                type="button"
+                onClick={() => fijar(valor - 1)}
+                disabled={valor <= 1}
+                aria-label="Restar uno"
+                className={claseBoton}
+            >
+                <Minus className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <input
+                id="cantidad"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={maximo}
+                value={texto}
+                onChange={(e) => {
+                    setTexto(e.target.value);
+                    const n = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(n)) {
+                        onCambiar(Math.min(maximo, Math.max(1, n)));
+                    }
+                }}
+                onBlur={() => fijar(parseInt(texto, 10) || 1)}
+                className="h-10 w-16 border-0 border-x border-gray-300 text-center [appearance:textfield] focus:ring-2 focus:ring-inset focus:ring-indigo-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <span className="px-3 text-sm text-gray-600">{unidad}</span>
+            <button
+                type="button"
+                onClick={() => fijar(valor + 1)}
+                disabled={valor >= maximo}
+                aria-label="Sumar uno"
+                className={`${claseBoton} border-l border-gray-300`}
+            >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+            </button>
         </div>
     );
 }

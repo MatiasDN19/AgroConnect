@@ -16,6 +16,8 @@ import { useState } from 'react';
 interface Solicitud {
     id: number;
     estado: EstadoSolicitud;
+    // Cuánto pidió el comprador (KAN-251); al aceptar se descuenta del stock.
+    cantidad: number;
     mensaje: string | null;
     created_at: string;
     updated_at: string;
@@ -244,12 +246,21 @@ function TarjetaSolicitud({
                 </p>
             </div>
 
-            <p className="text-sm text-gray-700">
-                <span className="text-gray-500">Comprador:</span>{' '}
-                <span className="font-medium">
-                    {usuario?.name ?? 'Usuario eliminado'}
-                </span>
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p className="text-sm text-gray-700">
+                    <span className="text-gray-500">Comprador:</span>{' '}
+                    <span className="font-medium">
+                        {usuario?.name ?? 'Usuario eliminado'}
+                    </span>
+                </p>
+                {publicacion && (
+                    <PedidoResumen
+                        cantidad={solicitud.cantidad}
+                        unidad={publicacion.unidad}
+                        precio={publicacion.precio}
+                    />
+                )}
+            </div>
 
             {solicitud.mensaje ? (
                 // whitespace-pre-line respeta los saltos de línea del comprador.
@@ -355,11 +366,38 @@ function ContenidoConfirmacion({
                 <dd className="text-slate-900">
                     {solicitud.usuario?.name ?? 'Usuario eliminado'}
                 </dd>
+                {solicitud.publicacion && (
+                    <>
+                        <dt className="text-slate-500">Cantidad</dt>
+                        <dd className="text-slate-900">
+                            {cantidadConUnidad(
+                                solicitud.cantidad,
+                                solicitud.publicacion.unidad,
+                            )}
+                        </dd>
+                    </>
+                )}
             </dl>
+
+            {/* Al aceptar, el backend descuenta la cantidad del stock (KAN-251); si
+                llega a 0, la publicación se pausa sola (KAN-180). */}
+            {esAceptar && solicitud.publicacion && (
+                <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                    Se van a descontar{' '}
+                    <strong>
+                        {cantidadConUnidad(
+                            solicitud.cantidad,
+                            solicitud.publicacion.unidad,
+                        )}
+                    </strong>{' '}
+                    del stock de la publicación. Si se queda sin stock, se pausa
+                    automáticamente.
+                </p>
+            )}
 
             <p className="mt-4 text-sm text-gray-600">
                 {esAceptar
-                    ? 'Vas a ver el teléfono y el email del comprador para coordinar la entrega y el pago. El stock no se descuenta solo: actualizalo cuando concretes la venta.'
+                    ? 'Vas a ver el teléfono y el email del comprador para coordinar la entrega y el pago.'
                     : 'El comprador va a ver que rechazaste su solicitud y podrá enviarte otra si quiere.'}{' '}
                 No se puede deshacer.
             </p>
@@ -379,5 +417,33 @@ function ContenidoConfirmacion({
                 )}
             </div>
         </div>
+    );
+}
+
+// "3 kg", "1 docena". La unidad la escribe el productor, así que se muestra tal cual.
+function cantidadConUnidad(cantidad: number, unidad: string): string {
+    return `${cantidad.toLocaleString('es-AR')} ${unidad}`;
+}
+
+// Cantidad pedida y subtotal estimado (precio de la publicación × cantidad, KAN-252).
+// Es una referencia: el precio final lo acuerdan productor y comprador.
+function PedidoResumen({
+    cantidad,
+    unidad,
+    precio,
+}: {
+    cantidad: number;
+    unidad: string;
+    precio: number | string;
+}) {
+    return (
+        <p className="flex items-center gap-2 text-sm">
+            <span className="rounded-full bg-sky-50 px-2.5 py-0.5 font-semibold text-marca-azul-profundo">
+                {cantidadConUnidad(cantidad, unidad)}
+            </span>
+            <span className="text-gray-500">
+                ≈ {formatearPrecio(Number(precio) * cantidad)}
+            </span>
+        </p>
     );
 }
