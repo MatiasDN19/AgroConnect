@@ -146,3 +146,52 @@ test('los invitados no autenticados no pueden acceder a alertas ni marcarlas com
     $this->patchJson(route('alertas.marcar-leida', $alerta))
         ->assertUnauthorized();
 });
+
+test('la prop compartida alertas_no_leidas refleja la cantidad correcta de alertas no leidas del usuario', function () {
+    $usuario = User::factory()->create();
+    $otroUsuario = User::factory()->create();
+
+    // 2 no leídas y 1 leída para este usuario
+    Alerta::factory()->count(2)->create([
+        'usuario_id' => $usuario->id,
+        'leida' => false,
+    ]);
+    $alertaALeer = Alerta::factory()->create([
+        'usuario_id' => $usuario->id,
+        'leida' => false,
+    ]);
+    Alerta::factory()->create([
+        'usuario_id' => $usuario->id,
+        'leida' => true,
+    ]);
+
+    // Alertas no leídas de otro usuario (no deben sumar)
+    Alerta::factory()->count(5)->create([
+        'usuario_id' => $otroUsuario->id,
+        'leida' => false,
+    ]);
+
+    // Inicialmente tiene 3 no leídas
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index'));
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('alertas_no_leidas', 3)
+    );
+
+    // Al marcar una como leída, la prop compartida baja a 2
+    $this->actingAs($usuario)->patch(route('alertas.marcar-leida', $alertaALeer));
+
+    $responsePostLeida = $this->actingAs($usuario)->get(route('publicaciones.index'));
+    $responsePostLeida->assertOk();
+    $responsePostLeida->assertInertia(fn (Assert $page) => $page
+        ->where('alertas_no_leidas', 2)
+    );
+});
+
+test('la prop compartida alertas_no_leidas es 0 para invitados', function () {
+    $response = $this->get(route('login'));
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('alertas_no_leidas', 0)
+    );
+});
