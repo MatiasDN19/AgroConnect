@@ -54,6 +54,52 @@ class SolicitudCompraController extends Controller
     }
 
     /**
+     * Listar las solicitudes de compra enviadas por el comprador autenticado (KAN-263).
+     */
+    public function enviadas(Request $request): InertiaResponse
+    {
+        $solicitudes = SolicitudCompra::query()
+            ->where('usuario_id', $request->user()->id)
+            ->with([
+                'publicacion' => function ($q) {
+                    $q->select('id', 'usuario_id', 'titulo', 'unidad')
+                        ->with([
+                            'usuario:id,name,telefono,socio_validado',
+                            'fotos' => fn ($f) => $f->orderBy('orden'),
+                        ]);
+                },
+            ])
+            ->latest('created_at')
+            ->latest('id')
+            ->paginate(15)
+            ->through(function (SolicitudCompra $solicitud) {
+                $productor = $solicitud->publicacion?->usuario;
+                $esAceptada = $solicitud->estado === SolicitudCompra::ESTADO_ACEPTADA;
+
+                return [
+                    ...$solicitud->only(['id', 'estado', 'cantidad', 'mensaje', 'created_at', 'updated_at']),
+                    'publicacion' => [
+                        'id' => $solicitud->publicacion?->id,
+                        'titulo' => $solicitud->publicacion?->titulo,
+                        'unidad' => $solicitud->publicacion?->unidad,
+                        'portada' => $solicitud->publicacion?->fotos?->first()?->url,
+                        'fotos' => $solicitud->publicacion?->fotos,
+                    ],
+                    'productor' => $productor ? [
+                        'id' => $productor->id,
+                        'name' => $productor->name,
+                        'socio_validado' => (bool) $productor->socio_validado,
+                        ...($esAceptada ? ['telefono' => $productor->telefono] : []),
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('SolicitudesCompra/Enviadas', [
+            'solicitudes' => $solicitudes,
+        ]);
+    }
+
+    /**
      * Store a newly created purchase request for the given publication.
      */
     public function store(StoreSolicitudCompraRequest $request, Publicacion $publicacion): RedirectResponse
