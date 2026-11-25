@@ -4350,17 +4350,23 @@ _Matching y sugerencia de productos/productores relevantes (priorizando socios d
 </details>
 
 <details>
-<summary>**KAN-137** [frontend] — Frontend Flutter: mostrar el precio sugerido en la pantalla de publicar</summary>
+<summary>**KAN-137** [frontend] — Frontend Flutter: mostrar el precio de referencia del Consorcio y el rango del marketplace al publicar</summary>
 
-**Archivos a crear/modificar:**
+Archivos a crear/modificar (app Flutter):
 
-* `mobile/lib/features/publicaciones/presentation/publicar_screen.dart` (o la ruta equivalente una vez que exista el proyecto Flutter — ver Epic de API REST para el setup inicial del proyecto)
+* Pantalla de publicar (KAN-97) y de editar (KAN-102).
+* `lib/services/publicacion_service.dart` — método `precioSugerido(categoriaId, unidad, titulo)`.
 
-**Guía:**
+Guía:
 
-1. Mismo criterio que la versión Web (ver Subtask hermana): al elegir categoría, llamar al endpoint `GET /categorias/{id}/precio-sugerido` de la API REST (Epic "API REST (Sanctum) para la app móvil") y mostrar el precio promedio como texto de ayuda debajo del campo de precio.
-2. Si la API devuelve `null`, no mostrar nada.
-3. Esta task depende de que ya exista el scaffold de la app Flutter y el cliente HTTP configurado contra la API (ver Epic de API REST).
+1. **Cambio respecto de la versión original (2026-11-26):** el precio de referencia lo define la mesa administrativa del Consorcio cada mes (KAN-336), no un cálculo. Mismo criterio que la versión web (KAN-340).
+2. Al elegir la categoría (y la unidad), llamar a `GET /api/categorias/{id}/precio-sugerido?unidad=&titulo=` (KAN-310 y KAN-338).
+3. Arriba, destacado: "Precio de referencia del Consorcio · noviembre 2026: $500 por kg" (la referencia que coincide con el título, o la lista corta de la categoría).
+4. Debajo, más chico: "En AgroConnect se publica entre $A y $B por kg" (si hay datos).
+5. Aviso suave si el precio se aleja mucho de la referencia, sin bloquear.
+6. Si no hay referencias ni datos, no mostrar nada.
+
+Depende de: KAN-310 y KAN-338.
 
 </details>
 
@@ -4520,6 +4526,146 @@ _Matching y sugerencia de productos/productores relevantes (priorizando socios d
     * Si el usuario tiene `fcm_token` seteado y se genera el evento que dispara la Alerta, se hace la llamada HTTP esperada (`Http::assertSent(...)`).
     * Si el usuario NO tiene `fcm_token`, no se intenta ningún envío.
     * Si `Http::fake()` simula una respuesta de error de Firebase, el test verifica que la Alerta in-app de todas formas se creó en la base (el fallo del push no debe afectar lo demás) — usen `assertDatabaseHas('alertas', [...])`.
+
+</details>
+
+---
+
+### KAN-336 — Ver los precios de referencia del Consorcio y la demanda del Plan Nutrir
+
+> Como productor, quiero ver los precios de referencia que define el Consorcio cada mes y qué productos necesita el Plan Nutrir, para poner un precio acorde al publicar y saber qué conviene ofrecer.
+>
+> Contexto (relevado por Nadia con el presidente del Consorcio, 2026-11-26): el precio de referencia **no sale de una fórmula**. Lo fija cada mes una mesa administrativa (representantes del Consorcio, abogados, contadores, referentes del Ministerio de Producción y presidentes de consorcios) según la demanda, la estacionalidad, la producción disponible, los cupos del Plan Nutrir y el presupuesto. El Plan Nutrir manda cada mes la lista de productos y cantidades que necesita.
+>
+> Criterios de aceptación:
+>
+> * El administrador carga cada mes, por producto: categoría, unidad, precio de referencia y, si corresponde, la cantidad que pide el Plan Nutrir. Puede copiar la lista del mes anterior y ajustarla.
+> * Al publicar, el productor ve primero el precio de referencia oficial del mes para ese producto (si existe) y, como dato secundario, el rango de precios que se publica en AgroConnect.
+> * Los productores ven en el Inicio qué productos y cantidades necesita el Plan Nutrir este mes.
+> * La asignación de cupos sigue siendo un trámite del Consorcio, fuera de la app.
+> * Funciona en la web y en la app móvil.
+>
+> Relacionada: KAN-132 (precio sugerido calculado, que pasa a ser el dato secundario).
+
+<details>
+<summary>**KAN-337** [backend] — Backend: referencias mensuales del Consorcio (precios y demanda del Plan Nutrir) y su ABM en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_create_referencias_mensuales_table.php` (nuevo) — `mes` (date, siempre el día 1), `producto` (string), `categoria_id` (FK), `unidad` (string), `precio_referencia` (decimal nullable), `cantidad_plan_nutrir` (decimal nullable), `nota` (string nullable), timestamps. Índice único en `mes` + `producto` + `unidad`.
+* `app/Models/ReferenciaMensual.php` (nuevo) — scope `delMes($fecha)` y `vigentes()` (el mes actual).
+* `app/Http/Controllers/Admin/ReferenciaMensualController.php` (nuevo) — `index(?mes=2026-11)`, `store`, `update`, `destroy` y `copiarMesAnterior`.
+* `app/Http/Requests/Admin/ReferenciaMensualRequest.php` (nuevo).
+* `routes/web.php` — rutas bajo `/admin/referencias` en el grupo `admin`.
+* `tests/Feature/Admin/ReferenciasMensualesTest.php` (nuevo).
+
+Guía:
+
+1. Cada fila es un producto del mes: "Zapallo · Verduras · kg · $500 · Plan Nutrir: 800 kg". El precio y la cantidad son opcionales por separado (puede haber referencia sin pedido del Plan Nutrir y al revés), pero al menos uno tiene que estar.
+2. `index()` devuelve `Inertia::render('Admin/Referencias/Index', [...])` con las filas del mes elegido (por defecto el actual) y la lista de categorías.
+3. `copiarMesAnterior`: copia las filas del mes anterior al mes elegido, sin duplicar las que ya existen.
+4. Si `KAN-302` (auditoría) ya está, registrar los cambios ahí.
+5. Tests: un admin crea, edita y borra filas; copiar el mes anterior no duplica; un no-admin recibe 403; validaciones (precio y cantidad positivos, al menos uno de los dos).
+
+Relacionada: KAN-336. La pantalla la hace KAN-339.
+
+</details>
+
+<details>
+<summary>**KAN-338** [backend] — Backend: referencias oficiales en el precio sugerido y demanda del Plan Nutrir en el Inicio (web y API)</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — `precioSugerido()` e `index()`.
+* `routes/api.php` y el controlador de la API — mismos datos (coordinar con KAN-310, que expone el precio sugerido en la API).
+* `tests/Feature/PrecioSugeridoTest.php` y `tests/Feature/PublicacionControllerTest.php` — agregar casos.
+
+Guía:
+
+1. `precioSugerido()` (KAN-132) suma `referencias`: las filas vigentes del mes actual de esa categoría con precio de referencia (producto, unidad, precio). Se mantiene lo que ya devuelve (mediana, rango y cantidad de publicaciones), que pasa a ser el dato secundario.
+2. Opcional: si se manda `?titulo=`, marcar con `coincide: true` la referencia cuyo producto aparece en el título (sin distinguir mayúsculas ni acentos), para que el frontend la resalte.
+3. `index()`: si el usuario es productor, mandar `demanda_plan_nutrir` con las filas del mes actual que tienen cantidad (producto, unidad, cantidad, categoría).
+4. API: endpoint `GET /api/plan-nutrir/demanda` con lo mismo, y las `referencias` en el precio sugerido de la API.
+5. Tests: con referencias cargadas aparecen en el precio sugerido; las de otro mes o de otra categoría no; la coincidencia por título; la demanda llega solo a productores.
+
+Depende de: KAN-337.
+
+</details>
+
+<details>
+<summary>**KAN-339** [frontend] — Frontend Web: pantalla "Referencias del mes" en el panel admin</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Admin/Referencias/Index.tsx` (nuevo).
+* `resources/js/utils/panelAdmin.ts` — sumar la sección al menú del panel.
+
+Guía:
+
+1. Selector de mes arriba ("Noviembre 2026", con flechas para ir al anterior/siguiente) y botón "Copiar del mes anterior" si el mes está vacío.
+2. Tabla editable en la misma pantalla: producto, categoría (con su ícono, `estiloCategoria`), unidad, precio de referencia y cantidad del Plan Nutrir. Agregar fila, editar en línea y borrar con confirmación.
+3. Aclarar arriba, en un texto corto, que los precios los define la mesa administrativa del Consorcio y que acá solo se cargan.
+4. Mismo estilo que el resto del panel (KAN-222/324); en el celu, tarjetas en lugar de tabla.
+
+Depende de: KAN-337.
+
+</details>
+
+<details>
+<summary>**KAN-340** [frontend] — Frontend Web: mostrar el precio de referencia oficial al publicar</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Partials/usePrecioSugerido.ts` y `PublicacionForm.tsx` (KAN-132).
+
+Guía:
+
+1. Arriba, destacado: "Precio de referencia del Consorcio · noviembre 2026: **$500 por kg**" (la referencia que coincide con el título; si no coincide ninguna, la lista corta de referencias del mes para esa categoría).
+2. Debajo, más chico y como dato secundario: "En AgroConnect se publica entre $A y $B por kg" (lo que ya muestra KAN-132).
+3. Si el precio que escribe el productor se aleja mucho de la referencia (por ejemplo, más de un 30%), un aviso suave, sin bloquear.
+4. Texto de ayuda: "El precio de referencia lo define la mesa administrativa del Consorcio".
+5. Coordinar con KAN-320 (publicar en pasos): esto va en el paso "Precio y stock".
+
+Depende de: KAN-338.
+
+</details>
+
+<details>
+<summary>**KAN-341** [frontend] — Frontend Web: bloque "Este mes el Plan Nutrir necesita…" en el Inicio</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/Inicio/DemandaPlanNutrir.tsx` (nuevo).
+* `resources/js/Pages/Publicaciones/Index.tsx` — ubicarlo en el Inicio (KAN-211), solo para productores.
+
+Guía:
+
+1. Tarjeta con el logo del Plan Nutrir (ya está en `resources/images/logos/plan-nutrir.webp`), el mes y la lista de productos con su cantidad ("Zapallo · 800 kg"), con el ícono de la categoría.
+2. Si son muchos, mostrar los primeros 6 y un "Ver todos".
+3. Cada producto con un acceso a "Publicar" ya con la categoría elegida.
+4. Aclarar: "Los cupos los asigna el Consorcio. Si podés ofrecer alguno de estos productos, publicalo o consultá en el Consorcio".
+5. No se muestra si no hay demanda cargada este mes, ni a compradores ni a admins.
+
+Depende de: KAN-338.
+
+</details>
+
+<details>
+<summary>**KAN-342** [frontend] — Frontend Flutter: demanda del Plan Nutrir en la pantalla de inicio</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* `lib/widgets/demanda_plan_nutrir.dart` (nuevo).
+* Pantalla de inicio de la app (KAN-233).
+* `lib/services/plan_nutrir_service.dart` (nuevo).
+
+Guía:
+
+1. Mismo contenido que la versión web: logo del Plan Nutrir, mes y lista de productos con su cantidad, con un acceso a publicar ese producto.
+2. Solo para productores y solo si hay demanda cargada este mes.
+3. Aclaración de que los cupos los asigna el Consorcio.
+
+Depende de: KAN-338 (endpoint `GET /api/plan-nutrir/demanda`). Versión web: KAN-341.
 
 </details>
 
