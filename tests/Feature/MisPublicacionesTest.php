@@ -260,3 +260,11 @@ test('la paginacion devuelve 12 publicaciones por pagina y conserva el query str
         ->where('filtros.estado', 'pausada')
     );
 });
+
+test('un administrador recibe 403 al intentar acceder a mis publicaciones porque no es productor', function () {
+    $admin = User::factory()->create(['rol' => User::ROL_ADMIN]);
+
+    $response = $this->actingAs($admin)->get(route('publicaciones.mias'));
+
+    $response->assertForbidden();
+});
