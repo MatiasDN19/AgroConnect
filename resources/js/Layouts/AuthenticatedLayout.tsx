@@ -1,257 +1,433 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import BuscadorPublicaciones from '@/Components/BuscadorPublicaciones';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
+import PieApp from '@/Components/PieApp';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import { User } from '@/types';
 import { rutaInicioAdmin } from '@/utils/panelAdmin';
 import { Link, usePage } from '@inertiajs/react';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import {
+    Bell,
+    ChevronDown,
+    Heart,
+    Inbox,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Plus,
+    Store,
+    UserRound,
+    X,
+} from 'lucide-react';
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+
+// Layout de la app logueada (KAN-211): navbar blanco translúcido fijo arriba
+// (efecto vidrio), que suma sombra al bajar; menú de usuario con avatar; footer
+// compacto. El buscador del navbar se puede ocultar: el Inicio lo muestra solo
+// cuando el buscador grande salió de la pantalla.
+const ROLES: Record<User['rol'], string> = {
+    productor: 'Productor',
+    comprador: 'Comprador',
+    admin: 'Administrador',
+};
 
 export default function Authenticated({
     header,
+    mostrarBuscador = true,
     children,
-}: PropsWithChildren<{ header?: ReactNode }>) {
+}: PropsWithChildren<{ header?: ReactNode; mostrarBuscador?: boolean }>) {
     const user = usePage().props.auth.user;
+    const esProductor = user.rol === 'productor';
 
     // Link al panel admin: va a la primera sección que ya exista (KAN-219).
     const inicioAdmin = user.rol === 'admin' ? rutaInicioAdmin() : null;
 
-    const [showingNavigationDropdown, setShowingNavigationDropdown] =
-        useState(false);
+    const [menuCelular, setMenuCelular] = useState(false);
+    const [conSombra, setConSombra] = useState(false);
+
+    useEffect(() => {
+        const alBajar = () => setConSombra(window.scrollY > 8);
+        alBajar();
+        window.addEventListener('scroll', alBajar, { passive: true });
+        return () => window.removeEventListener('scroll', alBajar);
+    }, []);
+
+    const enMarketplace =
+        route().current('publicaciones.index') ||
+        route().current('publicaciones.show');
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                {/* Insignia chica + nombre: a este tamaño los detalles del logo no se leen solos (como en el mockup). */}
-                                <Link
-                                    href={route('publicaciones.index')}
-                                    className="flex items-center gap-2"
-                                >
-                                    <ApplicationLogo className="block h-10 w-10" />
-                                    <span className="hidden font-display text-lg font-extrabold tracking-tight sm:inline">
-                                        <span className="text-marca-azul">
-                                            Agro
-                                        </span>
-                                        <span className="text-marca-dorado">
-                                            Connect
-                                        </span>
-                                    </span>
-                                </Link>
-                            </div>
+        // overflow-x-clip: nada decorativo puede generar scroll horizontal
+        // (clip, a diferencia de hidden, no rompe el navbar "sticky").
+        <div className="flex min-h-screen flex-col overflow-x-clip bg-marca-fondo">
+            <nav
+                className={`sticky top-0 z-40 border-b bg-white/80 backdrop-blur-md transition-[box-shadow,border-color] duration-200 ${
+                    conSombra
+                        ? 'border-slate-200/80 shadow-[0_8px_24px_-12px_rgba(15,37,64,0.18)]'
+                        : 'border-transparent'
+                }`}
+            >
+                <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+                    <Link
+                        href={route('publicaciones.index')}
+                        className="flex shrink-0 items-center gap-2 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
+                    >
+                        <ApplicationLogo className="h-10 w-10" />
+                        <span className="hidden font-display text-lg font-extrabold tracking-tight lg:inline">
+                            <span className="text-marca-azul">Agro</span>
+                            <span className="text-marca-dorado">Connect</span>
+                        </span>
+                    </Link>
 
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('publicaciones.index')}
-                                    active={
-                                        route().current(
-                                            'publicaciones.index',
-                                        ) ||
-                                        route().current('publicaciones.show')
-                                    }
-                                >
-                                    Marketplace
-                                </NavLink>
-
-                                {inicioAdmin && (
-                                    <NavLink href={inicioAdmin} active={false}>
-                                        Panel admin
-                                    </NavLink>
-                                )}
-
-                                {user.rol === 'productor' && (
-                                    <NavLink
-                                        href={route('publicaciones.create')}
-                                        active={route().current(
-                                            'publicaciones.create',
-                                        )}
-                                    >
-                                        Publicar
-                                    </NavLink>
-                                )}
-
-                                {user.rol === 'productor' && (
-                                    <NavLink
-                                        href={route('solicitudes-compra.index')}
-                                        active={route().current(
-                                            'solicitudes-compra.index',
-                                        )}
-                                    >
-                                        Solicitudes
-                                    </NavLink>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {user.name}
-
-                                                <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </Dropdown.Trigger>
-
-                                    <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            Mi perfil
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Cerrar sesión
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <div className="-me-2 flex items-center sm:hidden">
-                            <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown(
-                                        (previousState) => !previousState,
-                                    )
-                                }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    className="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        className={
-                                            !showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={
-                                            showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    className={
-                        (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
-                    }
-                >
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
+                    <div className="ms-2 hidden items-center gap-1 md:flex">
+                        <NavLink
                             href={route('publicaciones.index')}
-                            active={
-                                route().current('publicaciones.index') ||
-                                route().current('publicaciones.show')
-                            }
+                            active={enMarketplace}
                         >
                             Marketplace
-                        </ResponsiveNavLink>
-
-                        {inicioAdmin && (
-                            <ResponsiveNavLink href={inicioAdmin}>
-                                Panel admin
-                            </ResponsiveNavLink>
-                        )}
-
-                        {user.rol === 'productor' && (
-                            <ResponsiveNavLink
-                                href={route('publicaciones.create')}
-                                active={route().current('publicaciones.create')}
-                            >
-                                Publicar
-                            </ResponsiveNavLink>
-                        )}
-
-                        {user.rol === 'productor' && (
-                            <ResponsiveNavLink
+                        </NavLink>
+                        {esProductor && (
+                            <NavLink
                                 href={route('solicitudes-compra.index')}
                                 active={route().current(
                                     'solicitudes-compra.index',
                                 )}
                             >
-                                Solicitudes recibidas
-                            </ResponsiveNavLink>
+                                Solicitudes
+                            </NavLink>
+                        )}
+                        {inicioAdmin && (
+                            <NavLink href={inicioAdmin} active={false}>
+                                Panel admin
+                            </NavLink>
                         )}
                     </div>
 
-                    <div className="border-t border-gray-200 pb-1 pt-4">
-                        <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
-                            </div>
-                        </div>
-
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Mi perfil
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
-                            >
-                                Cerrar sesión
-                            </ResponsiveNavLink>
+                    {/* Buscador compacto: aparece/desaparece con un fundido corto. */}
+                    <div className="hidden flex-1 justify-center px-2 md:flex">
+                        <div
+                            aria-hidden={!mostrarBuscador}
+                            className={`w-full max-w-sm transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+                                mostrarBuscador
+                                    ? 'translate-y-0 opacity-100'
+                                    : 'pointer-events-none -translate-y-1 opacity-0'
+                            }`}
+                        >
+                            <BuscadorPublicaciones
+                                variante="compacto"
+                                inactivo={!mostrarBuscador}
+                            />
                         </div>
                     </div>
+
+                    <div className="ms-auto flex items-center gap-1 md:ms-0">
+                        {esProductor && (
+                            <Link
+                                href={route('publicaciones.create')}
+                                className="me-1 hidden items-center gap-1.5 rounded-xl bg-marca-ambar px-3.5 py-2 text-sm font-semibold text-amber-950 shadow-sm transition-transform duration-150 ease-out hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul active:scale-[0.97] sm:inline-flex"
+                            >
+                                <Plus className="h-4 w-4" aria-hidden="true" />
+                                Publicar
+                            </Link>
+                        )}
+
+                        <BotonIcono
+                            href={route('favoritos.index')}
+                            etiqueta="Mis favoritos"
+                            activo={route().current('favoritos.index')}
+                        >
+                            <Heart className="h-5 w-5" aria-hidden="true" />
+                        </BotonIcono>
+                        {/* El número de no leídas llega con KAN-248 (KAN-74/80). */}
+                        <BotonIcono
+                            href={route('alertas.index')}
+                            etiqueta="Notificaciones"
+                            activo={route().current('alertas.index')}
+                        >
+                            <Bell className="h-5 w-5" aria-hidden="true" />
+                        </BotonIcono>
+
+                        <div className="ms-1 hidden sm:block">
+                            <Dropdown>
+                                <Dropdown.Trigger>
+                                    <button
+                                        type="button"
+                                        className="group flex items-center gap-2 rounded-full py-1 pe-2 ps-1 transition-colors duration-150 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
+                                    >
+                                        <Avatar nombre={user.name} />
+                                        <span className="hidden max-w-[9rem] truncate text-sm font-semibold text-slate-700 lg:inline">
+                                            {user.name.split(' ')[0]}
+                                        </span>
+                                        <ChevronDown
+                                            className="h-4 w-4 text-slate-400"
+                                            aria-hidden="true"
+                                        />
+                                        <span className="sr-only">
+                                            Abrir el menú de usuario
+                                        </span>
+                                    </button>
+                                </Dropdown.Trigger>
+
+                                <Dropdown.Content width="64">
+                                    <div className="flex items-center gap-3 px-3 pb-3 pt-2">
+                                        <Avatar nombre={user.name} grande />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-900">
+                                                {user.name}
+                                            </p>
+                                            <p className="truncate text-xs text-slate-500">
+                                                {user.email}
+                                            </p>
+                                            <span className="mt-1 inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[0.7rem] font-semibold text-marca-azul-profundo">
+                                                {ROLES[user.rol]}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-0.5 border-t border-slate-100 pt-1.5">
+                                        <Dropdown.Link
+                                            href={route('profile.edit')}
+                                        >
+                                            <UserRound
+                                                className="h-4 w-4 text-slate-400"
+                                                aria-hidden="true"
+                                            />
+                                            Mi perfil
+                                        </Dropdown.Link>
+                                        <Dropdown.Link
+                                            href={route('favoritos.index')}
+                                        >
+                                            <Heart
+                                                className="h-4 w-4 text-slate-400"
+                                                aria-hidden="true"
+                                            />
+                                            Mis favoritos
+                                        </Dropdown.Link>
+                                        {esProductor && (
+                                            <Dropdown.Link
+                                                href={route(
+                                                    'solicitudes-compra.index',
+                                                )}
+                                            >
+                                                <Inbox
+                                                    className="h-4 w-4 text-slate-400"
+                                                    aria-hidden="true"
+                                                />
+                                                Solicitudes recibidas
+                                            </Dropdown.Link>
+                                        )}
+                                        {inicioAdmin && (
+                                            <Dropdown.Link href={inicioAdmin}>
+                                                <LayoutDashboard
+                                                    className="h-4 w-4 text-slate-400"
+                                                    aria-hidden="true"
+                                                />
+                                                Panel admin
+                                            </Dropdown.Link>
+                                        )}
+                                    </div>
+                                    <div className="mt-1.5 border-t border-slate-100 pt-1.5">
+                                        <Dropdown.Link
+                                            href={route('logout')}
+                                            method="post"
+                                            as="button"
+                                            className="text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50"
+                                        >
+                                            <LogOut
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                            Cerrar sesión
+                                        </Dropdown.Link>
+                                    </div>
+                                </Dropdown.Content>
+                            </Dropdown>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setMenuCelular((abierto) => !abierto)
+                            }
+                            aria-expanded={menuCelular}
+                            aria-controls="menu-celular"
+                            className="ms-1 inline-flex items-center justify-center rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul sm:hidden"
+                        >
+                            {menuCelular ? (
+                                <X className="h-6 w-6" aria-hidden="true" />
+                            ) : (
+                                <Menu className="h-6 w-6" aria-hidden="true" />
+                            )}
+                            <span className="sr-only">
+                                {menuCelular
+                                    ? 'Cerrar el menú'
+                                    : 'Abrir el menú'}
+                            </span>
+                        </button>
+                    </div>
                 </div>
+
+                {menuCelular && (
+                    <div
+                        id="menu-celular"
+                        className="border-t border-slate-200/80 px-4 pb-4 pt-3 sm:hidden"
+                    >
+                        <BuscadorPublicaciones variante="compacto" />
+
+                        <div className="mt-3 space-y-1">
+                            <ResponsiveNavLink
+                                href={route('publicaciones.index')}
+                                active={enMarketplace}
+                            >
+                                <Store className="h-5 w-5" aria-hidden="true" />
+                                Marketplace
+                            </ResponsiveNavLink>
+                            {esProductor && (
+                                <ResponsiveNavLink
+                                    href={route('publicaciones.create')}
+                                    active={route().current(
+                                        'publicaciones.create',
+                                    )}
+                                >
+                                    <Plus
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                    Publicar
+                                </ResponsiveNavLink>
+                            )}
+                            {esProductor && (
+                                <ResponsiveNavLink
+                                    href={route('solicitudes-compra.index')}
+                                    active={route().current(
+                                        'solicitudes-compra.index',
+                                    )}
+                                >
+                                    <Inbox
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                    Solicitudes recibidas
+                                </ResponsiveNavLink>
+                            )}
+                            {inicioAdmin && (
+                                <ResponsiveNavLink href={inicioAdmin}>
+                                    <LayoutDashboard
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                    Panel admin
+                                </ResponsiveNavLink>
+                            )}
+                        </div>
+
+                        <div className="mt-3 border-t border-slate-200 pt-3">
+                            <div className="flex items-center gap-3 px-3 pb-2">
+                                <Avatar nombre={user.name} grande />
+                                <div className="min-w-0">
+                                    <p className="truncate font-semibold text-slate-900">
+                                        {user.name}
+                                    </p>
+                                    <p className="truncate text-sm text-slate-500">
+                                        {user.email}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <ResponsiveNavLink
+                                    href={route('profile.edit')}
+                                    active={route().current('profile.edit')}
+                                >
+                                    <UserRound
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                    Mi perfil
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink
+                                    method="post"
+                                    href={route('logout')}
+                                    as="button"
+                                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                                >
+                                    <LogOut
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                    Cerrar sesión
+                                </ResponsiveNavLink>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </nav>
 
             {header && (
-                <header className="bg-white shadow">
+                <header className="border-b border-slate-200/70 bg-white">
                     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                         {header}
                     </div>
                 </header>
             )}
 
-            <main>{children}</main>
+            <main className="flex-1">{children}</main>
+
+            <PieApp />
         </div>
+    );
+}
+
+function BotonIcono({
+    href,
+    etiqueta,
+    activo,
+    children,
+}: {
+    href: string;
+    etiqueta: string;
+    activo: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <Link
+            href={href}
+            aria-label={etiqueta}
+            title={etiqueta}
+            aria-current={activo ? 'page' : undefined}
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
+                activo
+                    ? 'bg-sky-100/80 text-marca-azul-profundo'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+            }`}
+        >
+            {children}
+        </Link>
+    );
+}
+
+// Iniciales del nombre en un círculo con el degradé de la marca.
+function Avatar({
+    nombre,
+    grande = false,
+}: {
+    nombre: string;
+    grande?: boolean;
+}) {
+    const iniciales = nombre
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((parte) => parte[0]?.toUpperCase())
+        .join('');
+
+    return (
+        <span
+            aria-hidden="true"
+            className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marca-azul-claro to-marca-azul-profundo font-bold text-white ${
+                grande ? 'h-10 w-10 text-sm' : 'h-8 w-8 text-xs'
+            }`}
+        >
+            {iniciales}
+        </span>
     );
 }

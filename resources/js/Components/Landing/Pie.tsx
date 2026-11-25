@@ -219,7 +219,7 @@ function ColumnaContacto() {
     );
 }
 
-function RedSocial({
+export function RedSocial({
     href,
     nombre,
     children,

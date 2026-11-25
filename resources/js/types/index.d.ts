@@ -71,6 +71,18 @@ export interface Categoria {
     publicaciones_count?: number;
 }
 
+// Respuesta de ->paginate() de Laravel (KAN-209). "links" trae anterior, los
+// números de página y siguiente, con url null cuando no hay a dónde ir.
+export interface Paginado<T> {
+    data: T[];
+    links: { url: string | null; label: string; active: boolean }[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+}
+
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {

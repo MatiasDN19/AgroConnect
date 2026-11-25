@@ -1,5 +1,6 @@
 import { InertiaLinkProps, Link } from '@inertiajs/react';
 
+// Link del navbar (KAN-211): la sección activa se marca con una "pastilla" azul.
 export default function NavLink({
     active = false,
     className = '',
@@ -9,12 +10,13 @@ export default function NavLink({
     return (
         <Link
             {...props}
+            aria-current={active ? 'page' : undefined}
             className={
-                'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none ' +
+                'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ' +
                 (active
-                    ? 'border-indigo-400 text-gray-900 focus:border-indigo-700'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 focus:border-gray-300 focus:text-gray-700') +
-                className
+                    ? 'bg-sky-100/80 text-marca-azul-profundo'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900') +
+                ` ${className}`
             }
         >
             {children}

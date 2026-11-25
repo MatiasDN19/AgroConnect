@@ -1,6 +1,7 @@
 import Contador from '@/Components/Landing/Contador';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { PageProps } from '@/types';
+import { saludo } from '@/utils/fecha';
 import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -62,13 +63,6 @@ function haceCuanto(fecha: string): string {
 function fechaDeHoy(): string {
     const texto = formatoFechaLarga.format(new Date());
     return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
-function saludo(): string {
-    const hora = new Date().getHours();
-    if (hora < 12) return 'Buenos días';
-    if (hora < 20) return 'Buenas tardes';
-    return 'Buenas noches';
 }
 
 export default function Index({

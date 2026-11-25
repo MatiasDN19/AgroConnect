@@ -6,6 +6,7 @@ import {
     PropsWithChildren,
     SetStateAction,
     useContext,
+    useEffect,
     useState,
 } from 'react';
 
@@ -25,6 +26,15 @@ const Dropdown = ({ children }: PropsWithChildren) => {
     const toggleOpen = () => {
         setOpen((previousState) => !previousState);
     };
+
+    // Escape cierra el menú (KAN-211).
+    useEffect(() => {
+        if (!open) return;
+        const cerrar = (e: KeyboardEvent) =>
+            e.key === 'Escape' && setOpen(false);
+        window.addEventListener('keydown', cerrar);
+        return () => window.removeEventListener('keydown', cerrar);
+    }, [open]);
 
     return (
         <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
@@ -50,14 +60,16 @@ const Trigger = ({ children }: PropsWithChildren) => {
     );
 };
 
+// Animación del menú: aparece rápido desde donde está el botón (origin-top-right),
+// arrancando en 95% y no desde cero, y se va todavía más rápido.
 const Content = ({
     align = 'right',
     width = '48',
-    contentClasses = 'py-1 bg-white',
+    contentClasses = 'p-1.5 bg-white',
     children,
 }: PropsWithChildren<{
     align?: 'left' | 'right';
-    width?: '48';
+    width?: '48' | '64';
     contentClasses?: string;
 }>) => {
     const { open, setOpen } = useContext(DropDownContext);
@@ -70,30 +82,26 @@ const Content = ({
         alignmentClasses = 'ltr:origin-top-right rtl:origin-top-left end-0';
     }
 
-    let widthClasses = '';
-
-    if (width === '48') {
-        widthClasses = 'w-48';
-    }
+    const widthClasses = width === '64' ? 'w-64' : 'w-48';
 
     return (
         <>
             <Transition
                 show={open}
-                enter="transition ease-out duration-200"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="transition ease-in duration-75"
+                enter="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                enterFrom="opacity-0 scale-95 -translate-y-1"
+                enterTo="opacity-100 scale-100 translate-y-0"
+                leave="transition-[opacity,transform] duration-100 ease-out"
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
             >
                 <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
+                    className={`absolute z-50 mt-2 rounded-2xl shadow-xl shadow-slate-900/10 ${alignmentClasses} ${widthClasses}`}
                     onClick={() => setOpen(false)}
                 >
                     <div
                         className={
-                            `rounded-md ring-1 ring-black ring-opacity-5 ` +
+                            `rounded-2xl ring-1 ring-slate-200 ` +
                             contentClasses
                         }
                     >
@@ -114,7 +122,7 @@ const DropdownLink = ({
         <Link
             {...props}
             className={
-                'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ' +
+                'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-start text-sm font-medium text-slate-700 transition-colors duration-150 hover:bg-sky-50 hover:text-marca-azul-profundo focus:bg-sky-50 focus:outline-none ' +
                 className
             }
         >

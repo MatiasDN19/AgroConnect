@@ -72,16 +72,16 @@ export default function SugeridosParaVos() {
         >
             <div className="flex items-end justify-between gap-4">
                 <div>
-                    <h3
+                    <h2
                         id="titulo-sugeridos"
-                        className="flex items-center gap-2 text-lg font-semibold text-gray-900"
+                        className="flex items-center gap-2 font-display text-xl font-bold text-marca-tinta"
                     >
                         <Sparkles
                             className="h-5 w-5 text-marca-ambar"
                             aria-hidden="true"
                         />
                         Sugeridos para vos
-                    </h3>
+                    </h2>
                     <p className="text-sm text-gray-500">
                         Elegidas a partir de lo que te interesa.
                     </p>
