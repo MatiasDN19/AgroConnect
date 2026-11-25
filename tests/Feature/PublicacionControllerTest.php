@@ -627,8 +627,8 @@ test('el detalle de publicación devuelve todos los datos esperados, categoría,
         ->where('publicacion.categoria.nombre', 'Frutas')
         ->where('publicacion.usuario.id', $productor->id)
         ->where('publicacion.usuario.name', 'María Gómez')
-        ->where('publicacion.usuario.email', 'maria@ejemplo.com')
         ->where('publicacion.usuario.telefono', '3704123456')
+        ->missing('publicacion.usuario.email')
         ->has('publicacion.resenas', 2)
         ->where('publicacion.resenas.0.usuario.name', 'Carlos Comprador')
         ->where('publicacion.resenas.0.puntuacion', 4)
@@ -1144,4 +1144,67 @@ test('despues del login el usuario es redirigido a publicaciones.index y la ruta
 
     $dashboardResponse = $this->actingAs($usuario)->get('/dashboard');
     $dashboardResponse->assertNotFound();
+});
+
+test('el detalle incluye localidad del productor y distancia_km cuando ambos tienen ubicacion y oculta lat lng (KAN-272)', function () {
+    // Productor en Laguna Naineck aprox (-25.2458, -57.7345)
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'localidad' => 'Laguna Naineck',
+        'lat' => -25.2458000,
+        'lng' => -57.7345000,
+    ]);
+
+    // Comprador en Clorinda aprox a ~40 km (-25.2848, -57.7185)
+    $comprador = User::factory()->create([
+        'rol' => User::ROL_COMPRADOR,
+        'lat' => -25.2848000,
+        'lng' => -57.7185000,
+    ]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($comprador)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.usuario.localidad', 'Laguna Naineck')
+        ->where('distancia_km', fn ($dist) => is_numeric($dist) && $dist > 0)
+        ->missing('publicacion.usuario.lat')
+        ->missing('publicacion.usuario.lng')
+        ->missing('publicacion.usuario.email')
+    );
+});
+
+test('distancia_km es null si el usuario o el productor no tienen coordenadas (KAN-272)', function () {
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'localidad' => 'Laguna Naineck',
+        'lat' => null,
+        'lng' => null,
+    ]);
+
+    $comprador = User::factory()->create([
+        'rol' => User::ROL_COMPRADOR,
+        'lat' => -25.2848000,
+        'lng' => -57.7185000,
+    ]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($comprador)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('distancia_km', null)
+        ->where('publicacion.usuario.localidad', 'Laguna Naineck')
+    );
 });

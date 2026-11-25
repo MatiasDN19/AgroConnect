@@ -166,7 +166,7 @@ class PublicacionController extends Controller
         }
 
         $publicacion->load([
-            'usuario:id,name,email,telefono,socio_validado',
+            'usuario:id,name,telefono,localidad,lat,lng,socio_validado',
             'categoria:id,nombre',
             'resenas.usuario:id,name',
             'fotos' => fn ($q) => $q->orderBy('orden'),
@@ -195,8 +195,27 @@ class PublicacionController extends Controller
         $user = $request->user();
         $esDuenioOAdmin = $user && ($user->id === $publicacion->usuario_id || $user->esAdmin());
 
+        // Distancia en km entre el usuario que mira y el productor (KAN-272)
+        $distanciaKm = null;
+        $productor = $publicacion->usuario;
+        if ($user && $user->lat !== null && $user->lng !== null && $productor && $productor->lat !== null && $productor->lng !== null) {
+            $lat1 = deg2rad((float) $user->lat);
+            $lng1 = deg2rad((float) $user->lng);
+            $lat2 = deg2rad((float) $productor->lat);
+            $lng2 = deg2rad((float) $productor->lng);
+
+            $clampedCos = min(1.0, max(-1.0, sin($lat1) * sin($lat2) + cos($lat1) * cos($lat2) * cos($lng2 - $lng1)));
+            $distanciaKm = round(6371 * acos($clampedCos), 1);
+        }
+
+        // Ocultar las coordenadas exactas de la chacra del productor (KAN-272)
+        if ($productor) {
+            $productor->makeHidden(['email', 'lat', 'lng']);
+        }
+
         return Inertia::render('Publicaciones/Show', [
             'publicacion' => $publicacion->makeHidden($esDuenioOAdmin ? [] : ['motivo_bloqueo', 'bloqueada_por', 'bloqueada_at']),
+            'distancia_km' => $distanciaKm,
             'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
             'mi_denuncia' => $miDenuncia,
             'mi_solicitud' => $miSolicitud,

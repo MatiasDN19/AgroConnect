@@ -114,3 +114,43 @@ test('un usuario puede vaciar sus coordenadas enviando null', function () {
     expect($user->lat)->toBeNull();
     expect($user->lng)->toBeNull();
 });
+
+test('un usuario puede guardar y borrar su localidad desde el perfil', function () {
+    $user = User::factory()->create([
+        'localidad' => null,
+    ]);
+
+    // Guardar localidad
+    $response = $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => $user->email,
+        'localidad' => 'Laguna Naineck',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $user->refresh();
+    expect($user->localidad)->toBe('Laguna Naineck');
+
+    // Vaciar localidad
+    $responseVaciar = $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => $user->email,
+        'localidad' => null,
+    ]);
+
+    $responseVaciar->assertSessionHasNoErrors();
+    $user->refresh();
+    expect($user->localidad)->toBeNull();
+});
+
+test('la localidad no puede superar los 100 caracteres', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => $user->email,
+        'localidad' => str_repeat('a', 101),
+    ]);
+
+    $response->assertSessionHasErrors(['localidad']);
+});
