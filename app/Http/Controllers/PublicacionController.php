@@ -166,7 +166,7 @@ class PublicacionController extends Controller
         }
 
         $publicacion->load([
-            'usuario:id,name,email,telefono,socio_validado',
+            'usuario:id,name,telefono,socio_validado',
             'categoria:id,nombre',
             'resenas.usuario:id,name',
             'fotos' => fn ($q) => $q->orderBy('orden'),
