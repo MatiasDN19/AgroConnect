@@ -41,6 +41,10 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            // Cantidad de alertas no leídas del usuario logueado (KAN-248)
+            'alertas_no_leidas' => fn () => $request->user()
+                ? $request->user()->alertas()->where('leida', false)->count()
+                : 0,
             // Datos del panel de administración (solo para administradores)
             'admin' => fn () => $request->user()?->esAdmin()
                 ? ['denuncias_pendientes' => Denuncia::where('estado', Denuncia::ESTADO_PENDIENTE)->count()]
