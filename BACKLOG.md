@@ -359,6 +359,54 @@ Relacionada: KAN-231.
 
 ---
 
+### KAN-256 — Ver páginas de error claras y en castellano
+
+> Como usuario, quiero que si una página no existe, no tengo permiso o algo falla, vea una pantalla clara en castellano y con el diseño de AgroConnect, para entender qué pasó y poder volver al marketplace.
+>
+> Criterios de aceptación:
+>
+> * Los errores 403, 404, 419 (sesión vencida), 500 y 503 muestran una página propia con un título, una explicación corta y un botón para volver.
+> * La página usa la identidad visual de AgroConnect y está en castellano.
+> * En desarrollo (`APP_DEBUG=true`) se sigue viendo la pantalla de error de Laravel para poder depurar.
+> * Las respuestas JSON de la API no cambian.
+
+<details>
+<summary>**KAN-266** [backend] — Backend: mostrar una página Inertia en los errores 403, 404, 419, 500 y 503</summary>
+
+Archivos a crear/modificar:
+
+* `bootstrap/app.php` — en `withExceptions()`, agregar un `$exceptions->respond(...)`.
+* `tests/Feature/PaginasErrorTest.php` (nuevo).
+
+Guía:
+
+1. Patrón de la documentación de Inertia ("Error handling"): si la respuesta tiene estado 403, 404, 500 o 503 y **no** estamos en `local`/`testing` con debug, devolver `Inertia::render('Error', ['status' => $estado])->toResponse($request)->setStatusCode($estado)`.
+2. Para el 419 (sesión vencida, típico al dejar un formulario abierto mucho tiempo), volver atrás con un mensaje flash: `back()->with('error', 'La página venció. Probá de nuevo.')`.
+3. No tocar lo que ya hace `shouldRenderJsonWhen` para la API (`api/*` o `expectsJson()` siguen devolviendo JSON).
+4. Tests: con debug apagado (`config(['app.debug' => false])`), una URL inexistente responde 404 con el componente `Error` y `status` 404; una ruta de admin pedida por un comprador responde 403 con el mismo componente; una llamada a la API sigue devolviendo JSON.
+
+Relacionada: tarea de frontend hermana de esta historia (`Pages/Error.tsx`).
+
+</details>
+
+<details>
+<summary>**KAN-267** [frontend] — Frontend Web: página de error con la identidad de AgroConnect</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Error.tsx` (nuevo).
+
+Guía:
+
+1. Recibe `status` (403, 404, 500 o 503) y muestra un título y una explicación corta en castellano según el caso. Ej.: 404 "No encontramos esta página"; 403 "No tenés permiso para ver esto"; 500 "Algo salió mal de nuestro lado"; 503 "Estamos haciendo mantenimiento".
+2. Botón principal "Volver al marketplace" (o "Ir al inicio" si no hay sesión) y uno secundario "Volver atrás".
+3. Identidad visual de AgroConnect: logo, degradé azul y CTA ámbar (como la landing y el Inicio, KAN-201/211). No depende de que haya usuario logueado: puede pasar con o sin sesión.
+4. Probarla en local poniendo `APP_DEBUG=false` un momento.
+
+Depende de: la tarea de backend de esta historia.
+
+</details>
+
 ## Epic: KAN-5 — Categorías
 
 _ABM de categorías para que el admin organice el catálogo, y su uso para navegar/filtrar publicaciones. El modelo Categoria ya existe en la base de datos._
@@ -1178,7 +1226,168 @@ Relacionada: KAN-211 (la misma pantalla, versión Web).
 
 </details>
 
+<details>
+<summary>**KAN-269** [backend] — Backend: seeder de datos de demostración para la presentación</summary>
+
+Archivos a crear/modificar:
+
+* `database/seeders/DemoSeeder.php` (nuevo).
+* `README.md` — cómo cargarlo (`php artisan db:seed --class=DemoSeeder`).
+
+Guía:
+
+1. Separado del `DatabaseSeeder` (que sigue creando solo los usuarios de prueba), para poder cargarlo cuando haga falta mostrar la app.
+2. Unos 6 productores de la zona de Laguna Naineck (algunos socios validados, otros no, con teléfono, localidad y ubicación cerca de Laguna Naineck), 3 o 4 compradores y unas 30 publicaciones creíbles repartidas en todas las categorías (precios y unidades realistas: kg, docena, litro, unidad), con algunas pausadas y vendidas.
+3. Reseñas, favoritos y algunas solicitudes de compra (pendientes, aceptadas y rechazadas) para que todas las pantallas tengan algo que mostrar.
+4. Fotos: opcionales. Si se agregan, que sean propias o con licencia libre, guardadas en `storage/app/public` como las demás.
+5. Que se pueda correr dos veces sin duplicar (usar `firstOrCreate` por email o limpiar antes).
+
+Relacionada: la presentación del TFI. Reemplaza los datos "[prueba KAN-…]" que se fueron creando a mano en las bases locales.
+
+</details>
+
 ---
+
+### KAN-253 — Gestionar mis publicaciones
+
+> Como productor, quiero ver en un solo lugar todas mis publicaciones (activas, pausadas, vendidas y bloqueadas) y gestionarlas desde ahí, para saber cómo van y reactivar o editar las que no están a la vista en el marketplace.
+>
+> Criterios de aceptación:
+>
+> * Hay una página "Mis publicaciones", accesible desde el navbar y el menú de usuario, solo para productores.
+> * Muestra todas mis publicaciones, de cualquier estado, con un filtro por estado y paginación.
+> * Arriba veo un resumen: cantidad de activas, pausadas y vendidas, y solicitudes de compra pendientes.
+> * Desde cada publicación puedo ir a editarla, pausarla, reactivarla o marcarla como vendida. Las bloqueadas muestran el motivo y no se pueden reactivar.
+> * Nadie más puede ver las publicaciones pausadas, vendidas o bloqueadas de otro productor desde esta página.
+
+<details>
+<summary>**KAN-257** [backend] — Backend: ruta "Mis publicaciones" con todos los estados, filtro por estado y resumen</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — método nuevo `misPublicaciones()` (o un controlador `MisPublicacionesController`).
+* `routes/web.php` — `GET /mis-publicaciones` con nombre `publicaciones.mias`, solo para productores (`->can('create', Publicacion::class)` como la ruta de crear).
+
+Guía:
+
+1. Devolver `Inertia::render('Publicaciones/Mias', [...])` con las publicaciones del usuario logueado de **todos** los estados (activa, pausada, vendida, bloqueada), las más nuevas primero, `paginate(12)->withQueryString()`.
+2. Filtro opcional `?estado=` (validar que sea uno de los estados conocidos; si no viene, todas).
+3. Cargar lo mismo que el listado para la tarjeta: `categoria:id,nombre`, la foto de portada (`fotos` con `limit(1)`), el promedio de reseñas y, para las bloqueadas, `motivo_bloqueo`.
+4. Mandar `resumen` con la cantidad de activas, pausadas, vendidas y bloqueadas, y las solicitudes de compra pendientes. Es el mismo cálculo que hoy hace `index()` (KAN-209): moverlo a un método reutilizable y **sacarlo de** `index()`, donde ya no se muestra (KAN-211).
+5. Mandar `filtros` con el estado elegido.
+
+Relacionada: KAN-211 (el Inicio ya no muestra el resumen), tarea de frontend hermana de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-258** [backend] — Tests: feature tests de "Mis publicaciones"</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/MisPublicacionesTest.php` (nuevo).
+
+Guía:
+
+1. Un productor ve sus publicaciones de todos los estados, incluidas pausadas, vendidas y bloqueadas.
+2. No ve las publicaciones de otros productores.
+3. `?estado=pausada` devuelve solo las pausadas; un estado inválido da error de validación o se ignora (según cómo se implemente).
+4. El `resumen` tiene los conteos correctos (activas, pausadas, vendidas, bloqueadas y solicitudes pendientes).
+5. Un comprador recibe 403 y un invitado es redirigido al login.
+6. La paginación devuelve 12 por página y conserva el filtro.
+7. El listado del marketplace (`publicaciones.index`) ya no manda `resumen`.
+
+</details>
+
+<details>
+<summary>**KAN-259** [frontend] — Frontend Web: página "Mis publicaciones" con resumen, pestañas por estado y acciones</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Mias.tsx` (nuevo).
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — link "Mis publicaciones" en el navbar y en el menú de usuario (solo productores).
+* `resources/js/types/index.d.ts` — tipo del resumen.
+
+Guía:
+
+1. Arriba, el resumen con los números (activas, pausadas, vendidas, bloqueadas y solicitudes pendientes con link al panel de solicitudes).
+2. Pestañas por estado ("Todas", "Activas", "Pausadas", "Vendidas", "Bloqueadas") que cambian `?estado=` conservando lo demás (`irAlListado` o un `router.get` parecido).
+3. Cada publicación con su estado en un chip de color y acciones: Ver, Editar, Pausar/Reactivar, Marcar como vendida (usando la ruta `publicaciones.estado` que ya existe). Las bloqueadas muestran el motivo y no tienen acciones de estado.
+4. Paginación con `Components/Paginacion.tsx` (KAN-211).
+5. Estado vacío con link a "Nueva publicación".
+
+Depende de: la tarea de backend de esta historia (ruta `publicaciones.mias`).
+
+</details>
+
+---
+
+### KAN-254 — Ver el perfil público de un productor
+
+> Como comprador, quiero ver el perfil de un productor desde sus publicaciones, para conocer quién es, en qué zona produce, cómo lo calificaron y qué más vende.
+>
+> Criterios de aceptación:
+>
+> * Desde la tarjeta y el detalle de una publicación puedo ir al perfil del productor.
+> * El perfil muestra el nombre, la insignia de socio si corresponde, la localidad, el promedio de sus reseñas y sus publicaciones activas.
+> * No muestra datos privados: ni email, ni teléfono, ni la ubicación exacta.
+> * Si el usuario no es productor o está inhabilitado, la página responde 404.
+
+<details>
+<summary>**KAN-260** [backend] — Backend: ruta del perfil público de un productor</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/ProductorController.php` (nuevo) — método `show()`.
+* `routes/web.php` — `GET /productores/{usuario}` con nombre `productores.show`.
+
+Guía:
+
+1. Si el usuario no es productor o está inhabilitado, `abort(404)`.
+2. Devolver `Inertia::render('Productores/Show', [...])` con **solo datos públicos** del productor: `id`, `name`, `socio_validado`, `localidad` (si ya existe la columna de la tarea de ubicación de KAN-90) y la fecha desde que está en AgroConnect. Nada de email, teléfono, lat/lng ni número de socio.
+3. Sus publicaciones **activas**, con lo mismo que manda el listado para la tarjeta (categoría, portada, promedio), paginadas de a 12.
+4. El promedio general de las reseñas de todas sus publicaciones y la cantidad de reseñas.
+
+Relacionada: tarea de frontend hermana de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-261** [backend] — Tests: feature tests del perfil público de un productor</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/ProductorPerfilTest.php` (nuevo).
+
+Guía:
+
+1. Un usuario logueado ve el perfil de un productor con su nombre y sus publicaciones activas (no las pausadas, vendidas ni bloqueadas).
+2. La respuesta **no** incluye `email`, `telefono`, `lat`, `lng` ni `numero_socio` (`->missing(...)`).
+3. El promedio de reseñas es el correcto.
+4. El perfil de un comprador o de un admin da 404; el de un productor inhabilitado también.
+5. Un invitado es redirigido al login.
+
+</details>
+
+<details>
+<summary>**KAN-262** [frontend] — Frontend Web: página del perfil público del productor y links desde las publicaciones</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Productores/Show.tsx` (nuevo).
+* `resources/js/Components/PublicacionCard.tsx` — el nombre del productor lleva a su perfil (cuidado: la tarjeta entera ya es un link; usar un link aparte o mover el nombre fuera del link).
+* `resources/js/Pages/Publicaciones/Show.tsx` — link "Ver perfil" en el recuadro del productor.
+
+Guía:
+
+1. Cabecera con avatar de iniciales, nombre, insignia de socio, localidad, "En AgroConnect desde …" y el promedio de reseñas con estrellas.
+2. Grilla de sus publicaciones activas reusando `PublicacionCard` y la paginación de KAN-211.
+3. Estado vacío si no tiene publicaciones activas.
+4. Mismo estilo que el Inicio (KAN-211).
+
+Depende de: la tarea de backend de esta historia (ruta `productores.show`).
+
+</details>
 
 ## Epic: KAN-7 — Reseñas
 
@@ -1696,6 +1905,26 @@ Guía:
 
 </details>
 
+<details>
+<summary>**KAN-268** [backend] — Backend: columna notificar_por_mail y guardarla desde el perfil</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_add_notificar_por_mail_to_users_table.php` (nuevo) — columna boolean `notificar_por_mail`, default `true`.
+* `app/Models/User.php` — agregarla a `Fillable` y castearla a `boolean`.
+* `app/Http/Requests/ProfileUpdateRequest.php` — regla `'notificar_por_mail' => ['sometimes', 'boolean']`.
+* `tests/Feature/ProfileTest.php` — agregar casos.
+
+Guía:
+
+1. Hoy el código de alertas ya consulta `$usuario->notificar_por_mail ?? true` (reseñas, denuncias, KAN-250), pero **la columna no existe**: siempre da `null` y siempre se manda el mail. Con la columna, esa consulta empieza a funcionar sola.
+2. `ProfileController::update()` ya hace `fill($request->validated())`, así que alcanza con la regla.
+3. Tests: un usuario puede desactivar y volver a activar el mail desde el perfil; con `false` no se manda `NuevaAlertaMail` ante una reseña nueva (`Mail::fake()`); los usuarios nuevos arrancan con `true`.
+
+Destraba: KAN-77 (el switch en el perfil); de KAN-77 queda solo la parte de frontend.
+
+</details>
+
 ### KAN-27 — Ver historial de notificaciones en la campanita
 
 > Como usuario, quiero ver el historial de mis notificaciones en la campanita, para repasar alertas que me perdí.
@@ -2101,6 +2330,68 @@ Guía:
 1. Test: un usuario autenticado manda lat/lng válidos al endpoint de perfil y quedan guardados.
 2. Test: lat/lng fuera de rango (ej. lat=200) son rechazados por la validación.
 3. Test: no mandar lat/lng no rompe la actualización del resto del perfil (quedan null).
+
+</details>
+
+<details>
+<summary>**KAN-272** [backend] — Backend: localidad del productor y distancia en el detalle de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_add_localidad_to_users_table.php` (nuevo) — columna `localidad` (string nullable, máx. 100).
+* `app/Models/User.php` — agregarla a `Fillable`.
+* `app/Http/Requests/ProfileUpdateRequest.php` — regla `'localidad' => ['nullable', 'string', 'max:100']`.
+* `app/Http/Controllers/PublicacionController.php` — en `show()`.
+* `tests/Feature/PerfilUbicacionTest.php` y `tests/Feature/PublicacionControllerTest.php` — agregar casos.
+
+Guía:
+
+1. La ubicación del perfil del productor (lat/lng, KAN-117) pasa a ser la de **su chacra o punto de venta**. `localidad` es el nombre de la zona que carga él (ej. "Laguna Naineck"): con lat/lng solos no se puede mostrar un nombre sin un servicio externo.
+2. En `show()`, mandar del productor `localidad` y una prop `distancia_km`: la distancia entre el usuario que mira (si tiene lat/lng) y el productor (si tiene lat/lng), redondeada a 1 decimal; `null` si falta alguna de las dos. Se puede reusar la fórmula de Haversine de `index()` (en PHP, no en SQL).
+3. **No** mandar la lat/lng del productor en el detalle: la ubicación exacta de la chacra no se expone.
+4. Tests: guardar y borrar la localidad desde el perfil; `distancia_km` correcta con las dos ubicaciones y `null` si falta una; el detalle no incluye `usuario.lat` ni `usuario.lng`.
+
+Relacionada: KAN-171 (ordenar por cercanía), tareas de frontend de ubicación de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-273** [frontend] — Frontend Web: ubicación de la chacra o punto de venta en el perfil (sin mapa)</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Profile/Partials/UpdateUbicacionForm.tsx` (nuevo).
+* `resources/js/Pages/Profile/Edit.tsx` — sumar la sección.
+* `resources/js/types/index.d.ts` — `localidad` en `User`.
+
+Guía:
+
+1. Sección "Ubicación de tu chacra o punto de venta" para productores (para compradores: "Tu ubicación", para ordenar por cercanía).
+2. Campo de texto "Localidad" (ej. "Laguna Naineck").
+3. Botón "Usar mi ubicación actual": pide la posición al navegador (`navigator.geolocation`, como el orden por cercanía de KAN-171) y guarda lat/lng con `profile.update`. Mostrar "Ubicación guardada ✓" y un botón para borrarla.
+4. Aclarar que **no se muestra el punto exacto** a nadie: solo la localidad y la distancia aproximada.
+5. Manejar el permiso rechazado con un mensaje claro.
+
+Es un adelanto de KAN-121 (selector con Google Maps, bloqueada por la API key): cuando se haga, el mapa reemplaza o complementa el botón.
+
+Depende de: la tarea de backend de la localidad (esta historia).
+
+</details>
+
+<details>
+<summary>**KAN-274** [frontend] — Frontend Web: mostrar la localidad y la distancia del productor en el detalle</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Show.tsx` — recuadro del productor.
+
+Guía:
+
+1. Debajo del nombre del productor: "📍 Laguna Naineck · a 12 km" (ícono `MapPin` de lucide).
+2. Sin `distancia_km` (el que mira no tiene ubicación), solo la localidad; sin localidad, solo la distancia; sin ninguna de las dos, no se muestra nada.
+3. Distancia sin decimales si es de 10 km o más; "a menos de 1 km" si es menor a 1 (mismo criterio que la tarjeta, KAN-171).
+
+Depende de: la tarea de backend de la localidad y la distancia (esta historia).
 
 </details>
 
@@ -2901,7 +3192,110 @@ Guía — casos a cubrir:
 
 </details>
 
+<details>
+<summary>**KAN-270** [backend] — Backend: no mandar el email del productor en el detalle de la publicación</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/PublicacionController.php` — en `show()`, el `load()` de `usuario`.
+* `tests/Feature/PublicacionControllerTest.php` — agregar un caso.
+
+Guía:
+
+1. Hoy `show()` carga `'usuario:id,name,email,telefono,socio_validado'`. La pantalla no muestra el email, pero viaja en los datos de la página y cualquiera lo puede ver desde el navegador (es un dato privado).
+2. Sacar `email` de ese `load()`. El teléfono queda porque lo usa el botón de WhatsApp (KAN-178).
+3. Revisar si algún test esperaba el email (ej. el del detalle completo) y ajustarlo.
+4. Test: el detalle de una publicación **no** incluye `publicacion.usuario.email` (`->missing(...)`).
+
+Relacionada: KAN-178 (contacto por WhatsApp).
+
+</details>
+
+<details>
+<summary>**KAN-271** [frontend] — Frontend Web: mostrar el teléfono en el detalle solo cuando no hay botón de WhatsApp</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/Publicaciones/Show.tsx` — recuadro del productor.
+
+Guía:
+
+1. Hoy el recuadro muestra el número y, abajo, el botón "Escribir por WhatsApp": queda repetido.
+2. Si `numeroWhatsapp(telefono)` (`utils/whatsapp.ts`) da un número válido, mostrar solo el botón de WhatsApp.
+3. Si no (teléfono fijo o mal cargado), mostrar un link "Llamar al …" (`tel:`) para que el comprador no se quede sin forma de contacto.
+4. Si no hay teléfono, como hoy: solo la solicitud de compra.
+
+Relacionada: KAN-178 (botón de WhatsApp).
+
+</details>
+
 ---
+
+### KAN-255 — Ver las solicitudes de compra que envié
+
+> Como comprador, quiero ver las solicitudes de compra que mandé y en qué estado están, para saber si el productor las aceptó y coordinar la entrega.
+>
+> Criterios de aceptación:
+>
+> * Hay una página "Mis solicitudes" accesible desde el menú de usuario.
+> * Muestra cada solicitud que envié con la publicación, el productor, la cantidad, el mensaje, la fecha y el estado (pendiente, aceptada o rechazada).
+> * Si fue aceptada, veo cómo contactar al productor (botón de WhatsApp si tiene).
+> * Solo veo mis propias solicitudes.
+
+<details>
+<summary>**KAN-263** [backend] — Backend: listado de las solicitudes de compra enviadas por el comprador</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/SolicitudCompraController.php` — método nuevo `enviadas()`.
+* `routes/web.php` — `GET /mis-solicitudes` con nombre `solicitudes-compra.enviadas`.
+
+Guía:
+
+1. Listar las solicitudes donde `usuario_id` es el usuario logueado, las más nuevas primero, paginadas.
+2. Por cada una: `id`, `estado`, `mensaje`, `cantidad` (KAN-251), `created_at`, `updated_at`, la publicación (`id`, `titulo`, `unidad`, portada) y el productor (`id`, `name`, `socio_validado`).
+3. El **teléfono del productor solo en las aceptadas** (para el botón de WhatsApp), con el mismo criterio que `index()` usa para mostrarle al productor el contacto del comprador.
+4. Devolver `Inertia::render('SolicitudesCompra/Enviadas', [...])`.
+
+Relacionada: KAN-146 (listado de las recibidas), tarea de frontend hermana de esta historia.
+
+</details>
+
+<details>
+<summary>**KAN-264** [backend] — Tests: feature tests de las solicitudes de compra enviadas</summary>
+
+Archivos a crear/modificar:
+
+* `tests/Feature/SolicitudCompraTest.php` — agregar casos (o un archivo nuevo `SolicitudesEnviadasTest.php`).
+
+Guía:
+
+1. Un comprador ve solo las solicitudes que él envió, no las de otros.
+2. Vienen con la publicación, el productor y el estado.
+3. El teléfono del productor viene solo en las aceptadas; en las pendientes y rechazadas, no (`->missing(...)`).
+4. Un invitado es redirigido al login.
+
+</details>
+
+<details>
+<summary>**KAN-265** [frontend] — Frontend Web: página "Mis solicitudes" con el estado de cada solicitud enviada</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Pages/SolicitudesCompra/Enviadas.tsx` (nuevo).
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — link "Mis solicitudes" en el menú de usuario.
+
+Guía:
+
+1. Lista de solicitudes con la portada y el título de la publicación (link al detalle), el productor, la cantidad con su unidad, el mensaje, la fecha ("hace 2 días") y el estado en un chip de color.
+2. En las aceptadas, el botón de WhatsApp del productor (`WhatsappButton`, KAN-178).
+3. Pestañas o filtro por estado si hay muchas; paginación con `Components/Paginacion.tsx`.
+4. Estado vacío con link al marketplace.
+5. Mismo estilo que el panel de solicitudes recibidas (KAN-151).
+
+Depende de: la tarea de backend de esta historia (ruta `solicitudes-compra.enviadas`).
+
+</details>
 
 ## Epic: KAN-87 — Panel de Administración
 
