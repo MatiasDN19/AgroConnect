@@ -5,6 +5,7 @@ use App\Models\Publicacion;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('un administrador puede ver el listado de publicaciones para moderacion con filtros', function () {
     $admin = User::factory()->create(['rol' => User::ROL_ADMIN]);
@@ -219,4 +220,40 @@ test('usuarios no administradores reciben 403 en todas las rutas de moderacion d
     $this->actingAs($comprador)->patch(route('admin.publicaciones.bloquear', $publicacion))->assertForbidden();
     $this->actingAs($comprador)->patch(route('admin.publicaciones.desbloquear', $publicacion))->assertForbidden();
     $this->actingAs($comprador)->delete(route('admin.publicaciones.destroy', $publicacion))->assertForbidden();
+});
+
+test('un usuario que no es dueno ni admin recibe 404 al consultar una publicacion bloqueada', function () {
+    $productorDueno = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $otroUsuario = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $admin = User::factory()->create(['rol' => User::ROL_ADMIN]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productorDueno->id,
+        'estado' => Publicacion::ESTADO_BLOQUEADA,
+        'motivo_bloqueo' => 'Contenido inapropiado',
+        'bloqueada_por' => $admin->id,
+        'bloqueada_at' => now(),
+    ]);
+
+    // Comprador u otro usuario recibe 404 vía web y API
+    $this->actingAs($otroUsuario)->get(route('publicaciones.show', $publicacion))->assertNotFound();
+    $this->actingAs($otroUsuario)->getJson("/api/publicaciones/{$publicacion->id}")->assertNotFound();
+
+    // El dueño productor puede verla y recibe el motivo de bloqueo
+    $resDuenoWeb = $this->actingAs($productorDueno)->get(route('publicaciones.show', $publicacion));
+    $resDuenoWeb->assertOk();
+    $resDuenoWeb->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->where('publicacion.motivo_bloqueo', 'Contenido inapropiado')
+    );
+
+    // Un admin también puede verla
+    $resAdminWeb = $this->actingAs($admin)->get(route('publicaciones.show', $publicacion));
+    $resAdminWeb->assertOk();
+    $resAdminWeb->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('publicacion.id', $publicacion->id)
+        ->where('publicacion.motivo_bloqueo', 'Contenido inapropiado')
+    );
 });
