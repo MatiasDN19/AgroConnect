@@ -3136,6 +3136,43 @@ Depende de: KAN-251 (cantidad en la solicitud y descuento de stock).
 
 </details>
 
+<details>
+<summary>**KAN-275** [backend] — Backend: compartir la cantidad de solicitudes de compra pendientes del productor en todas las páginas</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Middleware/HandleInertiaRequests.php` — sumar una prop compartida `solicitudes_pendientes`.
+* `tests/Feature/SolicitudCompraTest.php` (o un test nuevo) — agregar casos.
+
+Guía:
+
+1. `solicitudes_pendientes` = cantidad de solicitudes de compra en estado `pendiente` sobre publicaciones del usuario logueado, **solo si es productor**; para compradores, admins e invitados, `0` o `null`.
+2. Mismo patrón que `alertas_no_leidas` (KAN-248): una closure (`fn () => ...`) para que solo se calcule cuando hace falta. Consulta: `SolicitudCompra::where('estado', SolicitudCompra::ESTADO_PENDIENTE)->whereHas('publicacion', fn ($q) => $q->where('usuario_id', $user->id))->count()`.
+3. Tests: el número coincide con las pendientes del productor; baja al aceptar o rechazar una; no cuenta las de publicaciones de otros productores; para un comprador da 0 o null.
+
+Relacionada: KAN-248 (mismo patrón para las alertas), KAN-276 (número en "Solicitudes" del navbar).
+
+</details>
+
+<details>
+<summary>**KAN-276** [frontend] — Frontend Web: número de solicitudes pendientes en "Solicitudes" del navbar y los menús</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Layouts/AuthenticatedLayout.tsx` — link "Solicitudes" del navbar, "Solicitudes recibidas" del menú de usuario y del menú del celular.
+* `resources/js/types/index.d.ts` — `solicitudes_pendientes` en `PageProps`.
+
+Guía:
+
+1. Leer `solicitudes_pendientes` de `usePage().props` (prop compartida de KAN-275).
+2. Si es mayor a 0, mostrar un globito con el número al lado de "Solicitudes" (ámbar, como los avisos de pendientes del panel admin); con más de 9, "9+". Si es 0, no se muestra nada.
+3. Agregarle al link un texto para lectores de pantalla, ej. "Solicitudes, 3 pendientes".
+4. Mismo estilo que el número de la campanita (KAN-74), para que se vean iguales.
+
+Depende de: KAN-275 (prop `solicitudes_pendientes`).
+
+</details>
+
 ### KAN-168 — Contactar al productor por WhatsApp desde la publicación
 
 > Como comprador, quiero contactar directamente al productor por WhatsApp desde la publicación o su perfil, para coordinar la compra sin depender de mensajería interna.
