@@ -102,4 +102,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(SolicitudCompra::class, 'usuario_id');
     }
+
+    /** @return HasMany<CuentaSocial, $this> */
+    public function cuentasSociales(): HasMany
+    {
+        return $this->hasMany(CuentaSocial::class, 'usuario_id');
+    }
 }
