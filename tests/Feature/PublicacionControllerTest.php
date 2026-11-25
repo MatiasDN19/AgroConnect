@@ -627,8 +627,8 @@ test('el detalle de publicación devuelve todos los datos esperados, categoría,
         ->where('publicacion.categoria.nombre', 'Frutas')
         ->where('publicacion.usuario.id', $productor->id)
         ->where('publicacion.usuario.name', 'María Gómez')
-        ->where('publicacion.usuario.email', 'maria@ejemplo.com')
         ->where('publicacion.usuario.telefono', '3704123456')
+        ->missing('publicacion.usuario.email')
         ->has('publicacion.resenas', 2)
         ->where('publicacion.resenas.0.usuario.name', 'Carlos Comprador')
         ->where('publicacion.resenas.0.puntuacion', 4)
@@ -1144,4 +1144,27 @@ test('despues del login el usuario es redirigido a publicaciones.index y la ruta
 
     $dashboardResponse = $this->actingAs($usuario)->get('/dashboard');
     $dashboardResponse->assertNotFound();
+});
+
+test('el detalle de publicacion no expone el email del productor (KAN-270)', function () {
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'email' => 'productor_privado@ejemplo.com',
+    ]);
+    $comprador = User::factory()->create([
+        'rol' => User::ROL_COMPRADOR,
+    ]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($comprador)->get(route('publicaciones.show', $publicacion));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->missing('publicacion.usuario.email')
+    );
 });
