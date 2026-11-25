@@ -179,6 +179,11 @@ class PublicacionController extends Controller
             ->latest('id')
             ->first(['estado', 'created_at']);
 
+        // Si la publicación está marcada como favorita por el usuario logueado (KAN-247).
+        $esFavorito = $publicacion->favoritos()
+            ->where('usuario_id', $request->user()->id)
+            ->exists();
+
         $user = $request->user();
         $esDuenioOAdmin = $user && ($user->id === $publicacion->usuario_id || $user->esAdmin());
 
@@ -187,6 +192,7 @@ class PublicacionController extends Controller
             'puntuacion_promedio' => $publicacion->puntuacionPromedio(),
             'mi_denuncia' => $miDenuncia,
             'mi_solicitud' => $miSolicitud,
+            'es_favorito' => $esFavorito,
         ]);
     }
 
