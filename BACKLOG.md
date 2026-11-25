@@ -2784,6 +2784,67 @@ Guía — casos a cubrir:
 
 </details>
 
+<details>
+<summary>**KAN-250** [backend] — Backend: generar alertas al recibir y al responder una solicitud de compra</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/SolicitudCompraController.php` — en `store()` y `resolve()`, crear la alerta y mandar mail/push.
+* `tests/Feature/SolicitudCompraTest.php` — agregar casos.
+
+Guía:
+
+1. En `store()`: alerta para el **productor** (dueño de la publicación), tipo `nueva_solicitud_compra`, mensaje tipo "Recibiste una solicitud de compra por '{titulo}'."
+2. En `resolve()`: alerta para el **comprador** que hizo la solicitud, tipo `solicitud_compra_aceptada` o `solicitud_compra_rechazada`, mensaje tipo "Tu solicitud por '{titulo}' fue aceptada." / "...fue rechazada."
+3. Mismo patrón que `ResenaController::store()` (KAN-73/76/187): `Alerta::create(...)`, después `NuevaAlertaMail` si `notificar_por_mail` no está en `false`, y `PushNotificationService::sendPush()`. Si se repite en varios lugares, se puede extraer a un método o servicio chico.
+4. Tests: con `Mail::fake()`, verificar que al crear la solicitud el productor tiene 1 alerta del tipo correcto y que al aceptar/rechazar la tiene el comprador (y no el productor). Verificar que no se manda mail si `notificar_por_mail` es `false`.
+
+Relacionada: KAN-116 (solicitar compra) y KAN-151 (panel de solicitudes recibidas), que hoy no le avisan a nadie. KAN-74/KAN-80 (campanita) las van a mostrar sin cambios en el frontend.
+
+</details>
+
+<details>
+<summary>**KAN-251** [backend] — Backend: cantidad en la solicitud de compra y descontar el stock al aceptarla</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_add_cantidad_to_solicitudes_compra_table.php` (nuevo) — columna `cantidad` (unsignedInteger, default 1 para las solicitudes que ya existen).
+* `app/Models/SolicitudCompra.php` — agregar `cantidad` a fillable y cast integer.
+* `app/Http/Requests/StoreSolicitudCompraRequest.php` — validar `cantidad`.
+* `app/Http/Controllers/SolicitudCompraController.php` — guardar la cantidad en `store()`, descontar en `resolve()` y mandarla en `index()`.
+* `tests/Feature/SolicitudCompraTest.php` — agregar casos.
+
+Guía:
+
+1. `cantidad`: obligatoria, entero, mínimo 1 y como máximo el `stock` actual de la publicación (mensaje en castellano: "No hay stock suficiente: quedan X").
+2. En `resolve()`, al **aceptar**: dentro de `DB::transaction()`, bloquear la publicación (`lockForUpdate()`), verificar que todavía alcance el stock (pudo cambiar desde que se pidió) y hacer `decrement('stock', cantidad)`. Si no alcanza, no aceptar y devolver error en `estado`. Rechazar no toca el stock.
+3. Usar `update()`/`decrement()` sobre el modelo para que corra el `PublicacionObserver`: si el stock llega a 0 la publicación se pausa sola (KAN-180), no hay que hacerlo a mano.
+4. `index()` tiene que mandar `cantidad` en cada solicitud para el panel.
+5. Tests: no se puede pedir más que el stock; aceptar descuenta; rechazar no descuenta; aceptar con stock insuficiente da error y no cambia nada; al llegar a 0 la publicación queda pausada.
+
+Relacionada: KAN-116 y KAN-151 (frontend de solicitar y gestionar solicitudes), KAN-180 (pausa automática sin stock), KAN-252 (campo cantidad en el formulario y el panel, depende de esta).
+
+</details>
+
+<details>
+<summary>**KAN-252** [frontend] — Frontend Web: pedir la cantidad al solicitar una compra y mostrarla en el panel</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/SolicitarCompra.tsx` — agregar el campo cantidad.
+* `resources/js/Pages/SolicitudesCompra/Index.tsx` (panel de solicitudes recibidas, KAN-151) — mostrar la cantidad.
+
+Guía:
+
+1. En el modal de solicitar compra, campo numérico "Cantidad" con la unidad de la publicación al lado (ej: "3 kg"), mínimo 1 y máximo el stock disponible. Mostrar el subtotal estimado (cantidad × precio) como referencia.
+2. Mostrar el error de validación del backend (ej: "No hay stock suficiente").
+3. En el panel, mostrar la cantidad pedida en cada solicitud y el error si al aceptar ya no alcanza el stock.
+4. Si la publicación se pausa al quedarse sin stock, el detalle ya lo maneja (no se puede solicitar).
+
+Depende de: KAN-251 (cantidad en la solicitud y descuento de stock).
+
+</details>
+
 ### KAN-168 — Contactar al productor por WhatsApp desde la publicación
 
 > Como comprador, quiero contactar directamente al productor por WhatsApp desde la publicación o su perfil, para coordinar la compra sin depender de mensajería interna.
