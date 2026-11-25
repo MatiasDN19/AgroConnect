@@ -18,7 +18,7 @@ export default function Index({
 }>) {
     const items = Array.isArray(publicaciones)
         ? publicaciones
-        : publicaciones?.data ?? [];
+        : (publicaciones?.data ?? []);
     const { auth } = usePage().props;
     const esProductor = auth.user.rol === 'productor';
 
