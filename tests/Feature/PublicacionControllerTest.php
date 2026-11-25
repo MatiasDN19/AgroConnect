@@ -3,7 +3,6 @@
 use App\Models\Categoria;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
-use App\Models\SolicitudCompra;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -1031,60 +1030,14 @@ test('las categorias enviadas al listado traen el conteo de publicaciones activa
     );
 });
 
-test('el resumen es null para compradores y trae el conteo para productores', function () {
-    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+test('el listado del marketplace no manda resumen', function () {
     $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
-    $otroProductor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
 
-    // Publicaciones de este productor
-    $pubActiva = Publicacion::factory()->create([
-        'usuario_id' => $productor->id,
-        'estado' => Publicacion::ESTADO_ACTIVA,
-    ]);
-    Publicacion::factory()->create([
-        'usuario_id' => $productor->id,
-        'estado' => Publicacion::ESTADO_PAUSADA,
-    ]);
-    Publicacion::factory()->create([
-        'usuario_id' => $productor->id,
-        'estado' => Publicacion::ESTADO_VENDIDA,
-    ]);
-
-    // Solicitud pendiente sobre su publicación
-    $pubActiva->solicitudesCompra()->create([
-        'usuario_id' => $comprador->id,
-        'estado' => SolicitudCompra::ESTADO_PENDIENTE,
-    ]);
-
-    // Solicitud ya resuelta no debe sumar a pendientes
-    $pubActiva->solicitudesCompra()->create([
-        'usuario_id' => $comprador->id,
-        'estado' => SolicitudCompra::ESTADO_ACEPTADA,
-    ]);
-
-    // Publicaciones de otro productor
-    Publicacion::factory()->create([
-        'usuario_id' => $otroProductor->id,
-        'estado' => Publicacion::ESTADO_ACTIVA,
-    ]);
-
-    // 1. Caso Comprador: resumen debe ser null
-    $resComprador = $this->actingAs($comprador)->get(route('publicaciones.index'));
-    $resComprador->assertOk();
-    $resComprador->assertInertia(fn (Assert $page) => $page
+    $response = $this->actingAs($productor)->get(route('publicaciones.index'));
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
         ->component('Publicaciones/Index')
-        ->where('resumen', null)
-    );
-
-    // 2. Caso Productor: resumen con conteos de sus publicaciones y solicitudes
-    $resProductor = $this->actingAs($productor)->get(route('publicaciones.index'));
-    $resProductor->assertOk();
-    $resProductor->assertInertia(fn (Assert $page) => $page
-        ->component('Publicaciones/Index')
-        ->where('resumen.activas', 1)
-        ->where('resumen.pausadas', 1)
-        ->where('resumen.vendidas', 1)
-        ->where('resumen.solicitudes_pendientes', 1)
+        ->missing('resumen')
     );
 });
 
