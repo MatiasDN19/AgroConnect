@@ -70,8 +70,15 @@ class PublicacionController extends Controller
     /**
      * Detalle de una publicación específica.
      */
-    public function show(Publicacion $publicacion): PublicacionResource
+    public function show(Request $request, Publicacion $publicacion): PublicacionResource
     {
+        $user = $request->user();
+        $esDuenioOAdmin = $user && ($user->id === $publicacion->usuario_id || $user->esAdmin());
+
+        if ($publicacion->estado === Publicacion::ESTADO_BLOQUEADA && ! $esDuenioOAdmin) {
+            abort(404);
+        }
+
         $publicacion->load([
             'usuario:id,name,email,telefono,lat,lng,socio_validado',
             'categoria:id,nombre,descripcion',

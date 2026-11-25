@@ -157,6 +157,14 @@ class PublicacionController extends Controller
      */
     public function show(Request $request, Publicacion $publicacion): InertiaResponse
     {
+        $user = $request->user();
+        $esDuenioOAdmin = $user && ($user->id === $publicacion->usuario_id || $user->esAdmin());
+
+        // Si la publicación está bloqueada y quien consulta no es dueño ni admin, responder 404 (KAN-249).
+        if ($publicacion->estado === Publicacion::ESTADO_BLOQUEADA && ! $esDuenioOAdmin) {
+            abort(404);
+        }
+
         $publicacion->load([
             'usuario:id,name,email,telefono,socio_validado',
             'categoria:id,nombre',
