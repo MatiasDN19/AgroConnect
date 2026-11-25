@@ -1,5 +1,6 @@
 import { InertiaLinkProps, Link } from '@inertiajs/react';
 
+// Link del menú del celular (KAN-211), con el mismo estilo de "pastilla" del navbar.
 export default function ResponsiveNavLink({
     active = false,
     className = '',
@@ -9,11 +10,12 @@ export default function ResponsiveNavLink({
     return (
         <Link
             {...props}
-            className={`flex w-full items-start border-l-4 py-2 pe-4 ps-3 ${
+            aria-current={active ? 'page' : undefined}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-base font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
                 active
-                    ? 'border-indigo-400 bg-indigo-50 text-indigo-700 focus:border-indigo-700 focus:bg-indigo-100 focus:text-indigo-800'
-                    : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:border-gray-300 focus:bg-gray-50 focus:text-gray-800'
-            } text-base font-medium transition duration-150 ease-in-out focus:outline-none ${className}`}
+                    ? 'bg-sky-100/80 text-marca-azul-profundo'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            } ${className}`}
         >
             {children}
         </Link>
