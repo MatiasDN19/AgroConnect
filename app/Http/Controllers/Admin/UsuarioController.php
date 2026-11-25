@@ -81,13 +81,9 @@ class UsuarioController extends Controller
      */
     public function cambiarRol(CambiarRolUsuarioRequest $request, User $usuario): RedirectResponse
     {
-        if ($request->user()->id === $usuario->id) {
-            abort(403, 'No podés modificar tu propio rol de administrador.');
-        }
-
         $nuevoRol = $request->validated('rol');
 
-        // Si se intenta quitar el rol de administrador a un admin, asegurar que no sea el único
+        // Si se intenta quitar el rol de administrador y no hay otros administradores en la plataforma
         if ($usuario->esAdmin() && $nuevoRol !== User::ROL_ADMIN) {
             $otrosAdmins = User::where('rol', User::ROL_ADMIN)
                 ->where('id', '!=', $usuario->id)
@@ -96,6 +92,10 @@ class UsuarioController extends Controller
             if ($otrosAdmins === 0) {
                 return back()->with('error', 'No se puede quitar el rol al único administrador de la plataforma.');
             }
+        }
+
+        if ($request->user()->id === $usuario->id) {
+            abort(403, 'No podés modificar tu propio rol de administrador.');
         }
 
         $usuario->update([
