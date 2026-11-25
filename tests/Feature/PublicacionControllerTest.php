@@ -1087,3 +1087,61 @@ test('el resumen es null para compradores y trae el conteo para productores', fu
         ->where('resumen.solicitudes_pendientes', 1)
     );
 });
+
+test('la busqueda por q se combina correctamente con categoria_id', function () {
+    $usuario = User::factory()->create();
+
+    $catFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+    $catVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+
+    $tomateVerdura = Publicacion::factory()->create([
+        'categoria_id' => $catVerduras->id,
+        'titulo' => 'Tomate perita',
+        'descripcion' => 'Rojos y frescos',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $tomateArbol = Publicacion::factory()->create([
+        'categoria_id' => $catFrutas->id,
+        'titulo' => 'Tomate de árbol',
+        'descripcion' => 'Fruta exótica',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $lechugaVerdura = Publicacion::factory()->create([
+        'categoria_id' => $catVerduras->id,
+        'titulo' => 'Lechuga mantecosa',
+        'descripcion' => 'Verdura de hoja',
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $response = $this->actingAs($usuario)->get(route('publicaciones.index', [
+        'q' => 'tomate',
+        'categoria_id' => $catVerduras->id,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('publicaciones.data', 1)
+        ->where('publicaciones.data.0.id', $tomateVerdura->id)
+        ->where('filtros.q', 'tomate')
+        ->where('filtros.categoria_id', (string) $catVerduras->id)
+    );
+});
+
+test('despues del login el usuario es redirigido a publicaciones.index y la ruta /dashboard devuelve 404', function () {
+    $usuario = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
+
+    $loginResponse = $this->post(route('login'), [
+        'email' => $usuario->email,
+        'password' => 'password123',
+    ]);
+
+    $loginResponse->assertRedirect(route('publicaciones.index'));
+
+    $dashboardResponse = $this->actingAs($usuario)->get('/dashboard');
+    $dashboardResponse->assertNotFound();
+});
