@@ -322,11 +322,12 @@ test('el detalle de la publicación devuelve teléfono null cuando el productor 
 
 // --- KAN-116: una sola solicitud pendiente y estado en el detalle ---
 
-function crearSolicitud(User $comprador, Publicacion $publicacion, string $estado): SolicitudCompra
+function crearSolicitud(User $comprador, Publicacion $publicacion, string $estado, int $cantidad = 1): SolicitudCompra
 {
     return SolicitudCompra::create([
         'usuario_id' => $comprador->id,
         'publicacion_id' => $publicacion->id,
+        'cantidad' => $cantidad,
         'mensaje' => null,
         'estado' => $estado,
     ]);
@@ -606,4 +607,187 @@ test('no se envia correo de solicitud de compra si el usuario desactivo notifica
         ]);
 
     Mail::assertNothingSent();
+});
+
+// --- KAN-251: cantidad en solicitud de compra y descuento de stock ---
+
+test('no se puede solicitar una cantidad mayor al stock disponible de la publicacion', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 5,
+    ]);
+
+    $response = $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion), [
+            'cantidad' => 10,
+        ]);
+
+    $response->assertSessionHasErrors([
+        'cantidad' => 'No hay stock suficiente: quedan 5.',
+    ]);
+
+    $this->assertDatabaseEmpty('solicitudes_compra');
+});
+
+test('la cantidad minima a solicitar es 1', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 5,
+    ]);
+
+    $response = $this->actingAs($comprador)
+        ->from(route('publicaciones.show', $publicacion))
+        ->post(route('solicitudes-compra.store', $publicacion), [
+            'cantidad' => 0,
+        ]);
+
+    $response->assertSessionHasErrors(['cantidad']);
+    $this->assertDatabaseEmpty('solicitudes_compra');
+});
+
+test('al aceptar una solicitud de compra se descuenta el stock de la publicacion', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 10,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 4);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_ACEPTADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('solicitudes-compra.index'));
+
+    $publicacion->refresh();
+    $solicitud->refresh();
+
+    expect($publicacion->stock)->toBe(6);
+    expect($publicacion->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+    expect($solicitud->estado)->toBe(SolicitudCompra::ESTADO_ACEPTADA);
+});
+
+test('al rechazar una solicitud de compra no se descuenta el stock de la publicacion', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 10,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 4);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_RECHAZADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+    $response->assertRedirect(route('solicitudes-compra.index'));
+
+    $publicacion->refresh();
+    $solicitud->refresh();
+
+    expect($publicacion->stock)->toBe(10);
+    expect($publicacion->estado)->toBe(Publicacion::ESTADO_ACTIVA);
+    expect($solicitud->estado)->toBe(SolicitudCompra::ESTADO_RECHAZADA);
+});
+
+test('no se puede aceptar una solicitud de compra si el stock actual ya no alcanza', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 2,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    // Solicitud que pide 3 unidades, cuando solo quedan 2
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 3);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_ACEPTADA,
+        ]);
+
+    $response->assertSessionHasErrors([
+        'estado' => 'No hay stock suficiente: quedan 2.',
+    ]);
+
+    $publicacion->refresh();
+    $solicitud->refresh();
+
+    expect($publicacion->stock)->toBe(2);
+    expect($solicitud->estado)->toBe(SolicitudCompra::ESTADO_PENDIENTE);
+});
+
+test('cuando el stock llega a cero al aceptar la solicitud la publicacion se pausa automaticamente', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 5,
+        'estado' => Publicacion::ESTADO_ACTIVA,
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 5);
+
+    $response = $this->actingAs($productor)
+        ->from(route('solicitudes-compra.index'))
+        ->patch(route('solicitudes-compra.resolve', $solicitud), [
+            'estado' => SolicitudCompra::ESTADO_ACEPTADA,
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $publicacion->refresh();
+    $solicitud->refresh();
+
+    expect($publicacion->stock)->toBe(0);
+    expect($publicacion->estado)->toBe(Publicacion::ESTADO_PAUSADA);
+    expect($solicitud->estado)->toBe(SolicitudCompra::ESTADO_ACEPTADA);
+});
+
+test('el listado de solicitudes recibidas incluye la cantidad solicitada', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'stock' => 20,
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 7);
+
+    $response = $this->actingAs($productor)
+        ->get(route('solicitudes-compra.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->has('solicitudes.0', fn (Assert $s) => $s
+            ->where('id', $solicitud->id)
+            ->where('cantidad', 7)
+            ->etc()
+        )
+    );
 });

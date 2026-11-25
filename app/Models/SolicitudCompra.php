@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'usuario_id',
     'publicacion_id',
+    'cantidad',
     'mensaje',
     'estado',
 ])]
@@ -25,6 +26,13 @@ class SolicitudCompra extends Model
     public const ESTADO_ACEPTADA = 'aceptada';
 
     public const ESTADO_RECHAZADA = 'rechazada';
+
+    protected function casts(): array
+    {
+        return [
+            'cantidad' => 'integer',
+        ];
+    }
 
     /**
      * @return BelongsTo<User, $this>
