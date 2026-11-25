@@ -142,3 +142,30 @@ test('un usuario no puede eliminar el favorito de otro usuario', function () {
         'publicacion_id' => $publicacion->id,
     ]);
 });
+
+test('el detalle de publicacion indica es_favorito true cuando el usuario la tiene en favoritos y false en caso contrario', function () {
+    $usuarioConFav = User::factory()->create();
+    $usuarioSinFav = User::factory()->create();
+    $publicacion = Publicacion::factory()->create();
+
+    Favorito::create([
+        'usuario_id' => $usuarioConFav->id,
+        'publicacion_id' => $publicacion->id,
+    ]);
+
+    // Para el usuario que marcó como favorito debe ser true
+    $resConFav = $this->actingAs($usuarioConFav)->get(route('publicaciones.show', $publicacion));
+    $resConFav->assertOk();
+    $resConFav->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('es_favorito', true)
+    );
+
+    // Para otro usuario que no la marcó debe ser false
+    $resSinFav = $this->actingAs($usuarioSinFav)->get(route('publicaciones.show', $publicacion));
+    $resSinFav->assertOk();
+    $resSinFav->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Show')
+        ->where('es_favorito', false)
+    );
+});
