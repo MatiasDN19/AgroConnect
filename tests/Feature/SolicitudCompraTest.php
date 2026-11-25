@@ -322,13 +322,13 @@ test('el detalle de la publicación devuelve teléfono null cuando el productor 
 
 // --- KAN-116: una sola solicitud pendiente y estado en el detalle ---
 
-function crearSolicitud(User $comprador, Publicacion $publicacion, string $estado, int $cantidad = 1): SolicitudCompra
+function crearSolicitud(User $comprador, Publicacion $publicacion, string $estado, int $cantidad = 1, ?string $mensaje = null): SolicitudCompra
 {
     return SolicitudCompra::create([
         'usuario_id' => $comprador->id,
         'publicacion_id' => $publicacion->id,
         'cantidad' => $cantidad,
-        'mensaje' => null,
+        'mensaje' => $mensaje,
         'estado' => $estado,
     ]);
 }
@@ -789,5 +789,116 @@ test('el listado de solicitudes recibidas incluye la cantidad solicitada', funct
             ->where('cantidad', 7)
             ->etc()
         )
+    );
+});
+
+// --- Listado de Solicitudes Enviadas por el Comprador (KAN-263 / KAN-264) ---
+
+test('los invitados no autenticados son redirigidos al login al intentar ver las solicitudes enviadas', function () {
+    $this->get(route('solicitudes-compra.enviadas'))
+        ->assertRedirect(route('login'));
+});
+
+test('un comprador ve solo las solicitudes que el envio y no las de otros usuarios', function () {
+    $comprador1 = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $comprador2 = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+
+    $solicitud1 = crearSolicitud($comprador1, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 3);
+    $solicitud2 = crearSolicitud($comprador2, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 5);
+
+    $response = $this->actingAs($comprador1)
+        ->get(route('solicitudes-compra.enviadas'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('SolicitudesCompra/Enviadas')
+        ->has('solicitudes.data', 1)
+        ->where('solicitudes.data.0.id', $solicitud1->id)
+        ->where('solicitudes.data.0.cantidad', 3)
+    );
+});
+
+test('las solicitudes enviadas vienen con la publicacion, portada, productor y estado', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'name' => 'Don Antonio',
+        'socio_validado' => true,
+    ]);
+
+    $publicacion = Publicacion::factory()->create([
+        'usuario_id' => $productor->id,
+        'titulo' => 'Mandarinas Criollas',
+        'unidad' => 'cajon',
+    ]);
+
+    $solicitud = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 4, 'Hola Don Antonio');
+
+    $response = $this->actingAs($comprador)
+        ->get(route('solicitudes-compra.enviadas'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('SolicitudesCompra/Enviadas')
+        ->has('solicitudes.data.0', fn (Assert $s) => $s
+            ->where('id', $solicitud->id)
+            ->where('estado', SolicitudCompra::ESTADO_PENDIENTE)
+            ->where('cantidad', 4)
+            ->where('mensaje', 'Hola Don Antonio')
+            ->has('created_at')
+            ->has('updated_at')
+            ->where('publicacion.id', $publicacion->id)
+            ->where('publicacion.titulo', 'Mandarinas Criollas')
+            ->where('publicacion.unidad', 'cajon')
+            ->has('publicacion.portada')
+            ->has('publicacion.fotos')
+            ->where('productor.id', $productor->id)
+            ->where('productor.name', 'Don Antonio')
+            ->where('productor.socio_validado', true)
+            ->missing('productor.telefono')
+        )
+    );
+});
+
+test('el telefono del productor viene solo en las solicitudes aceptadas y no en pendientes o rechazadas', function () {
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $productor = User::factory()->create([
+        'rol' => User::ROL_PRODUCTOR,
+        'telefono' => '3704123456',
+    ]);
+
+    $publicacion = Publicacion::factory()->create(['usuario_id' => $productor->id]);
+
+    $solicitudPendiente = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_PENDIENTE, 2);
+    $solicitudPendiente->update(['created_at' => now()->subMinutes(2)]);
+
+    $solicitudRechazada = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_RECHAZADA, 1);
+    $solicitudRechazada->update(['created_at' => now()->subMinute()]);
+
+    $solicitudAceptada = crearSolicitud($comprador, $publicacion, SolicitudCompra::ESTADO_ACEPTADA, 5);
+    $solicitudAceptada->update(['created_at' => now()]);
+
+    $response = $this->actingAs($comprador)
+        ->get(route('solicitudes-compra.enviadas'));
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('SolicitudesCompra/Enviadas')
+        ->has('solicitudes.data', 3)
+        // La más nueva es la aceptada (latest)
+        ->where('solicitudes.data.0.id', $solicitudAceptada->id)
+        ->where('solicitudes.data.0.estado', SolicitudCompra::ESTADO_ACEPTADA)
+        ->where('solicitudes.data.0.productor.telefono', '3704123456')
+        // La rechazada no expone teléfono
+        ->where('solicitudes.data.1.id', $solicitudRechazada->id)
+        ->where('solicitudes.data.1.estado', SolicitudCompra::ESTADO_RECHAZADA)
+        ->missing('solicitudes.data.1.productor.telefono')
+        // La pendiente no expone teléfono
+        ->where('solicitudes.data.2.id', $solicitudPendiente->id)
+        ->where('solicitudes.data.2.estado', SolicitudCompra::ESTADO_PENDIENTE)
+        ->missing('solicitudes.data.2.productor.telefono')
     );
 });

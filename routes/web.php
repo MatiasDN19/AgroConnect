@@ -27,6 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/publicaciones/sugeridas', [PublicacionController::class, 'sugeridas'])->name('publicaciones.sugeridas');
     Route::get('/publicaciones/mapa', [PublicacionController::class, 'mapa'])->name('publicaciones.mapa');
 
+    Route::get('/mis-publicaciones', [PublicacionController::class, 'misPublicaciones'])
+        ->can('create', Publicacion::class)
+        ->name('publicaciones.mias');
     // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
     Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
         ->can('create', Publicacion::class)
@@ -49,6 +52,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])->name('solicitudes-compra.store');
     Route::get('/solicitudes-compra', [SolicitudCompraController::class, 'index'])->name('solicitudes-compra.index');
+    Route::get('/mis-solicitudes', [SolicitudCompraController::class, 'enviadas'])->name('solicitudes-compra.enviadas');
     Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');
 
     Route::get('/alertas', [AlertaController::class, 'index'])->name('alertas.index');

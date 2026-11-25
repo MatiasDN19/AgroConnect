@@ -30,6 +30,7 @@ class ProfileUpdateRequest extends FormRequest
             'localidad' => ['nullable', 'string', 'max:100'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'notificar_por_mail' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'rol' => User::ROL_PRODUCTOR,
             'telefono' => fake()->phoneNumber(),
+            'notificar_por_mail' => true,
         ];
     }
 
