@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\SocialController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+
+    Route::get('auth/{proveedor}/redirect', [SocialController::class, 'redirigir'])
+        ->name('social.redirect');
+
+    Route::get('auth/{proveedor}/callback', [SocialController::class, 'callback'])
+        ->name('social.callback');
 });
 
 Route::middleware('auth')->group(function () {
@@ -53,6 +60,12 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    Route::get('elegir-rol', [SocialController::class, 'mostrarElegirRol'])
+        ->name('rol.elegir');
+
+    Route::post('elegir-rol', [SocialController::class, 'guardarRol'])
+        ->name('rol.guardar');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
