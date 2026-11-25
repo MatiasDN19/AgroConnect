@@ -85,29 +85,70 @@ class PublicacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
-        $user = $request->user();
-        $resumen = null;
-
-        if ($user && $user->esProductor()) {
-            $resumen = [
-                'activas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_ACTIVA)->count(),
-                'pausadas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_PAUSADA)->count(),
-                'vendidas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_VENDIDA)->count(),
-                'solicitudes_pendientes' => SolicitudCompra::whereHas('publicacion', fn ($q) => $q->where('usuario_id', $user->id))
-                    ->where('estado', SolicitudCompra::ESTADO_PENDIENTE)
-                    ->count(),
-            ];
-        }
-
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
             'categorias' => $categorias,
             'filtros' => $request->only(['q', 'categoria_id']),
-            'resumen' => $resumen,
             'categoria_id' => $request->input('categoria_id'),
             'lat' => $request->input('lat'),
             'lng' => $request->input('lng'),
         ]);
+    }
+
+    /**
+     * Display a listing of the authenticated producer's publications.
+     */
+    public function misPublicaciones(Request $request): InertiaResponse
+    {
+        $user = $request->user();
+
+        $estado = $request->input('estado');
+        $estadosValidos = [
+            Publicacion::ESTADO_ACTIVA,
+            Publicacion::ESTADO_PAUSADA,
+            Publicacion::ESTADO_VENDIDA,
+            Publicacion::ESTADO_BLOQUEADA,
+        ];
+
+        $filtroEstado = in_array($estado, $estadosValidos, true) ? $estado : null;
+
+        $publicaciones = Publicacion::query()
+            ->where('usuario_id', $user->id)
+            ->when($filtroEstado, fn ($q) => $q->where('estado', $filtroEstado))
+            ->with([
+                'categoria:id,nombre',
+                'fotos' => fn ($q) => $q->orderBy('orden')->limit(1),
+            ])
+            ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return Inertia::render('Publicaciones/Mias', [
+            'publicaciones' => $publicaciones,
+            'resumen' => $this->calcularResumenProductor($user->id),
+            'filtros' => [
+                'estado' => $filtroEstado,
+            ],
+        ]);
+    }
+
+    /**
+     * Calculate publications summary for a producer.
+     *
+     * @return array{activas: int, pausadas: int, vendidas: int, bloqueadas: int, solicitudes_pendientes: int}
+     */
+    private function calcularResumenProductor(int $usuarioId): array
+    {
+        return [
+            'activas' => Publicacion::where('usuario_id', $usuarioId)->where('estado', Publicacion::ESTADO_ACTIVA)->count(),
+            'pausadas' => Publicacion::where('usuario_id', $usuarioId)->where('estado', Publicacion::ESTADO_PAUSADA)->count(),
+            'vendidas' => Publicacion::where('usuario_id', $usuarioId)->where('estado', Publicacion::ESTADO_VENDIDA)->count(),
+            'bloqueadas' => Publicacion::where('usuario_id', $usuarioId)->where('estado', Publicacion::ESTADO_BLOQUEADA)->count(),
+            'solicitudes_pendientes' => SolicitudCompra::whereHas('publicacion', fn ($q) => $q->where('usuario_id', $usuarioId))
+                ->where('estado', SolicitudCompra::ESTADO_PENDIENTE)
+                ->count(),
+        ];
     }
 
     /**
