@@ -9,6 +9,7 @@ use App\Models\Categoria;
 use App\Models\Configuracion;
 use App\Models\Publicacion;
 use App\Models\PublicacionFoto;
+use App\Models\SolicitudCompra;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,9 +27,16 @@ class PublicacionController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $hasUbicacion = $request->filled('lat') && $request->filled('lng');
+        $q = $request->input('q');
 
         $query = Publicacion::query()
             ->where('publicaciones.estado', Publicacion::ESTADO_ACTIVA)
+            ->when($q, function ($query, $q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('publicaciones.titulo', 'like', "%{$q}%")
+                        ->orWhere('publicaciones.descripcion', 'like', "%{$q}%");
+                });
+            })
             ->when($request->filled('categoria_id'), function ($query) use ($request) {
                 $query->where('publicaciones.categoria_id', $request->input('categoria_id'));
             })
@@ -68,10 +76,34 @@ class PublicacionController extends Controller
                 'fotos' => fn ($q) => $q->orderBy('orden')->limit(1),
             ])
             ->withAvg('resenas as puntuacion_promedio', 'puntuacion')
-            ->get();
+            ->paginate(12)
+            ->withQueryString();
+
+        $categorias = Categoria::withCount([
+            'publicaciones' => fn ($q) => $q->where('estado', Publicacion::ESTADO_ACTIVA),
+        ])
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $user = $request->user();
+        $resumen = null;
+
+        if ($user && $user->esProductor()) {
+            $resumen = [
+                'activas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_ACTIVA)->count(),
+                'pausadas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_PAUSADA)->count(),
+                'vendidas' => Publicacion::where('usuario_id', $user->id)->where('estado', Publicacion::ESTADO_VENDIDA)->count(),
+                'solicitudes_pendientes' => SolicitudCompra::whereHas('publicacion', fn ($q) => $q->where('usuario_id', $user->id))
+                    ->where('estado', SolicitudCompra::ESTADO_PENDIENTE)
+                    ->count(),
+            ];
+        }
 
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
+            'categorias' => $categorias,
+            'filtros' => $request->only(['q', 'categoria_id']),
+            'resumen' => $resumen,
             'categoria_id' => $request->input('categoria_id'),
             'lat' => $request->input('lat'),
             'lng' => $request->input('lng'),

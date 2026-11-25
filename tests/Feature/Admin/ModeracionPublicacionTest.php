@@ -112,8 +112,8 @@ test('una publicacion bloqueada no aparece en el listado publico', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Publicaciones/Index')
-        ->has('publicaciones', 1)
-        ->where('publicaciones.0.titulo', 'Publicacion Activa')
+        ->has('publicaciones.data', 1)
+        ->where('publicaciones.data.0.titulo', 'Publicacion Activa')
     );
 });
 
