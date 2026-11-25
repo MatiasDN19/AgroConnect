@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'rol', 'telefono', 'lat', 'lng', 'numero_socio', 'socio_validado', 'inhabilitado', 'fcm_token'])]
+#[Fillable(['name', 'email', 'password', 'rol', 'telefono', 'lat', 'lng', 'numero_socio', 'socio_validado', 'inhabilitado', 'fcm_token', 'notificar_por_mail'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -24,6 +24,15 @@ class User extends Authenticatable
     public const ROL_COMPRADOR = 'comprador';
 
     public const ROL_ADMIN = 'admin';
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'notificar_por_mail' => true,
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -39,6 +48,7 @@ class User extends Authenticatable
             'lng' => 'decimal:7',
             'socio_validado' => 'boolean',
             'inhabilitado' => 'boolean',
+            'notificar_por_mail' => 'boolean',
         ];
     }
 

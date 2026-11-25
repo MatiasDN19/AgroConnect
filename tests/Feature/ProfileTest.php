@@ -146,3 +146,47 @@ test('correct password must be provided to delete account', function () {
 
     $this->assertNotNull($user->fresh());
 });
+
+test('los usuarios nuevos arrancan con notificar_por_mail en true por defecto', function () {
+    $user = User::factory()->create();
+
+    expect($user->notificar_por_mail)->toBeTrue();
+});
+
+test('un usuario puede desactivar y volver a activar las notificaciones por mail desde el perfil', function () {
+    $user = User::factory()->create([
+        'notificar_por_mail' => true,
+    ]);
+
+    // Desactivar notificaciones por mail
+    $response = $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'notificar_por_mail' => false,
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/profile');
+
+    $user->refresh();
+    expect($user->notificar_por_mail)->toBeFalse();
+
+    // Volver a activar notificaciones por mail
+    $response = $this
+        ->actingAs($user)
+        ->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'notificar_por_mail' => true,
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/profile');
+
+    $user->refresh();
+    expect($user->notificar_por_mail)->toBeTrue();
+});
