@@ -62,6 +62,20 @@ const GENERICO = {
     fondo: 'from-emerald-50 to-green-100 text-emerald-400',
 };
 
+// Ícono y colores de una categoría según su nombre. También lo usan los círculos
+// de categorías del Inicio (KAN-211).
+export function estiloCategoria(categoria?: string): {
+    Icono: LucideIcon;
+    fondo: string;
+} {
+    const nombre = (categoria ?? '').toLowerCase();
+    return (
+        ICONOS.find(({ palabras }) =>
+            palabras.some((p) => nombre.includes(p)),
+        ) ?? GENERICO
+    );
+}
+
 export default function PlaceholderCategoria({
     categoria,
     className = '',
@@ -69,11 +83,7 @@ export default function PlaceholderCategoria({
     categoria?: string;
     className?: string;
 }) {
-    const nombre = (categoria ?? '').toLowerCase();
-    const { Icono, fondo } =
-        ICONOS.find(({ palabras }) =>
-            palabras.some((p) => nombre.includes(p)),
-        ) ?? GENERICO;
+    const { Icono, fondo } = estiloCategoria(categoria);
 
     return (
         <div

@@ -1,5 +1,6 @@
 import { PageProps } from '@/types';
-import { router, usePage } from '@inertiajs/react';
+import { irAlListado } from '@/utils/listado';
+import { usePage } from '@inertiajs/react';
 import { Clock, LoaderCircle, MapPin } from 'lucide-react';
 import { useState } from 'react';
 
@@ -25,35 +26,15 @@ export default function OrdenCercania({ activo }: { activo: boolean }) {
     // Sin ubicación posible no tiene sentido ofrecer la opción.
     if (!tienePerfil && !hayNavegador) return null;
 
-    // Conserva los demás filtros de la URL (búsqueda, categoría: KAN-209/53) y
-    // vuelve a la página 1, porque con otro orden la página actual ya no sirve.
-    const recargar = (ubicacion?: { lat: number; lng: number }) => {
-        const parametros = Object.fromEntries(
-            new URLSearchParams(window.location.search),
-        );
-        delete parametros.lat;
-        delete parametros.lng;
-        delete parametros.page;
-
-        router.get(
-            route('publicaciones.index'),
+    // irAlListado conserva los demás filtros (búsqueda, categoría) y vuelve a la página 1.
+    const recargar = (ubicacion?: { lat: number; lng: number }) =>
+        irAlListado(
             {
-                ...parametros,
-                ...(ubicacion
-                    ? {
-                          lat: redondear(ubicacion.lat),
-                          lng: redondear(ubicacion.lng),
-                      }
-                    : {}),
+                lat: ubicacion ? redondear(ubicacion.lat) : null,
+                lng: ubicacion ? redondear(ubicacion.lng) : null,
             },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                only: ['publicaciones', 'lat', 'lng'],
-                onFinish: () => setBuscando(false),
-            },
+            { onFinish: () => setBuscando(false) },
         );
-    };
 
     const ordenarPorCercania = () => {
         setError(null);

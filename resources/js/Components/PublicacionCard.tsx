@@ -48,7 +48,7 @@ export default function PublicacionCard({
         // Toda la tarjeta es un link al detalle.
         <Link
             href={route('publicaciones.show', publicacion.id)}
-            className="group flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-100 transition hover:shadow-md hover:ring-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul active:scale-[0.99] motion-reduce:hover:translate-y-0"
         >
             {/* Portada con proporción fija: todas las tarjetas quedan del mismo alto
                 aunque las fotos tengan tamaños distintos (KAN-205). */}
