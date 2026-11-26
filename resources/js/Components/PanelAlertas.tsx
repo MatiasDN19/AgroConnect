@@ -6,6 +6,7 @@ import {
     CircleX,
     Flag,
     LucideIcon,
+    ShoppingBag,
     Star,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -28,6 +29,10 @@ const CANTIDAD_EN_PANEL = 8;
 // Ícono y color según el tipo. Los tipos salen de los controladores que crean
 // alertas (solicitudes, reseñas y denuncias).
 const ESTILO_TIPO: Record<string, { Icono: LucideIcon; color: string }> = {
+    nueva_solicitud_compra: {
+        Icono: ShoppingBag,
+        color: 'bg-sky-50 text-marca-azul',
+    },
     solicitud_compra_aceptada: {
         Icono: CircleCheck,
         color: 'bg-green-50 text-green-600',
@@ -46,6 +51,8 @@ const ESTILO_GENERICO = { Icono: Bell, color: 'bg-sky-50 text-marca-azul' };
 // ningún lado (solo se marcan como leídas).
 function destino(tipo: string): string | null {
     switch (tipo) {
+        case 'nueva_solicitud_compra':
+            return route('solicitudes-compra.index');
         case 'solicitud_compra_aceptada':
         case 'solicitud_compra_rechazada':
             return route('solicitudes-compra.enviadas');
