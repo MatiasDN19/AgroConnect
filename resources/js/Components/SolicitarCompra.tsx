@@ -94,7 +94,7 @@ export default function SolicitarCompra({
 
         post(route('solicitudes-compra.store', publicacion.id), {
             preserveScroll: true,
-            // El mensaje de éxito llega como flash y lo muestra la página.
+            // El mensaje de éxito llega como flash y lo muestran los avisos flotantes (KAN-319).
             onSuccess: () => cerrar(),
         });
     };

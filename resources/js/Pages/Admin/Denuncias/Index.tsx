@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Denuncia, EstadoDenuncia } from '@/types';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Check, RotateCcw, ShieldAlert, X } from 'lucide-react';
 import { CSSProperties, useState } from 'react';
 
@@ -52,7 +52,6 @@ export default function Index({
     // El estado por el que filtró el backend (por defecto, "pendiente").
     estado_actual: EstadoDenuncia;
 }) {
-    const { flash } = usePage().props;
     const filtroActivo = estado_actual;
 
     const filtrar = (valor: EstadoDenuncia) => {
@@ -109,12 +108,6 @@ export default function Index({
                         );
                     })}
                 </div>
-
-                {flash.success && (
-                    <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
                     {denuncias.length === 0 ? (

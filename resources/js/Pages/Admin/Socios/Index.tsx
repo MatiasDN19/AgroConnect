@@ -3,7 +3,7 @@ import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { User } from '@/types';
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { BadgeCheck, Check, X } from 'lucide-react';
 import { CSSProperties, useState } from 'react';
 
@@ -29,8 +29,6 @@ export default function Index({
 }: {
     solicitudes: Solicitud[];
 }) {
-    const { flash } = usePage().props;
-
     // Solicitud + acción que se está confirmando en el modal (null = modal cerrado).
     const [confirmando, setConfirmando] = useState<{
         solicitud: Solicitud;
@@ -60,12 +58,6 @@ export default function Index({
     return (
         <AdminLayout titulo="Socios del Consorcio">
             <div className="mx-auto max-w-7xl space-y-6">
-                {flash.success && (
-                    <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-                        {flash.success}
-                    </div>
-                )}
-
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
                     <div className="border-b border-slate-200 px-5 py-4">
                         <h2 className="text-base font-semibold text-slate-800">

@@ -2,7 +2,7 @@ import InputError from '@/Components/InputError';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Configuracion } from '@/types';
 import { numeroWhatsapp } from '@/utils/whatsapp';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { Contact, LucideIcon, SlidersHorizontal } from 'lucide-react';
 import { FormEventHandler, ReactNode } from 'react';
 
@@ -22,8 +22,6 @@ export default function Edit({
 }: {
     configuraciones: Configuracion;
 }) {
-    const { flash } = usePage().props;
-
     // Todo como texto: es lo que dan los inputs. Laravel valida tipos y rangos.
     const texto = (valor: string | number | null) =>
         valor === null ? '' : String(valor);
@@ -52,15 +50,6 @@ export default function Edit({
     return (
         <AdminLayout titulo="Configuración">
             <form onSubmit={guardar} className="mx-auto max-w-3xl space-y-6">
-                {flash.success && (
-                    <div
-                        role="status"
-                        className="rounded-md bg-green-50 p-4 text-sm text-green-800"
-                    >
-                        {flash.success}
-                    </div>
-                )}
-
                 <Bloque
                     Icono={Contact}
                     titulo="Datos de contacto"

@@ -1,3 +1,4 @@
+import { avisar } from '@/Components/Avisos/avisos';
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -7,14 +8,12 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Categoria, PageProps } from '@/types';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
 
 export default function Index({
     categorias,
 }: PageProps<{ categorias: Categoria[] }>) {
-    const { flash } = usePage().props;
-
     // Modal de crear/editar: si "editando" es null, el formulario crea una categoría nueva.
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
     const [editando, setEditando] = useState<Categoria | null>(null);
@@ -89,18 +88,6 @@ export default function Index({
         >
             <div>
                 <div className="mx-auto max-w-7xl space-y-4">
-                    {flash.success && (
-                        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-                            {flash.success}
-                        </div>
-                    )}
-
-                    {flash.error && (
-                        <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">
-                            {flash.error}
-                        </div>
-                    )}
-
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                         {categorias.length === 0 ? (
                             <p className="p-6 text-sm text-gray-600">
@@ -162,19 +149,26 @@ export default function Index({
 
                                                         <DangerButton
                                                             className="ms-2"
-                                                            onClick={() =>
+                                                            onClick={() => {
+                                                                // No se deshabilita: en el celu no hay
+                                                                // mouse para ver un title, así que
+                                                                // explicamos el motivo con un aviso.
+                                                                if (
+                                                                    tienePublicaciones
+                                                                ) {
+                                                                    const n =
+                                                                        categoria.publicaciones_count ??
+                                                                        0;
+                                                                    avisar(
+                                                                        'error',
+                                                                        `No se puede eliminar ${categoria.nombre}: tiene ${n} ${n === 1 ? 'publicación' : 'publicaciones'}.`,
+                                                                    );
+                                                                    return;
+                                                                }
                                                                 setAEliminar(
                                                                     categoria,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                tienePublicaciones
-                                                            }
-                                                            title={
-                                                                tienePublicaciones
-                                                                    ? 'No se puede eliminar: tiene publicaciones asociadas'
-                                                                    : undefined
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             Eliminar
                                                         </DangerButton>
