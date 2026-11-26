@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AsegurarCuentaHabilitada;
 use App\Http\Middleware\CabecerasSeguridad;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -24,6 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            AsegurarCuentaHabilitada::class,
+        ]);
+
+        $middleware->api(append: [
+            AsegurarCuentaHabilitada::class,
         ]);
 
         $middleware->alias([

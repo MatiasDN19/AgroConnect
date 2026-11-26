@@ -7,6 +7,8 @@ use App\Http\Requests\CambiarRolUsuarioRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -68,6 +70,14 @@ class UsuarioController extends Controller
         $usuario->update([
             'inhabilitado' => $nuevoEstado,
         ]);
+
+        if ($usuario->estaInhabilitado()) {
+            $usuario->tokens()->delete();
+
+            if (Schema::hasTable('sessions')) {
+                DB::table('sessions')->where('user_id', $usuario->id)->delete();
+            }
+        }
 
         $mensaje = $usuario->estaInhabilitado()
             ? 'Usuario inhabilitado correctamente.'
