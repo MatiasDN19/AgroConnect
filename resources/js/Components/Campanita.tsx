@@ -1,41 +1,33 @@
-import BotonIcono from '@/Components/BotonIcono';
+import { clasesBotonIcono } from '@/Components/BotonIcono';
+import PanelAlertas, { actualizarContador } from '@/Components/PanelAlertas';
 import { PageProps } from '@/types';
-import { router, usePage } from '@inertiajs/react';
+import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
+import { usePage } from '@inertiajs/react';
 import { Bell } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 // Cada cuánto se consulta si llegaron alertas nuevas mientras el usuario está quieto.
 const INTERVALO_CONSULTA = 60_000;
 
-// Campanita del navbar con la cantidad de alertas sin leer (KAN-74).
+// Campanita del navbar con la cantidad de alertas sin leer (KAN-74) y el panel
+// desplegable con las últimas notificaciones (KAN-80).
 // El número llega en todas las páginas como prop compartida (KAN-248).
-// El panel desplegable con el listado es KAN-80; por ahora lleva a /alertas.
 export default function Campanita() {
     const { alertas_no_leidas: noLeidas = 0 } = usePage<PageProps>().props;
 
-    // Cada tanto pedimos solo el número (y el flash, ver abajo), si la pestaña
-    // está a la vista. Al volver a la pestaña, consultamos enseguida.
+    // Cada tanto pedimos solo el número, si la pestaña está a la vista.
+    // Al volver a la pestaña, consultamos enseguida.
     useEffect(() => {
         const consultar = () => {
-            if (document.hidden) return;
-            router.reload({
-                // "flash" también, para que llegue fresco: si no, Inertia
-                // conserva el de la página y el aviso se repetiría.
-                only: ['alertas_no_leidas', 'flash'],
-                // async: no cancela una navegación que el usuario esté haciendo.
-                async: true,
-            });
+            if (!document.hidden) actualizarContador();
         };
 
         const intervalo = setInterval(consultar, INTERVALO_CONSULTA);
-        const alCambiarPestana = () => {
-            if (!document.hidden) consultar();
-        };
-        document.addEventListener('visibilitychange', alCambiarPestana);
+        document.addEventListener('visibilitychange', consultar);
 
         return () => {
             clearInterval(intervalo);
-            document.removeEventListener('visibilitychange', alCambiarPestana);
+            document.removeEventListener('visibilitychange', consultar);
         };
     }, []);
 
@@ -54,24 +46,41 @@ export default function Campanita() {
             : 'Notificaciones';
 
     return (
-        <BotonIcono
-            href={route('alertas.index')}
-            etiqueta={etiqueta}
-            activo={route().current('alertas.index')}
-        >
-            <Bell className="h-5 w-5" aria-hidden="true" />
-            {noLeidas > 0 && (
-                <span
-                    // Cambiar la key reinicia la animación.
-                    key={pop}
-                    aria-hidden="true"
-                    className={`absolute right-0.5 top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white ${
-                        pop > 0 ? 'globito-pop' : ''
-                    }`}
-                >
-                    {noLeidas > 9 ? '9+' : noLeidas}
-                </span>
+        <Popover className="relative">
+            {({ open, close }) => (
+                <>
+                    <PopoverButton
+                        aria-label={etiqueta}
+                        title={etiqueta}
+                        className={clasesBotonIcono(open)}
+                    >
+                        <Bell className="h-5 w-5" aria-hidden="true" />
+                        {noLeidas > 0 && (
+                            <span
+                                // Cambiar la key reinicia la animación.
+                                key={pop}
+                                aria-hidden="true"
+                                className={`absolute right-0.5 top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white ${
+                                    pop > 0 ? 'globito-pop' : ''
+                                }`}
+                            >
+                                {noLeidas > 9 ? '9+' : noLeidas}
+                            </span>
+                        )}
+                    </PopoverButton>
+
+                    {/* anchor: Headless UI lo ubica debajo de la campana y lo
+                        mantiene dentro de la pantalla (en el celu ocupa casi
+                        todo el ancho). Misma animación que el menú de cuenta. */}
+                    <PopoverPanel
+                        anchor={{ to: 'bottom end', gap: 8, padding: 12 }}
+                        transition
+                        className="z-50 w-[min(24rem,calc(100vw-1.5rem))] origin-top-right rounded-2xl bg-white shadow-xl shadow-slate-900/10 ring-1 ring-slate-200 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus:outline-none data-[closed]:-translate-y-1 data-[closed]:scale-95 data-[closed]:opacity-0 data-[leave]:duration-100 motion-reduce:data-[closed]:translate-y-0 motion-reduce:data-[closed]:scale-100"
+                    >
+                        <PanelAlertas noLeidas={noLeidas} cerrar={close} />
+                    </PopoverPanel>
+                </>
             )}
-        </BotonIcono>
+        </Popover>
     );
 }
