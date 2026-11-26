@@ -2822,6 +2822,29 @@ Depende de: KAN-272 y que la API del detalle mande `localidad` y `distancia_km` 
 
 </details>
 
+<details>
+<summary>**KAN-346** [backend] — Backend: no exponer las coordenadas ni el email del productor en la API</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Resources/PublicacionResource.php` — bloque `usuario`.
+* `app/Http/Controllers/Api/PublicacionController.php` — calcular `distancia_km` en `show()` como la web.
+* `tests/Feature/Api/...` (el test de publicaciones de la API) — agregar casos.
+
+Guía:
+
+1. Hoy `PublicacionResource` devuelve en `usuario` el `email`, la `lat` y la `lng` del productor. Cualquiera que use la API (la app de Flutter o un script) ve el punto de la chacra y el correo del productor.
+2. La web ya los oculta: KAN-270 sacó el email del detalle y KAN-272 oculta las coordenadas con `makeHidden(['email', 'lat', 'lng'])` y manda solo `localidad` y `distancia_km`. La API tiene que hacer lo mismo.
+3. En `usuario`: sacar `email`, `lat` y `lng`; sumar `localidad`.
+4. En el detalle (`GET /api/publicaciones/{id}`): sumar `distancia_km` si el usuario logueado y el productor tienen ubicación (misma cuenta Haversine que `PublicacionController::show()` de la web; conviene llevarla a un método reutilizable).
+5. Tests: ni `/api/publicaciones` ni `/api/publicaciones/{id}` incluyen `email`, `lat` ni `lng` del productor; incluyen `localidad`; `distancia_km` aparece solo si ambos tienen ubicación.
+
+Contexto: desde KAN-273 el perfil web guarda la ubicación redondeada a ~1 km, pero las ubicaciones cargadas antes pueden ser exactas.
+
+Relacionada: KAN-270, KAN-272, KAN-273.
+
+</details>
+
 ### KAN-95 — Ver productores y publicaciones en un mapa
 
 > Como comprador, quiero ver en un mapa las publicaciones y productores cercanos, para elegir con quién contactarme según la distancia.
