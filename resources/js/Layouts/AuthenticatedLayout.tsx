@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import Avatar from '@/Components/Avatar';
 import BotonIcono from '@/Components/BotonIcono';
 import BuscadorPublicaciones from '@/Components/BuscadorPublicaciones';
 import Campanita from '@/Components/Campanita';
@@ -368,32 +369,5 @@ export default function Authenticated({
 
             <PieApp />
         </div>
-    );
-}
-
-// Iniciales del nombre en un círculo con el degradé de la marca.
-function Avatar({
-    nombre,
-    grande = false,
-}: {
-    nombre: string;
-    grande?: boolean;
-}) {
-    const iniciales = nombre
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((parte) => parte[0]?.toUpperCase())
-        .join('');
-
-    return (
-        <span
-            aria-hidden="true"
-            className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marca-azul-claro to-marca-azul-profundo font-bold text-white ${
-                grande ? 'h-10 w-10 text-sm' : 'h-8 w-8 text-xs'
-            }`}
-        >
-            {iniciales}
-        </span>
     );
 }

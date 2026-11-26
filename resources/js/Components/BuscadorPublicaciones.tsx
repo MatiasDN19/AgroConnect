@@ -79,10 +79,13 @@ const BuscadorPublicaciones = forwardRef<
                 autoComplete="off"
                 enterKeyHint="search"
                 tabIndex={inactivo ? -1 : undefined}
-                className={`w-full border-0 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-marca-azul [&::-webkit-search-cancel-button]:hidden ${
+                // El fondo va solo en cada variante: antes "bg-white" común
+                // pisaba al gris del compacto y en el navbar quedaba blanco
+                // sobre blanco, sin marco hasta enfocarlo.
+                className={`w-full border-0 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-marca-azul [&::-webkit-search-cancel-button]:hidden ${
                     grande
-                        ? 'h-14 rounded-2xl pl-12 pr-36 text-base shadow-xl shadow-sky-900/10 ring-1 ring-slate-200 sm:pr-40'
-                        : 'h-10 rounded-xl bg-slate-100 pl-9 pr-9 text-sm ring-1 ring-transparent focus:bg-white'
+                        ? 'h-14 rounded-2xl bg-white pl-12 pr-36 text-base shadow-xl shadow-sky-900/10 ring-1 ring-slate-200 sm:pr-40'
+                        : 'h-10 rounded-xl bg-slate-50 pl-9 pr-9 text-sm ring-1 ring-slate-200 transition-[background-color,box-shadow] duration-150 hover:ring-slate-300 focus:bg-white'
                 }`}
             />
 

@@ -1,12 +1,14 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
+import { avisar } from '@/Components/Avisos/avisos';
+import {
+    Bloque,
+    BotonGuardar,
+    BotonSecundario,
+    Campo,
+    CLASES_CAMPO,
+} from '@/Components/Formulario';
 import SocioBadge from '@/Components/SocioBadge';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { useForm, usePage } from '@inertiajs/react';
-import { Clock } from 'lucide-react';
+import { BadgeCheck, Clock } from 'lucide-react';
 import { FormEventHandler, useState } from 'react';
 
 type EstadoSocio = 'sin_solicitar' | 'pendiente' | 'validado';
@@ -15,13 +17,7 @@ type EstadoSocio = 'sin_solicitar' | 'pendiente' | 'validado';
 // el admin lo valida desde el panel. Ojo: el backend resetea la validación
 // cada vez que se guarda (aunque el número sea el mismo), por eso cuando ya
 // está validado el campo queda bloqueado hasta que toque "Cambiar número".
-export default function UpdateSocioForm({
-    status,
-    className = '',
-}: {
-    status?: string;
-    className?: string;
-}) {
+export default function UpdateSocioForm() {
     const user = usePage().props.auth.user;
 
     const estado: EstadoSocio = !user.numero_socio
@@ -43,7 +39,13 @@ export default function UpdateSocioForm({
 
         patch(route('profile.socio.update'), {
             preserveScroll: true,
-            onSuccess: () => setEditando(false),
+            onSuccess: () => {
+                setEditando(false);
+                avisar(
+                    'exito',
+                    'Enviamos tu número de socio. Te avisamos cuando lo validen.',
+                );
+            },
         });
     };
 
@@ -54,34 +56,25 @@ export default function UpdateSocioForm({
     };
 
     return (
-        <section className={className}>
-            <header className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Socio del Consorcio
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                        Si sos socio del Consorcio Productivo de Laguna Naineck,
-                        cargá tu número de socio. Cuando un administrador lo
-                        valide, tus publicaciones van a aparecer primero en las
-                        búsquedas.
-                    </p>
-                </div>
-
-                <ChipEstado estado={estado} />
-            </header>
-
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel
-                        htmlFor="numero_socio"
-                        value="Número de socio"
-                    />
-
-                    <TextInput
+        <Bloque
+            Icono={BadgeCheck}
+            titulo="Socio del Consorcio"
+            descripcion="Si sos socio del Consorcio Productivo de Laguna Naineck, cargá tu número. Cuando un administrador lo valide, tus publicaciones van a aparecer primero en las búsquedas."
+            extra={<ChipEstado estado={estado} />}
+        >
+            <form onSubmit={submit} className="space-y-4">
+                <Campo
+                    id="numero_socio"
+                    etiqueta="Número de socio"
+                    error={errors.numero_socio}
+                    ayuda={
+                        estado === 'pendiente'
+                            ? 'Tu solicitud está esperando la validación de un administrador.'
+                            : undefined
+                    }
+                >
+                    <input
                         id="numero_socio"
-                        className="mt-1 block w-full disabled:bg-gray-100 disabled:text-gray-500"
                         value={data.numero_socio}
                         onChange={(e) =>
                             setData('numero_socio', e.target.value)
@@ -89,64 +82,39 @@ export default function UpdateSocioForm({
                         maxLength={50}
                         disabled={bloqueado}
                         required
+                        className={`${CLASES_CAMPO} sm:max-w-xs`}
                     />
+                </Campo>
 
-                    <InputError
-                        className="mt-2"
-                        message={errors.numero_socio}
-                    />
+                {estado === 'validado' && editando && (
+                    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                        Si cambiás tu número, vas a dejar de figurar como socio
+                        validado hasta que un administrador lo vuelva a revisar.
+                    </p>
+                )}
 
-                    {estado === 'pendiente' && (
-                        <p className="mt-2 text-sm text-gray-600">
-                            Tu solicitud está esperando la validación de un
-                            administrador.
-                        </p>
-                    )}
-
-                    {estado === 'validado' && editando && (
-                        <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-                            Si cambiás tu número, vas a dejar de figurar como
-                            socio validado hasta que un administrador lo vuelva
-                            a revisar.
-                        </p>
-                    )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap justify-end gap-3 pt-1">
                     {bloqueado ? (
-                        <SecondaryButton onClick={() => setEditando(true)}>
+                        <BotonSecundario onClick={() => setEditando(true)}>
                             Cambiar número
-                        </SecondaryButton>
+                        </BotonSecundario>
                     ) : (
                         <>
-                            <PrimaryButton disabled={processing}>
+                            {editando && (
+                                <BotonSecundario onClick={cancelarCambio}>
+                                    Cancelar
+                                </BotonSecundario>
+                            )}
+                            <BotonGuardar disabled={processing}>
                                 {estado === 'sin_solicitar'
                                     ? 'Solicitar validación'
                                     : 'Guardar número'}
-                            </PrimaryButton>
-
-                            {editando && (
-                                <SecondaryButton onClick={cancelarCambio}>
-                                    Cancelar
-                                </SecondaryButton>
-                            )}
+                            </BotonGuardar>
                         </>
                     )}
-
-                    <Transition
-                        show={status === 'socio-actualizado'}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
-                            Solicitud enviada.
-                        </p>
-                    </Transition>
                 </div>
             </form>
-        </section>
+        </Bloque>
     );
 }
 
@@ -166,7 +134,7 @@ function ChipEstado({ estado }: { estado: EstadoSocio }) {
     }
 
     return (
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             Sin solicitar
         </span>
     );

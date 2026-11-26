@@ -1,10 +1,10 @@
-import InputError from '@/Components/InputError';
+import { Bloque, Campo, CLASES_CAMPO } from '@/Components/Formulario';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Configuracion } from '@/types';
 import { numeroWhatsapp } from '@/utils/whatsapp';
 import { useForm } from '@inertiajs/react';
-import { Contact, LucideIcon, SlidersHorizontal } from 'lucide-react';
-import { FormEventHandler, ReactNode } from 'react';
+import { Contact, SlidersHorizontal } from 'lucide-react';
+import { FormEventHandler } from 'react';
 
 // Configuración de la plataforma (KAN-225). Lo que se guarda acá lo usan:
 // - el pie de la landing (datos de contacto, compartidos por HandleInertiaRequests);
@@ -13,9 +13,6 @@ import { FormEventHandler, ReactNode } from 'react';
 // El backend guarda el tamaño en KB (entre 512 y 10240); el admin elige en MB.
 const TAMANOS_KB = [512, 1024, 1536, 2048, 3072, 5120, 10240];
 const textoMb = (kb: number) => `${String(kb / 1024).replace('.', ',')} MB`;
-
-const CLASES_CAMPO =
-    'mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-sky-600 focus:ring-sky-600';
 
 export default function Edit({
     configuraciones,
@@ -251,62 +248,5 @@ export default function Edit({
                 </div>
             </form>
         </AdminLayout>
-    );
-}
-
-function Bloque({
-    Icono,
-    titulo,
-    descripcion,
-    children,
-}: {
-    Icono: LucideIcon;
-    titulo: string;
-    descripcion: string;
-    children: ReactNode;
-}) {
-    return (
-        <section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="mb-5 flex gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-marca-azul">
-                    <Icono className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <div>
-                    <h2 className="font-display text-lg font-bold text-marca-tinta">
-                        {titulo}
-                    </h2>
-                    <p className="text-sm text-slate-500">{descripcion}</p>
-                </div>
-            </div>
-            <div className="space-y-4">{children}</div>
-        </section>
-    );
-}
-
-function Campo({
-    id,
-    etiqueta,
-    error,
-    ayuda,
-    children,
-}: {
-    id: string;
-    etiqueta: string;
-    error?: string;
-    ayuda?: ReactNode;
-    children: ReactNode;
-}) {
-    return (
-        <div>
-            <label
-                htmlFor={id}
-                className="block text-sm font-medium text-slate-700"
-            >
-                {etiqueta}
-            </label>
-            {children}
-            {ayuda && <p className="mt-1 text-xs text-slate-500">{ayuda}</p>}
-            <InputError message={error} className="mt-1" />
-        </div>
     );
 }
