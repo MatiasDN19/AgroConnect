@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ConfiguracionController;
+use App\Http\Controllers\Admin\ExportacionController;
 use App\Http\Controllers\Admin\MetricasController;
 use App\Http\Controllers\Admin\PublicacionModeracionController;
 use App\Http\Controllers\Admin\ReferenciaMensualController;
@@ -92,6 +93,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/admin/referencias/{referencia}', [ReferenciaMensualController::class, 'update'])->name('admin.referencias.update');
     Route::delete('/admin/referencias/{referencia}', [ReferenciaMensualController::class, 'destroy'])->name('admin.referencias.destroy');
     Route::post('/admin/referencias/copiar-mes-anterior', [ReferenciaMensualController::class, 'copiarMesAnterior'])->name('admin.referencias.copiar-mes-anterior');
+
+    Route::get('/admin/exportar/socios', [ExportacionController::class, 'socios'])->name('admin.exportar.socios');
+    Route::get('/admin/exportar/usuarios', [ExportacionController::class, 'usuarios'])->name('admin.exportar.usuarios');
+    Route::get('/admin/exportar/solicitudes', [ExportacionController::class, 'solicitudes'])->name('admin.exportar.solicitudes');
+    Route::get('/admin/exportar/{tipo}', [ExportacionController::class, 'exportar'])->name('admin.exportar');
 });
 
 require __DIR__.'/auth.php';
