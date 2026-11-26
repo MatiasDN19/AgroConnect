@@ -1,17 +1,16 @@
-import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
+import {
+    Bloque,
+    BotonPeligro,
+    BotonSecundario,
+    Campo,
+    CLASES_CAMPO,
+} from '@/Components/Formulario';
 import Modal from '@/Components/Modal';
-import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
+import { Trash2, TriangleAlert } from 'lucide-react';
 import { FormEventHandler, useRef, useState } from 'react';
 
-export default function DeleteUserForm({
-    className = '',
-}: {
-    className?: string;
-}) {
+export default function DeleteUserForm() {
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
     const passwordInput = useRef<HTMLInputElement>(null);
 
@@ -26,10 +25,6 @@ export default function DeleteUserForm({
     } = useForm({
         password: '',
     });
-
-    const confirmUserDeletion = () => {
-        setConfirmingUserDeletion(true);
-    };
 
     const deleteUser: FormEventHandler = (e) => {
         e.preventDefault();
@@ -50,73 +45,80 @@ export default function DeleteUserForm({
     };
 
     return (
-        <section className={`space-y-6 ${className}`}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Eliminar cuenta
-                </h2>
+        <Bloque
+            Icono={Trash2}
+            titulo="Eliminar cuenta"
+            descripcion="Se borran para siempre tus datos, tus publicaciones y todo lo asociado. No se puede deshacer."
+            peligro
+        >
+            <p className="text-sm text-slate-600">
+                Antes de hacerlo, guardate lo que quieras conservar. Si solo
+                querés dejar de vender por un tiempo, podés pausar tus
+                publicaciones.
+            </p>
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Si eliminás tu cuenta, se borran para siempre tus datos, tus
-                    publicaciones y todo lo asociado. Antes de hacerlo, guardate
-                    lo que quieras conservar.
-                </p>
-            </header>
-
-            <DangerButton onClick={confirmUserDeletion}>
-                Eliminar cuenta
-            </DangerButton>
+            <div className="flex justify-end">
+                <BotonPeligro onClick={() => setConfirmingUserDeletion(true)}>
+                    Eliminar mi cuenta
+                </BotonPeligro>
+            </div>
 
             <Modal show={confirmingUserDeletion} onClose={closeModal}>
                 <form onSubmit={deleteUser} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        ¿Seguro que querés eliminar tu cuenta?
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-600">
-                        Se van a borrar para siempre tus datos y tus
-                        publicaciones, y no se puede deshacer. Ingresá tu
-                        contraseña para confirmar.
-                    </p>
-
-                    <div className="mt-6">
-                        <InputLabel
-                            htmlFor="password"
-                            value="Contraseña"
-                            className="sr-only"
-                        />
-
-                        <TextInput
-                            id="password"
-                            type="password"
-                            name="password"
-                            ref={passwordInput}
-                            value={data.password}
-                            onChange={(e) =>
-                                setData('password', e.target.value)
-                            }
-                            className="mt-1 block w-3/4"
-                            isFocused
-                            placeholder="Contraseña"
-                        />
-
-                        <InputError
-                            message={errors.password}
-                            className="mt-2"
-                        />
+                    <div className="flex gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                            <TriangleAlert
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                            />
+                        </span>
+                        <div>
+                            <h2 className="font-display text-lg font-bold text-marca-tinta">
+                                ¿Seguro que querés eliminar tu cuenta?
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-600">
+                                Se van a borrar para siempre tus datos y tus
+                                publicaciones, y no se puede deshacer. Ingresá
+                                tu contraseña para confirmar.
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>
-                            Cancelar
-                        </SecondaryButton>
+                    <div className="mt-5">
+                        <Campo
+                            id="password_eliminar"
+                            etiqueta="Contraseña"
+                            error={errors.password}
+                        >
+                            <input
+                                id="password_eliminar"
+                                type="password"
+                                name="password"
+                                ref={passwordInput}
+                                value={data.password}
+                                onChange={(e) =>
+                                    setData('password', e.target.value)
+                                }
+                                autoComplete="current-password"
+                                autoFocus
+                                className={CLASES_CAMPO}
+                            />
+                        </Campo>
+                    </div>
 
-                        <DangerButton className="ms-3" disabled={processing}>
+                    <div className="mt-6 flex flex-wrap justify-end gap-3">
+                        <BotonSecundario onClick={closeModal}>
+                            Cancelar
+                        </BotonSecundario>
+                        <BotonPeligro
+                            type="submit"
+                            disabled={processing || !data.password}
+                        >
                             Eliminar cuenta
-                        </DangerButton>
+                        </BotonPeligro>
                     </div>
                 </form>
             </Modal>
-        </section>
+        </Bloque>
     );
 }

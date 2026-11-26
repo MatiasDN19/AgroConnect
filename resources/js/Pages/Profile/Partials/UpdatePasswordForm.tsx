@@ -1,28 +1,19 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
+import { avisar } from '@/Components/Avisos/avisos';
+import {
+    Bloque,
+    BotonGuardar,
+    Campo,
+    CLASES_CAMPO,
+} from '@/Components/Formulario';
 import { useForm } from '@inertiajs/react';
+import { ShieldCheck } from 'lucide-react';
 import { FormEventHandler, useRef } from 'react';
 
-export default function UpdatePasswordForm({
-    className = '',
-}: {
-    className?: string;
-}) {
+export default function UpdatePasswordForm() {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
 
-    const {
-        data,
-        setData,
-        errors,
-        put,
-        reset,
-        processing,
-        recentlySuccessful,
-    } = useForm({
+    const { data, setData, errors, put, reset, processing } = useForm({
         current_password: '',
         password: '',
         password_confirmation: '',
@@ -33,7 +24,10 @@ export default function UpdatePasswordForm({
 
         put(route('password.update'), {
             preserveScroll: true,
-            onSuccess: () => reset(),
+            onSuccess: () => {
+                reset();
+                avisar('exito', 'Cambiaste tu contraseña.');
+            },
             onError: (errors) => {
                 if (errors.password) {
                     reset('password', 'password_confirmation');
@@ -49,26 +43,18 @@ export default function UpdatePasswordForm({
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Cambiar contraseña
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
-                    Usá una contraseña larga y difícil de adivinar para mantener
-                    tu cuenta segura.
-                </p>
-            </header>
-
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel
-                        htmlFor="current_password"
-                        value="Contraseña actual"
-                    />
-
-                    <TextInput
+        <Bloque
+            Icono={ShieldCheck}
+            titulo="Cambiar contraseña"
+            descripcion="Usá una contraseña larga y difícil de adivinar para mantener tu cuenta segura."
+        >
+            <form onSubmit={updatePassword} className="space-y-4">
+                <Campo
+                    id="current_password"
+                    etiqueta="Contraseña actual"
+                    error={errors.current_password}
+                >
+                    <input
                         id="current_password"
                         ref={currentPasswordInput}
                         value={data.current_password}
@@ -76,69 +62,60 @@ export default function UpdatePasswordForm({
                             setData('current_password', e.target.value)
                         }
                         type="password"
-                        className="mt-1 block w-full"
                         autoComplete="current-password"
+                        className={CLASES_CAMPO}
                     />
+                </Campo>
 
-                    <InputError
-                        message={errors.current_password}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="password" value="Contraseña nueva" />
-
-                    <TextInput
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <Campo
                         id="password"
-                        ref={passwordInput}
-                        value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div>
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Repetí la contraseña nueva"
-                    />
-
-                    <TextInput
-                        id="password_confirmation"
-                        value={data.password_confirmation}
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        type="password"
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                    />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Guardar</PrimaryButton>
-
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
+                        etiqueta="Contraseña nueva"
+                        error={errors.password}
                     >
-                        <p className="text-sm text-gray-600">Guardado.</p>
-                    </Transition>
+                        <input
+                            id="password"
+                            ref={passwordInput}
+                            value={data.password}
+                            onChange={(e) =>
+                                setData('password', e.target.value)
+                            }
+                            type="password"
+                            autoComplete="new-password"
+                            className={CLASES_CAMPO}
+                        />
+                    </Campo>
+
+                    <Campo
+                        id="password_confirmation"
+                        etiqueta="Repetí la contraseña nueva"
+                        error={errors.password_confirmation}
+                    >
+                        <input
+                            id="password_confirmation"
+                            value={data.password_confirmation}
+                            onChange={(e) =>
+                                setData('password_confirmation', e.target.value)
+                            }
+                            type="password"
+                            autoComplete="new-password"
+                            className={CLASES_CAMPO}
+                        />
+                    </Campo>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                    <BotonGuardar
+                        disabled={
+                            processing ||
+                            !data.current_password ||
+                            !data.password
+                        }
+                    >
+                        Cambiar contraseña
+                    </BotonGuardar>
                 </div>
             </form>
-        </section>
+        </Bloque>
     );
 }
