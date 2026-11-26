@@ -90,7 +90,8 @@ export default function Edit({
     const seccion = secciones.find((s) => s.id === activa.id) ?? secciones[0];
 
     return (
-        <AuthenticatedLayout>
+        // Sin buscador en el navbar: acá no se buscan productos.
+        <AuthenticatedLayout mostrarBuscador={false}>
             <Head title="Mi perfil" />
 
             <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
