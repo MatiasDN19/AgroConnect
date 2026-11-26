@@ -2,6 +2,7 @@ import Estrellas from '@/Components/Estrellas';
 import PlaceholderCategoria from '@/Components/PlaceholderCategoria';
 import SocioBadge from '@/Components/SocioBadge';
 import { Categoria, Publicacion, PublicacionFoto, User } from '@/types';
+import { textoDistancia } from '@/utils/distancia';
 import { formatearPrecio } from '@/utils/formato';
 import { Link } from '@inertiajs/react';
 import { MapPin } from 'lucide-react';
@@ -24,11 +25,6 @@ export type PublicacionResumen = Pick<
 };
 
 // Las coordenadas viajan redondeadas (~1 km), así que no mostramos decimales.
-function textoDistancia(km: number): string {
-    if (km < 1) return 'A menos de 1 km';
-    return `A ${Math.round(km).toLocaleString('es-AR')} km`;
-}
-
 export default function PublicacionCard({
     publicacion,
 }: {
@@ -77,7 +73,8 @@ export default function PublicacionCard({
                                 className="h-3.5 w-3.5"
                                 aria-hidden="true"
                             />
-                            {textoDistancia(distancia)}
+                            {/* En la tarjeta va sola, así que con mayúscula: "A 12 km". */}
+                            {textoDistancia(distancia).replace(/^a/, 'A')}
                         </span>
                     )}
                 </div>
