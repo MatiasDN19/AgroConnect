@@ -108,8 +108,27 @@
     animation: auth-desde-arriba 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 
+/* Globito de la campanita cuando llega una alerta nueva (KAN-74): crece un
+   poquito de más y se asienta. Corto, para que llame la atención sin molestar. */
+.globito-pop {
+    animation: globito-pop 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes globito-pop {
+    0% {
+        transform: scale(0.6);
+    }
+    60% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* Quien tiene activado "reducir movimiento" en su sistema ve todo sin animar. */
 @media (prefers-reduced-motion: reduce) {
+    .globito-pop,
     .aparecer,
     .flotar,
     .trazo,

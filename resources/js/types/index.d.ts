@@ -97,6 +97,8 @@ export type PageProps<
     admin?: {
         denuncias_pendientes: number;
     } | null;
+    // Cantidad de alertas sin leer del usuario logueado (KAN-248); 0 para invitados.
+    alertas_no_leidas?: number;
     // Datos públicos de contacto que carga el admin en Configuración (KAN-224/225).
     // Vacíos (null o "") hasta que se carguen: no hay datos de ejemplo.
     contacto: ContactoPlataforma;

@@ -32,13 +32,19 @@ export default function ContenedorAvisos({
     // Y el de cada navegación de Inertia. Escuchamos el evento y no el cambio de
     // props a propósito: si se guarda dos veces seguidas con el mismo mensaje,
     // el texto no cambia pero igual hay que avisar.
+    // Ojo con las recargas parciales (router.reload({ only: [...] })): Inertia
+    // conserva las props que no pidió, así que llega el MISMO objeto flash de
+    // antes. Si es el mismo objeto, ya se mostró y no se repite (KAN-74).
+    const ultimoFlash = useRef<Flash>(flashInicial);
     useEffect(
         () =>
-            router.on('success', (evento) =>
-                mostrarFlash(
-                    (evento.detail.page.props as Partial<PageProps>).flash,
-                ),
-            ),
+            router.on('success', (evento) => {
+                const flash = (evento.detail.page.props as Partial<PageProps>)
+                    .flash;
+                if (flash === ultimoFlash.current) return;
+                ultimoFlash.current = flash;
+                mostrarFlash(flash);
+            }),
         [],
     );
 

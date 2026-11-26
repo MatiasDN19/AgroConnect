@@ -1,5 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import BotonIcono from '@/Components/BotonIcono';
 import BuscadorPublicaciones from '@/Components/BuscadorPublicaciones';
+import Campanita from '@/Components/Campanita';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import PieApp from '@/Components/PieApp';
@@ -8,7 +10,6 @@ import { User } from '@/types';
 import { rutaInicioAdmin } from '@/utils/panelAdmin';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    Bell,
     ChevronDown,
     Heart,
     Inbox,
@@ -139,14 +140,7 @@ export default function Authenticated({
                         >
                             <Heart className="h-5 w-5" aria-hidden="true" />
                         </BotonIcono>
-                        {/* El número de no leídas llega con KAN-248 (KAN-74/80). */}
-                        <BotonIcono
-                            href={route('alertas.index')}
-                            etiqueta="Notificaciones"
-                            activo={route().current('alertas.index')}
-                        >
-                            <Bell className="h-5 w-5" aria-hidden="true" />
-                        </BotonIcono>
+                        <Campanita />
 
                         <div className="ms-1 hidden sm:block">
                             <Dropdown>
@@ -374,34 +368,6 @@ export default function Authenticated({
 
             <PieApp />
         </div>
-    );
-}
-
-function BotonIcono({
-    href,
-    etiqueta,
-    activo,
-    children,
-}: {
-    href: string;
-    etiqueta: string;
-    activo: boolean;
-    children: ReactNode;
-}) {
-    return (
-        <Link
-            href={href}
-            aria-label={etiqueta}
-            title={etiqueta}
-            aria-current={activo ? 'page' : undefined}
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
-                activo
-                    ? 'bg-sky-100/80 text-marca-azul-profundo'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-            }`}
-        >
-            {children}
-        </Link>
     );
 }
 
