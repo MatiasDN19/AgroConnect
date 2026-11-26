@@ -1,6 +1,16 @@
 import { Link } from '@inertiajs/react';
 import { ReactNode } from 'react';
 
+// Clases del botón cuadrado con ícono del navbar. Se exportan para la
+// campanita, que es un botón (abre un panel) y no un link (KAN-80).
+export function clasesBotonIcono(activo: boolean) {
+    return `relative inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
+        activo
+            ? 'bg-sky-100/80 text-marca-azul-profundo'
+            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+    }`;
+}
+
 // Botón cuadrado con un ícono para el navbar (favoritos, notificaciones).
 // Es "relative" para que se le pueda poner un globito encima (KAN-74).
 export default function BotonIcono({
@@ -20,11 +30,7 @@ export default function BotonIcono({
             aria-label={etiqueta}
             title={etiqueta}
             aria-current={activo ? 'page' : undefined}
-            className={`relative inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
-                activo
-                    ? 'bg-sky-100/80 text-marca-azul-profundo'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-            }`}
+            className={clasesBotonIcono(activo)}
         >
             {children}
         </Link>
