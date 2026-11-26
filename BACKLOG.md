@@ -2137,6 +2137,75 @@ Guía:
 
 </details>
 
+<details>
+<summary>**KAN-343** [backend] — Backend: guardar la publicación relacionada en cada alerta (publicacion_id)</summary>
+
+Archivos a crear/modificar:
+
+* `database/migrations/xxxx_add_publicacion_id_to_alertas_table.php` (nuevo) — `publicacion_id` nullable, FK a `publicaciones` con `nullOnDelete()`.
+* `app/Models/Alerta.php` — sumarlo al `Fillable` y la relación `publicacion()`.
+* `app/Http/Controllers/SolicitudCompraController.php` — `store()` (nueva_solicitud_compra) y `resolve()` (solicitud_compra_aceptada/rechazada): pasar la publicación a `notificarUsuario()`.
+* `app/Http/Controllers/ResenaController.php` y `Api/ResenaController.php` — nueva_resena.
+* `app/Http/Controllers/DenunciaController.php` — denuncia_resuelta (las dos alertas: al que denunció y al dueño).
+* `app/Http/Resources/AlertaResource.php` — exponer `publicacion_id`.
+* `app/Mail/NuevaAlertaMail.php` y su vista (opcional) — botón "Ver publicación".
+* `tests/Feature/AlertaTest.php` (o los tests de cada controlador) — agregar casos.
+
+Guía:
+
+1. Hoy las alertas solo tienen `tipo` y `mensaje`, así que al tocarlas en la campanita (KAN-80) solo se puede llevar a una sección general. Con `publicacion_id`, la web y la app llevan a la publicación exacta.
+2. Se guarda el **id** y no un link armado porque la app de Flutter no puede usar rutas de la web: cada cliente arma su destino con `tipo` + `publicacion_id`.
+3. `nullOnDelete()`: si se borra la publicación, la alerta queda pero sin referencia. Las alertas viejas también quedan en `null` y el frontend usa el destino por tipo.
+4. `GET /alertas` (web, con `Accept: application/json`) y `GET /api/alertas` tienen que devolver el campo.
+5. Tests: cada uno de los 4 tipos guarda la publicación correcta; al borrar la publicación la alerta queda con `null`; el campo aparece en la respuesta JSON.
+
+Relacionada: KAN-80 (panel de la campanita). La usan KAN-344 (web) y KAN-345 (Flutter).
+
+</details>
+
+<details>
+<summary>**KAN-344** [frontend] — Frontend Web: llevar a la publicación al tocar una notificación (panel de la campanita y página de notificaciones)</summary>
+
+Archivos a crear/modificar:
+
+* `resources/js/Components/PanelAlertas.tsx` — función `destino()`.
+* `resources/js/Pages/Alertas/Index.tsx` — mismo destino al tocar una notificación (conviene mover `destino()` a un archivo compartido, ej. `resources/js/utils/alertas.ts`).
+
+Guía:
+
+1. Usar el `publicacion_id` que suma KAN-343:
+    * `nueva_resena` → detalle de la publicación, con el ancla a la sección de reseñas.
+    * `denuncia_resuelta` del dueño → detalle de la publicación.
+    * `denuncia_resuelta` del que denunció → detalle de la publicación, salvo que esté bloqueada (si da 403/404, no navegar).
+    * Solicitudes (`nueva_solicitud_compra`, `solicitud_compra_aceptada/rechazada`) → siguen yendo a su sección (Solicitudes recibidas / Mis solicitudes).
+2. Si `publicacion_id` viene `null` (alertas viejas o publicación borrada), usar el destino por tipo de hoy.
+3. Así se evita el 403 actual: una alerta de reseña lleva a "Mis publicaciones", que es solo para productores.
+
+Depende de: KAN-343.
+
+</details>
+
+<details>
+<summary>**KAN-345** [frontend] — Frontend Flutter: abrir la publicación al tocar una notificación</summary>
+
+Archivos a crear/modificar (app Flutter):
+
+* Pantalla de historial de notificaciones (KAN-147).
+* Manejo del toque en la notificación push (KAN-187).
+* `lib/models/alerta.dart` — sumar `publicacionId` (nullable).
+
+Guía:
+
+1. Mismo criterio que la versión web: con `tipo` + `publicacion_id` (KAN-343) decidir a qué pantalla ir.
+    * Reseña y denuncia → detalle de la publicación.
+    * Solicitudes → la pantalla de solicitudes recibidas o enviadas.
+2. Marcar la alerta como leída al tocarla (`PATCH /api/alertas/{id}/leida`).
+3. Si `publicacion_id` viene `null`, ir a la sección según el tipo o quedarse en el historial.
+
+Depende de: KAN-343. Versión web: KAN-344.
+
+</details>
+
 ---
 
 ## Epic: KAN-82 — API REST para la app móvil (Sanctum)
