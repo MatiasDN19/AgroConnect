@@ -2,10 +2,11 @@ import Avatar from '@/Components/Avatar';
 import SocioBadge from '@/Components/SocioBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps, User } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
     LucideIcon,
+    MapPin,
     ShieldCheck,
     Trash2,
     UserRound,
@@ -15,12 +16,13 @@ import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import UpdateSocioForm from './Partials/UpdateSocioForm';
+import UpdateUbicacionForm from './Partials/UpdateUbicacionForm';
 
 // Perfil rediseñado (KAN-322): cabecera con los datos del usuario y una
 // sección a la vez, elegida desde un menú lateral (compu) o pestañas (celu).
 // La sección queda en la URL (#seguridad) para poder volver o compartirla.
-// Ubicación (KAN-273) y Notificaciones (KAN-77) se suman como entradas nuevas
-// de SECCIONES cuando se hagan.
+// Para sumar una sección (ej. Notificaciones, KAN-77) alcanza con agregar una
+// entrada a "secciones".
 
 const ROLES: Record<User['rol'], string> = {
     productor: 'Productor',
@@ -60,6 +62,17 @@ export default function Edit({
                 />
             ),
         },
+        // Ubicación (KAN-273): productores (su chacra) y compradores (cercanía).
+        ...(user.rol !== 'admin'
+            ? [
+                  {
+                      id: 'ubicacion',
+                      etiqueta: 'Ubicación',
+                      Icono: MapPin,
+                      contenido: <UpdateUbicacionForm />,
+                  },
+              ]
+            : []),
         // Solo productores: la validación de socio prioriza sus publicaciones.
         ...(esProductor
             ? [
@@ -261,6 +274,28 @@ function useSeccionActiva(ids: string[]) {
         // replaceState conservando el estado de Inertia, así no se rompe "atrás".
         window.history.replaceState(window.history.state, '', `#${nuevo}`);
     };
+
+    // Al guardar, el backend redirige a /profile y la URL pierde el #hash:
+    // lo volvemos a poner para que al recargar siga en la misma sección.
+    // El setTimeout deja que Inertia termine de actualizar el historial antes.
+    useEffect(
+        () =>
+            router.on('success', () => {
+                setTimeout(() => {
+                    const enPerfil =
+                        window.location.pathname ===
+                        new URL(route('profile.edit')).pathname;
+                    if (enPerfil && window.location.hash !== `#${id}`) {
+                        window.history.replaceState(
+                            window.history.state,
+                            '',
+                            `#${id}`,
+                        );
+                    }
+                });
+            }),
+        [id],
+    );
 
     return { id, elegir };
 }

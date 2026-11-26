@@ -106,16 +106,23 @@ export function BotonGuardar({
 }
 
 // Botón secundario (borde gris), ej. "Cancelar" o "Cambiar número".
+// "peligro" pinta el texto de rojo (ej. "Quitar"). Va como opción y no por
+// className porque dos colores de texto se pisan y no gana el último.
 export function BotonSecundario({
     className = '',
+    peligro = false,
     children,
     ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { peligro?: boolean }) {
     return (
         <button
             type="button"
             {...props}
-            className={`rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-300 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 active:scale-[0.98] disabled:opacity-60 ${className}`}
+            className={`rounded-lg bg-white px-4 py-2.5 text-sm font-semibold shadow-sm ring-1 ring-slate-300 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 active:scale-[0.98] disabled:opacity-60 ${
+                peligro
+                    ? 'text-red-600 hover:bg-red-50'
+                    : 'text-slate-700 hover:bg-slate-50'
+            } ${className}`}
         >
             {children}
         </button>
