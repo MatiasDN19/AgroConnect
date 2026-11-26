@@ -12,8 +12,8 @@ test('new users can register', function () {
     $response = $this->post('/register', [
         'name' => 'Test User',
         'email' => 'test@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'rol' => User::ROL_PRODUCTOR,
     ]);
 
@@ -25,8 +25,8 @@ test('registration saves the chosen role (productor)', function () {
     $response = $this->post('/register', [
         'name' => 'Productor User',
         'email' => 'productor@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'rol' => User::ROL_PRODUCTOR,
     ]);
 
@@ -48,8 +48,8 @@ test('registration saves the chosen role (comprador)', function () {
     $response = $this->post('/register', [
         'name' => 'Comprador User',
         'email' => 'comprador@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'rol' => User::ROL_COMPRADOR,
     ]);
 
@@ -71,8 +71,8 @@ test('cannot register as admin from public registration', function () {
     $response = $this->post('/register', [
         'name' => 'Admin User',
         'email' => 'admin@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'rol' => User::ROL_ADMIN,
     ]);
 
@@ -86,8 +86,8 @@ test('registration requires a role', function () {
     $response = $this->post('/register', [
         'name' => 'No Role User',
         'email' => 'norole@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
     ]);
 
     $response->assertSessionHasErrors('rol');
@@ -100,8 +100,8 @@ test('registration rejects invalid roles', function () {
     $response = $this->post('/register', [
         'name' => 'Invalid Role User',
         'email' => 'invalidrole@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'rol' => 'moderador',
     ]);
 
@@ -124,4 +124,57 @@ test('validation error messages are returned in spanish', function () {
         'email' => 'El campo correo electrónico debe ser una dirección de correo electrónico válida.',
         'password' => 'La confirmación del campo contraseña no coincide.',
     ]);
+});
+
+test('registration fails when password has no letters', function () {
+    $response = $this->post('/register', [
+        'name' => 'Test User',
+        'email' => 'noletters@example.com',
+        'password' => '12345678',
+        'password_confirmation' => '12345678',
+        'rol' => User::ROL_PRODUCTOR,
+    ]);
+
+    $response->assertSessionHasErrors([
+        'password' => 'La contraseña debe contener al menos una letra.',
+    ]);
+});
+
+test('registration fails when password has no numbers', function () {
+    $response = $this->post('/register', [
+        'name' => 'Test User',
+        'email' => 'nonumbers@example.com',
+        'password' => 'abcdefgh',
+        'password_confirmation' => 'abcdefgh',
+        'rol' => User::ROL_PRODUCTOR,
+    ]);
+
+    $response->assertSessionHasErrors([
+        'password' => 'La contraseña debe contener al menos un número.',
+    ]);
+});
+
+test('registration fails when password has less than 8 characters', function () {
+    $response = $this->post('/register', [
+        'name' => 'Test User',
+        'email' => 'short@example.com',
+        'password' => 'abc12',
+        'password_confirmation' => 'abc12',
+        'rol' => User::ROL_PRODUCTOR,
+    ]);
+
+    $response->assertSessionHasErrors('password');
+});
+
+test('registration succeeds with strong password (agro2026campo)', function () {
+    $response = $this->post('/register', [
+        'name' => 'Test User',
+        'email' => 'agro@example.com',
+        'password' => 'agro2026campo',
+        'password_confirmation' => 'agro2026campo',
+        'rol' => User::ROL_PRODUCTOR,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $this->assertAuthenticated();
 });

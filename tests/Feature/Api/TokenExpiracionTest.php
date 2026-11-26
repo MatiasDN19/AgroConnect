@@ -77,8 +77,8 @@ test('al restablecer la contrasena via link se revocan todos los tokens api del 
     $response = $this->post(route('password.store'), [
         'token' => $resetToken,
         'email' => $user->email,
-        'password' => 'nueva-password-super-segura',
-        'password_confirmation' => 'nueva-password-super-segura',
+        'password' => 'nueva-password-super-segura-123',
+        'password_confirmation' => 'nueva-password-super-segura-123',
     ]);
 
     $response->assertSessionHasNoErrors();
