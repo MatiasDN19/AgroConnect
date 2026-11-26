@@ -17,6 +17,7 @@ class AlertaResource extends JsonResource
         return [
             'id' => $this->id,
             'usuario_id' => $this->usuario_id,
+            'publicacion_id' => $this->publicacion_id,
             'tipo' => $this->tipo,
             'mensaje' => $this->mensaje,
             'leida' => (bool) $this->leida,

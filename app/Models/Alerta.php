@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['usuario_id', 'tipo', 'mensaje', 'leida'])]
+#[Fillable(['usuario_id', 'publicacion_id', 'tipo', 'mensaje', 'leida'])]
 class Alerta extends Model
 {
     /** @use HasFactory<AlertaFactory> */
@@ -27,5 +27,11 @@ class Alerta extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    /** @return BelongsTo<Publicacion, $this> */
+    public function publicacion(): BelongsTo
+    {
+        return $this->belongsTo(Publicacion::class, 'publicacion_id');
     }
 }

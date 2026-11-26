@@ -25,6 +25,7 @@ class ResenaController extends Controller
         // Generar alerta para el dueño de la publicación (KAN-73)
         $alerta = Alerta::create([
             'usuario_id' => $publicacion->usuario_id,
+            'publicacion_id' => $publicacion->id,
             'tipo' => 'nueva_resena',
             'mensaje' => "Tu publicación '{$publicacion->titulo}' recibió una nueva reseña.",
             'leida' => false,
