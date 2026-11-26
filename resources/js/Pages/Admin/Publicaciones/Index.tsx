@@ -4,7 +4,7 @@ import {
 } from '@/Components/Admin/ModalesModeracion';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Categoria, EstadoPublicacion, Publicacion, User } from '@/types';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Ban, Eye, LockOpen, Search, Trash2 } from 'lucide-react';
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 
@@ -73,8 +73,6 @@ export default function Index({
     categorias: Pick<Categoria, 'id' | 'nombre'>[];
     filtros: Filtros;
 }) {
-    const { flash } = usePage().props;
-
     const [busqueda, setBusqueda] = useState(filtros.q ?? '');
     const [aBloquear, setABloquear] = useState<Fila | null>(null);
     const [aEliminar, setAEliminar] = useState<Fila | null>(null);
@@ -180,23 +178,6 @@ export default function Index({
                         </select>
                     </label>
                 </div>
-
-                {flash.success && (
-                    <div
-                        role="status"
-                        className="rounded-md bg-green-50 p-4 text-sm text-green-800"
-                    >
-                        {flash.success}
-                    </div>
-                )}
-                {flash.error && (
-                    <div
-                        role="alert"
-                        className="rounded-md bg-red-50 p-4 text-sm text-red-800"
-                    >
-                        {flash.error}
-                    </div>
-                )}
 
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
                     {publicaciones.data.length === 0 ? (

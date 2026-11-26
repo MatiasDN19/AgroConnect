@@ -57,7 +57,7 @@ export default function Show({
     // Última solicitud de compra del usuario logueado (KAN-116).
     mi_solicitud: MiSolicitud | null;
 }>) {
-    const { auth, flash } = usePage().props;
+    const { auth } = usePage().props;
 
     // Misma regla que PublicacionPolicy::update. Es solo para mostrar el botón:
     // si alguien entra a /editar sin permiso, la ruta igual responde 403.
@@ -167,12 +167,6 @@ export default function Show({
 
             <div className="py-12">
                 <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
-                    {flash.success && (
-                        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-                            {flash.success}
-                        </div>
-                    )}
-
                     {bloqueada && (
                         <div
                             role="status"

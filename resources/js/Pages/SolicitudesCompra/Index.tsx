@@ -61,7 +61,7 @@ const formatoFecha = new Intl.DateTimeFormat('es-AR', {
 export default function Index({
     solicitudes,
 }: PageProps<{ solicitudes: Solicitud[] }>) {
-    const { flash, errors } = usePage().props;
+    const { errors } = usePage().props;
 
     const [pestana, setPestana] = useState<EstadoSolicitud>('pendiente');
     // Solicitud + acción que se está confirmando en el modal (null = modal cerrado).
@@ -114,11 +114,6 @@ export default function Index({
                         comprador para coordinar la entrega y el pago.
                     </p>
 
-                    {flash.success && (
-                        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-                            {flash.success}
-                        </div>
-                    )}
                     {errors.estado && (
                         <div
                             role="alert"

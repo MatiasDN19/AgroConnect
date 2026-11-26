@@ -95,7 +95,7 @@ export default function DenunciarPublicacion({
 
         post(route('publicaciones.denuncias.store', publicacionId), {
             preserveScroll: true,
-            // El mensaje de éxito llega como flash y lo muestra la página.
+            // El mensaje de éxito llega como flash y lo muestran los avisos flotantes (KAN-319).
             onSuccess: () => cerrar(),
         });
     };
