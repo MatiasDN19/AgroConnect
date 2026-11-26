@@ -60,6 +60,14 @@ La app queda disponible en **http://localhost**.
 | Admin | `admin@agroconnect.test` | `password` |
 | Productor | `productor@agroconnect.test` | `password` |
 
+### Datos de demostración para presentaciones (DemoSeeder)
+
+Para poblar la base de datos con un conjunto completo y realista de productores de Laguna Naineck (validados y no validados), compradores, publicaciones con variedad de estados, reseñas, favoritos y solicitudes de compra para demostraciones o presentaciones del TFI:
+
+```bash
+./vendor/bin/sail artisan db:seed --class=DemoSeeder
+```
+
 ## Comandos del día a día
 
 ```bash
