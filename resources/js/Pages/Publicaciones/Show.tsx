@@ -20,15 +20,19 @@ import {
     Resena,
     User,
 } from '@/types';
+import { textoDistancia } from '@/utils/distancia';
 import { formatearPrecio } from '@/utils/formato';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Ban, LockOpen, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Ban, LockOpen, MapPin, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
 type PublicacionDetalle = Publicacion & {
     categoria: Pick<Categoria, 'id' | 'nombre'>;
-    usuario: Pick<User, 'id' | 'name' | 'telefono' | 'socio_validado'>;
+    usuario: Pick<
+        User,
+        'id' | 'name' | 'telefono' | 'socio_validado' | 'localidad'
+    >;
     resenas: Resena[];
     fotos: PublicacionFoto[];
 };
@@ -49,9 +53,13 @@ export default function Show({
     puntuacion_promedio,
     mi_denuncia,
     mi_solicitud,
+    distancia_km,
 }: PageProps<{
     publicacion: PublicacionDetalle;
     puntuacion_promedio: number | null;
+    // Distancia entre el que mira y el productor (KAN-272). null si alguno de
+    // los dos no tiene ubicación. Las coordenadas nunca llegan.
+    distancia_km: number | null;
     // Denuncia del usuario logueado sobre esta publicación (KAN-65).
     mi_denuncia: MiDenuncia | null;
     // Última solicitud de compra del usuario logueado (KAN-116).
@@ -375,6 +383,10 @@ export default function Show({
                             {publicacion.usuario.socio_validado && (
                                 <SocioBadge />
                             )}
+                            <UbicacionProductor
+                                localidad={publicacion.usuario.localidad}
+                                distanciaKm={esDueno ? null : distancia_km}
+                            />
 
                             {publicacion.usuario.telefono ? (
                                 <a
@@ -528,5 +540,35 @@ export default function Show({
                 onCerrar={() => setBloqueando(false)}
             />
         </AuthenticatedLayout>
+    );
+}
+
+// "📍 Laguna Naineck · a 12 km" debajo del nombre del productor (KAN-274).
+// Muestra lo que haya: solo la localidad, solo la distancia o nada.
+function UbicacionProductor({
+    localidad,
+    distanciaKm,
+}: {
+    localidad?: string | null;
+    distanciaKm: number | null;
+}) {
+    const partes = [
+        localidad?.trim() || null,
+        distanciaKm == null ? null : textoDistancia(Number(distanciaKm)),
+    ].filter(Boolean);
+
+    if (partes.length === 0) return null;
+
+    const texto = partes.join(' · ');
+
+    return (
+        <p className="flex items-center gap-1.5 text-sm text-gray-600">
+            <MapPin
+                className="h-4 w-4 shrink-0 text-marca-azul"
+                aria-hidden="true"
+            />
+            {/* Si solo está la distancia, arranca con mayúscula: "A 12 km". */}
+            {texto.replace(/^a /, 'A ')}
+        </p>
     );
 }
