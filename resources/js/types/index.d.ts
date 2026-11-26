@@ -11,6 +11,8 @@ export interface User {
     // Ubicación del perfil (KAN-90). Llega como "-26.1849000" por el cast decimal:7.
     lat?: string | null;
     lng?: string | null;
+    // Localidad de la chacra o punto de venta (KAN-272/273): lo único que ven los demás.
+    localidad?: string | null;
     // Fecha de alta: el perfil muestra "En AgroConnect desde …" (KAN-322).
     created_at?: string;
 }
