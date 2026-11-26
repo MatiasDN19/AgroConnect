@@ -3,6 +3,7 @@
 use App\Models\Categoria;
 use App\Models\Denuncia;
 use App\Models\Publicacion;
+use App\Models\ReferenciaMensual;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -1183,4 +1184,71 @@ test('distancia_km es null si el usuario o el productor no tienen coordenadas (K
         ->where('distancia_km', null)
         ->where('publicacion.usuario.localidad', 'Laguna Naineck')
     );
+});
+
+test('el inicio manda demanda_plan_nutrir solo si el usuario es productor y hay demanda vigente', function () {
+    $productor = User::factory()->create(['rol' => User::ROL_PRODUCTOR]);
+    $comprador = User::factory()->create(['rol' => User::ROL_COMPRADOR]);
+    $categoria = Categoria::factory()->create(['nombre' => 'Verduras']);
+
+    // Demanda vigente este mes
+    ReferenciaMensual::create([
+        'mes' => now()->startOfMonth()->toDateString(),
+        'producto' => 'Zapallo Criollo',
+        'categoria_id' => $categoria->id,
+        'unidad' => 'kg',
+        'cantidad_plan_nutrir' => 1500.00,
+    ]);
+
+    // Demanda de mes anterior (no debe aparecer)
+    ReferenciaMensual::create([
+        'mes' => now()->subMonth()->startOfMonth()->toDateString(),
+        'producto' => 'Tomate Pasado',
+        'categoria_id' => $categoria->id,
+        'unidad' => 'cajón',
+        'cantidad_plan_nutrir' => 200.00,
+    ]);
+
+    // 1. Caso Productor: recibe la demanda vigente
+    $responseProductor = $this->actingAs($productor)->get(route('publicaciones.index'));
+    $responseProductor->assertOk();
+    $responseProductor->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->has('demanda_plan_nutrir', 1)
+        ->where('demanda_plan_nutrir.0.producto', 'Zapallo Criollo')
+        ->where('demanda_plan_nutrir.0.cantidad', fn ($cant) => (float) $cant === 1500.0)
+    );
+
+    // 2. Caso Comprador: demanda_plan_nutrir es null
+    $responseComprador = $this->actingAs($comprador)->get(route('publicaciones.index'));
+    $responseComprador->assertOk();
+    $responseComprador->assertInertia(fn (Assert $page) => $page
+        ->component('Publicaciones/Index')
+        ->where('demanda_plan_nutrir', null)
+    );
+});
+
+test('el endpoint api /api/plan-nutrir/demanda devuelve la demanda vigente', function () {
+    $categoria = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    ReferenciaMensual::create([
+        'mes' => now()->startOfMonth()->toDateString(),
+        'producto' => 'Banana',
+        'categoria_id' => $categoria->id,
+        'unidad' => 'cajón',
+        'cantidad_plan_nutrir' => 500.00,
+    ]);
+
+    $response = $this->getJson('/api/plan-nutrir/demanda');
+
+    $response->assertOk();
+    $response->assertJson([
+        'data' => [
+            [
+                'producto' => 'Banana',
+                'unidad' => 'cajón',
+                'cantidad' => 500.00,
+            ],
+        ],
+    ]);
 });

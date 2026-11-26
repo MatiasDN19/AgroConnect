@@ -2,6 +2,7 @@
 
 use App\Models\Categoria;
 use App\Models\Publicacion;
+use App\Models\ReferenciaMensual;
 use App\Models\User;
 
 test('los invitados no autenticados son redirigidos al login al consultar el precio sugerido', function () {
@@ -215,4 +216,83 @@ test('la mediana no se deja arrastrar por un precio fuera de lo común', functio
             'precio_maximo' => 9999,
             'cantidad' => 4,
         ]);
+});
+
+test('precioSugerido incluye las referencias oficiales vigentes del Consorcio para la categoria', function () {
+    $usuario = User::factory()->create();
+    $catVerduras = Categoria::factory()->create(['nombre' => 'Verduras']);
+    $catFrutas = Categoria::factory()->create(['nombre' => 'Frutas']);
+
+    // Referencia vigente mes actual para Verduras
+    ReferenciaMensual::create([
+        'mes' => now()->startOfMonth()->toDateString(),
+        'producto' => 'Zapallo Criollo',
+        'categoria_id' => $catVerduras->id,
+        'unidad' => 'kg',
+        'precio_referencia' => 500.00,
+    ]);
+
+    // Referencia de otro mes para Verduras (no debe aparecer)
+    ReferenciaMensual::create([
+        'mes' => now()->subMonth()->startOfMonth()->toDateString(),
+        'producto' => 'Zapallo Viejo',
+        'categoria_id' => $catVerduras->id,
+        'unidad' => 'kg',
+        'precio_referencia' => 300.00,
+    ]);
+
+    // Referencia vigente pero de otra categoría (no debe aparecer)
+    ReferenciaMensual::create([
+        'mes' => now()->startOfMonth()->toDateString(),
+        'producto' => 'Banana',
+        'categoria_id' => $catFrutas->id,
+        'unidad' => 'cajón',
+        'precio_referencia' => 4000.00,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->getJson(route('categorias.precio-sugerido', ['categoria' => $catVerduras, 'unidad' => 'kg']));
+
+    $response->assertOk();
+    $response->assertJson([
+        'referencias' => [
+            [
+                'producto' => 'Zapallo Criollo',
+                'unidad' => 'kg',
+                'precio' => 500.00,
+                'coincide' => false,
+            ],
+        ],
+    ]);
+    expect($response->json('referencias'))->toHaveCount(1);
+});
+
+test('precioSugerido marca coincide true cuando el titulo coincide con el producto', function () {
+    $usuario = User::factory()->create();
+    $categoria = Categoria::factory()->create();
+
+    ReferenciaMensual::create([
+        'mes' => now()->startOfMonth()->toDateString(),
+        'producto' => 'Tomate Perita',
+        'categoria_id' => $categoria->id,
+        'unidad' => 'kg',
+        'precio_referencia' => 800.00,
+    ]);
+
+    $response = $this->actingAs($usuario)
+        ->getJson(route('categorias.precio-sugerido', [
+            'categoria' => $categoria,
+            'unidad' => 'kg',
+            'titulo' => 'Cajón de tomates peritas recién cosechados',
+        ]));
+
+    $response->assertOk();
+    $response->assertJson([
+        'referencias' => [
+            [
+                'producto' => 'Tomate Perita',
+                'coincide' => true,
+            ],
+        ],
+    ]);
 });

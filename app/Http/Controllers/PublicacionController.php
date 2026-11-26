@@ -9,6 +9,7 @@ use App\Models\Categoria;
 use App\Models\Configuracion;
 use App\Models\Publicacion;
 use App\Models\PublicacionFoto;
+use App\Models\ReferenciaMensual;
 use App\Models\SolicitudCompra;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -85,6 +86,27 @@ class PublicacionController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
 
+        $user = $request->user();
+        $demandaPlanNutrir = null;
+
+        if ($user && $user->esProductor()) {
+            $demandaPlanNutrir = ReferenciaMensual::query()
+                ->vigentes()
+                ->whereNotNull('cantidad_plan_nutrir')
+                ->where('cantidad_plan_nutrir', '>', 0)
+                ->with('categoria:id,nombre')
+                ->orderBy('producto')
+                ->get()
+                ->map(fn (ReferenciaMensual $ref) => [
+                    'id' => $ref->id,
+                    'producto' => $ref->producto,
+                    'unidad' => $ref->unidad,
+                    'cantidad' => (float) $ref->cantidad_plan_nutrir,
+                    'categoria_id' => $ref->categoria_id,
+                    'categoria' => $ref->categoria ? ['id' => $ref->categoria->id, 'nombre' => $ref->categoria->nombre] : null,
+                ]);
+        }
+
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
             'categorias' => $categorias,
@@ -92,6 +114,7 @@ class PublicacionController extends Controller
             'categoria_id' => $request->input('categoria_id'),
             'lat' => $request->input('lat'),
             'lng' => $request->input('lng'),
+            'demanda_plan_nutrir' => $demandaPlanNutrir,
         ]);
     }
 
@@ -333,15 +356,70 @@ class PublicacionController extends Controller
     }
 
     /**
-     * Devuelve el precio promedio sugerido para una categoría basado en publicaciones activas.
+     * Devuelve el precio promedio sugerido para una categoría basado en publicaciones activas
+     * e incluye las referencias oficiales vigentes del Consorcio (KAN-338).
      */
     public function precioSugerido(Request $request, Categoria $categoria): JsonResponse
     {
         // ?unidad=kg compara solo publicaciones con la misma unidad (KAN-132).
         // Sin unidad se comporta como antes: toda la categoría.
         $unidad = $request->filled('unidad') ? (string) $request->query('unidad') : null;
+        $titulo = $request->filled('titulo') ? (string) $request->query('titulo') : null;
 
         $estadisticas = Publicacion::estadisticasPrecio($categoria->id, $unidad);
+
+        // Referencias del mes actual para esta categoría con precio de referencia
+        $referenciasQuery = ReferenciaMensual::query()
+            ->vigentes()
+            ->where('categoria_id', $categoria->id)
+            ->whereNotNull('precio_referencia');
+
+        if ($unidad) {
+            $referenciasQuery->whereRaw('LOWER(TRIM(unidad)) = ?', [mb_strtolower(trim($unidad))]);
+        }
+
+        $referencias = $referenciasQuery->get()->map(function (ReferenciaMensual $ref) use ($titulo) {
+            $coincide = false;
+            if ($titulo) {
+                // Comparar sin distinguir mayúsculas ni acentos
+                $normalizar = function (string $str) {
+                    $str = mb_strtolower(trim($str), 'UTF-8');
+                    $reemplazos = [
+                        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+                        'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o', 'ü' => 'u',
+                        'ñ' => 'n',
+                    ];
+
+                    return strtr($str, $reemplazos);
+                };
+
+                $tituloNorm = $normalizar($titulo);
+                $prodNorm = $normalizar($ref->producto);
+
+                // Coincide si el título contiene el producto completo o alguna de sus palabras clave significativas (>3 letras)
+                if (str_contains($tituloNorm, $prodNorm)) {
+                    $coincide = true;
+                } else {
+                    $palabras = array_filter(explode(' ', $prodNorm), fn ($p) => mb_strlen($p) > 3);
+                    foreach ($palabras as $palabra) {
+                        // Buscar coincidencia de raíz de palabra (ej: "perita" con "peritas" o "tomate" con "tomates")
+                        $raiz = rtrim($palabra, 's');
+                        if (str_contains($tituloNorm, $raiz)) {
+                            $coincide = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return [
+                'id' => $ref->id,
+                'producto' => $ref->producto,
+                'unidad' => $ref->unidad,
+                'precio' => (float) $ref->precio_referencia,
+                'coincide' => $coincide,
+            ];
+        });
 
         return response()->json([
             'precio_promedio' => $estadisticas['promedio'] ?? null,
@@ -349,6 +427,7 @@ class PublicacionController extends Controller
             'precio_minimo' => $estadisticas['minimo'] ?? null,
             'precio_maximo' => $estadisticas['maximo'] ?? null,
             'cantidad' => $estadisticas['cantidad'] ?? 0,
+            'referencias' => $referencias,
         ]);
     }
 

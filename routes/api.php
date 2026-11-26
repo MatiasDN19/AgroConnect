@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AlertaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoriaController;
 use App\Http\Controllers\Api\DenunciaController;
+use App\Http\Controllers\Api\PlanNutrirController;
 use App\Http\Controllers\Api\PublicacionController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ResenaController;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
+Route::get('/plan-nutrir/demanda', [PlanNutrirController::class, 'demanda']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
