@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ConfiguracionController;
 use App\Http\Controllers\Admin\MetricasController;
 use App\Http\Controllers\Admin\PublicacionModeracionController;
+use App\Http\Controllers\Admin\ReferenciaMensualController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\AlertaController;
 use App\Http\Controllers\CategoriaController;
@@ -82,6 +83,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::patch('/admin/publicaciones/{publicacion}/bloquear', [PublicacionModeracionController::class, 'bloquear'])->name('admin.publicaciones.bloquear');
     Route::patch('/admin/publicaciones/{publicacion}/desbloquear', [PublicacionModeracionController::class, 'desbloquear'])->name('admin.publicaciones.desbloquear');
     Route::delete('/admin/publicaciones/{publicacion}', [PublicacionModeracionController::class, 'destroy'])->name('admin.publicaciones.destroy');
+
+    Route::get('/admin/referencias', [ReferenciaMensualController::class, 'index'])->name('admin.referencias.index');
+    Route::post('/admin/referencias', [ReferenciaMensualController::class, 'store'])->name('admin.referencias.store');
+    Route::put('/admin/referencias/{referencia}', [ReferenciaMensualController::class, 'update'])->name('admin.referencias.update');
+    Route::delete('/admin/referencias/{referencia}', [ReferenciaMensualController::class, 'destroy'])->name('admin.referencias.destroy');
+    Route::post('/admin/referencias/copiar-mes-anterior', [ReferenciaMensualController::class, 'copiarMesAnterior'])->name('admin.referencias.copiar-mes-anterior');
 });
 
 require __DIR__.'/auth.php';
