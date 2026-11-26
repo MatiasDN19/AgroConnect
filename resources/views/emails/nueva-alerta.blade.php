@@ -64,6 +64,13 @@
             <span class="badge">{{ str_replace('_', ' ', $alerta->tipo) }}</span>
             <p>Hola <strong>{{ $alerta->usuario?->name ?? 'Usuario' }}</strong>,</p>
             <p>{{ $alerta->mensaje }}</p>
+            @if ($alerta->publicacion_id)
+                <p style="margin-top: 24px;">
+                    <a href="{{ route('publicaciones.show', $alerta->publicacion_id) }}" style="display: inline-block; background-color: #0284c7; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                        Ver publicación
+                    </a>
+                </p>
+            @endif
         </div>
         <div class="footer">
             <p>Este es un correo automático enviado por AgroConnect - Consorcio Productivo de Laguna Naineck.</p>

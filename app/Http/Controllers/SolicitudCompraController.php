@@ -118,7 +118,8 @@ class SolicitudCompraController extends Controller
             $this->notificarUsuario(
                 $productor,
                 'nueva_solicitud_compra',
-                "Recibiste una solicitud de compra por '{$publicacion->titulo}'."
+                "Recibiste una solicitud de compra por '{$publicacion->titulo}'.",
+                $publicacion->id
             );
         }
 
@@ -190,7 +191,8 @@ class SolicitudCompraController extends Controller
             $this->notificarUsuario(
                 $comprador,
                 $tipoAlerta,
-                "Tu solicitud por '{$tituloPublicacion}' fue {$accion}."
+                "Tu solicitud por '{$tituloPublicacion}' fue {$accion}.",
+                $solicitud->publicacion_id
             );
         }
 
@@ -200,10 +202,11 @@ class SolicitudCompraController extends Controller
     /**
      * Notificar al usuario mediante alerta en el sistema, correo y notificación push.
      */
-    private function notificarUsuario(User $usuario, string $tipo, string $mensaje): void
+    private function notificarUsuario(User $usuario, string $tipo, string $mensaje, ?int $publicacionId = null): void
     {
         $alerta = Alerta::create([
             'usuario_id' => $usuario->id,
+            'publicacion_id' => $publicacionId,
             'tipo' => $tipo,
             'mensaje' => $mensaje,
             'leida' => false,

@@ -72,6 +72,7 @@ class DenunciaController extends Controller
             // Alerta al denunciante
             $alertaDenunciante = Alerta::create([
                 'usuario_id' => $denuncia->usuario_id,
+                'publicacion_id' => $denuncia->publicacion_id,
                 'tipo' => 'denuncia_resuelta',
                 'mensaje' => "Tu denuncia sobre la publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
                 'leida' => false,
@@ -91,6 +92,7 @@ class DenunciaController extends Controller
             if ($denuncia->publicacion && $denuncia->publicacion->usuario_id) {
                 $alertaDueno = Alerta::create([
                     'usuario_id' => $denuncia->publicacion->usuario_id,
+                    'publicacion_id' => $denuncia->publicacion_id,
                     'tipo' => 'denuncia_resuelta',
                     'mensaje' => "La denuncia sobre tu publicación '{$tituloPublicacion}' fue marcada como {$estado}.",
                     'leida' => false,
