@@ -5,6 +5,7 @@ import { PageProps, User } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
+    Bell,
     LucideIcon,
     MapPin,
     ShieldCheck,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { KeyboardEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import DeleteUserForm from './Partials/DeleteUserForm';
+import UpdateNotificationPreferencesForm from './Partials/UpdateNotificationPreferencesForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import UpdateSocioForm from './Partials/UpdateSocioForm';
@@ -21,8 +23,7 @@ import UpdateUbicacionForm from './Partials/UpdateUbicacionForm';
 // Perfil rediseñado (KAN-322): cabecera con los datos del usuario y una
 // sección a la vez, elegida desde un menú lateral (compu) o pestañas (celu).
 // La sección queda en la URL (#seguridad) para poder volver o compartirla.
-// Para sumar una sección (ej. Notificaciones, KAN-77) alcanza con agregar una
-// entrada a "secciones".
+// Para sumar una sección alcanza con agregar una entrada a "secciones".
 
 const ROLES: Record<User['rol'], string> = {
     productor: 'Productor',
@@ -84,6 +85,13 @@ export default function Edit({
                   },
               ]
             : []),
+        // Avisos por mail (KAN-77), para todos los roles.
+        {
+            id: 'notificaciones',
+            etiqueta: 'Notificaciones',
+            Icono: Bell,
+            contenido: <UpdateNotificationPreferencesForm />,
+        },
         {
             id: 'seguridad',
             etiqueta: 'Seguridad',

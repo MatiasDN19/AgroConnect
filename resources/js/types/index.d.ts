@@ -13,6 +13,8 @@ export interface User {
     lng?: string | null;
     // Localidad de la chacra o punto de venta (KAN-272/273): lo único que ven los demás.
     localidad?: string | null;
+    // Si recibe los avisos también por mail (KAN-268/77). Por defecto true.
+    notificar_por_mail?: boolean;
     // Fecha de alta: el perfil muestra "En AgroConnect desde …" (KAN-322).
     created_at?: string;
 }
