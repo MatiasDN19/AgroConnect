@@ -1,4 +1,5 @@
 import { ModalBloquear } from '@/Components/Admin/ModalesModeracion';
+import BotonFavorito from '@/Components/BotonFavorito';
 import DenunciarPublicacion, {
     MiDenuncia,
 } from '@/Components/DenunciarPublicacion';
@@ -62,7 +63,10 @@ export default function Show({
     mi_denuncia,
     mi_solicitud,
     distancia_km,
+    es_favorito = false,
 }: PageProps<{
+    // Si el usuario la tiene en favoritos (KAN-247).
+    es_favorito?: boolean;
     publicacion: PublicacionDetalle;
     puntuacion_promedio: number | null;
     // Distancia entre el que mira y el productor (KAN-272). null si alguno de
@@ -243,9 +247,18 @@ export default function Show({
                                 categoria={publicacion.categoria.nombre}
                             />
 
-                            <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                                {publicacion.categoria.nombre}
-                            </span>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                                    {publicacion.categoria.nombre}
+                                </span>
+                                {/* Favoritos (KAN-188): no en las propias publicaciones. */}
+                                {!esDueno && (
+                                    <BotonFavorito
+                                        publicacionId={publicacion.id}
+                                        esFavorito={es_favorito}
+                                    />
+                                )}
+                            </div>
 
                             <div className="flex flex-wrap items-baseline gap-x-2">
                                 <p className="text-3xl font-semibold text-gray-900">

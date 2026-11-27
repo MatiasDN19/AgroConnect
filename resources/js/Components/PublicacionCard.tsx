@@ -16,7 +16,8 @@ export type PublicacionResumen = Pick<
     categoria: Pick<Categoria, 'id' | 'nombre'>;
     usuario: Pick<User, 'id' | 'name' | 'socio_validado'>;
     // withAvg de Laravel puede devolverlo como string ("4.0000") o null.
-    puntuacion_promedio: number | string | null;
+    // Algunos listados (ej. favoritos) todavía no lo mandan: queda undefined.
+    puntuacion_promedio?: number | string | null;
     // El listado manda solo la portada (KAN-204). Otros listados pueden no mandarla.
     fotos?: Pick<PublicacionFoto, 'url'>[];
     // Solo al ordenar por cercanía (KAN-171), en km. null si el productor no
@@ -35,7 +36,7 @@ export default function PublicacionCard({
     enlaceProductor?: boolean;
 }) {
     const promedio =
-        publicacion.puntuacion_promedio === null
+        publicacion.puntuacion_promedio == null
             ? null
             : Number(publicacion.puntuacion_promedio);
 
@@ -125,15 +126,19 @@ export default function PublicacionCard({
                         )}
                     </span>
 
+                    {/* Si el listado no manda el dato (undefined), no se muestra nada
+                        en vez de decir "Sin reseñas" sin saberlo (KAN-188). */}
                     {promedio !== null ? (
                         <span className="flex shrink-0 items-center gap-1 text-gray-600">
                             <Estrellas valor={promedio} className="text-sm" />
                             {promedio.toFixed(1)}
                         </span>
                     ) : (
-                        <span className="shrink-0 text-xs text-gray-400">
-                            Sin reseñas
-                        </span>
+                        publicacion.puntuacion_promedio === null && (
+                            <span className="shrink-0 text-xs text-gray-400">
+                                Sin reseñas
+                            </span>
+                        )
                     )}
                 </div>
             </div>
