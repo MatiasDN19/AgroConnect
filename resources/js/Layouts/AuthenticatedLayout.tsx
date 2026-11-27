@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Avatar from '@/Components/Avatar';
+import { FranjaVerificarEmail } from '@/Components/AvisoVerificarEmail';
 import BotonIcono from '@/Components/BotonIcono';
 import BuscadorPublicaciones from '@/Components/BuscadorPublicaciones';
 import Campanita from '@/Components/Campanita';
@@ -356,6 +357,9 @@ export default function Authenticated({
                     </div>
                 )}
             </nav>
+
+            {/* Cuentas sin verificar (KAN-312): no aparece si ya verificó. */}
+            <FranjaVerificarEmail />
 
             {header && (
                 <header className="border-b border-slate-200/70 bg-white">

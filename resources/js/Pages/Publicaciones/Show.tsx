@@ -1,4 +1,8 @@
 import { ModalBloquear } from '@/Components/Admin/ModalesModeracion';
+import {
+    BloqueVerificarEmail,
+    useEmailVerificado,
+} from '@/Components/AvisoVerificarEmail';
 import BotonFavorito from '@/Components/BotonFavorito';
 import DenunciarPublicacion, {
     MiDenuncia,
@@ -104,6 +108,8 @@ export default function Show({
     // deja una sola. Lo resolvemos acá para no mostrar un formulario que el
     // backend va a rechazar (StoreResenaRequest lo sigue validando igual).
     const esDueno = auth.user.id === publicacion.usuario_id;
+    // Cuentas sin verificar: avisar antes de dejarlas completar un formulario (KAN-312).
+    const emailVerificado = useEmailVerificado();
     const yaReseno = publicacion.resenas.some(
         (resena) => resena.usuario.id === auth.user.id,
     );
@@ -477,22 +483,33 @@ export default function Show({
                                 (publicacion.estado === 'activa' ||
                                     mi_solicitud) && (
                                     <div className="pt-3">
-                                        <SolicitarCompra
-                                            publicacion={publicacion}
-                                            miSolicitud={mi_solicitud}
-                                            disponible={
-                                                publicacion.estado === 'activa'
-                                            }
-                                        />
+                                        {/* Sin email verificado el backend lo rechaza
+                                            (KAN-299): avisar antes (KAN-312). */}
+                                        {emailVerificado || mi_solicitud ? (
+                                            <SolicitarCompra
+                                                publicacion={publicacion}
+                                                miSolicitud={mi_solicitud}
+                                                disponible={
+                                                    publicacion.estado ===
+                                                    'activa'
+                                                }
+                                            />
+                                        ) : (
+                                            <BloqueVerificarEmail accion="solicitar una compra" />
+                                        )}
                                     </div>
                                 )}
 
                             {puedeDenunciar && (
                                 <div className="border-t border-gray-100 pt-3">
-                                    <DenunciarPublicacion
-                                        publicacionId={publicacion.id}
-                                        miDenuncia={mi_denuncia}
-                                    />
+                                    {emailVerificado || mi_denuncia ? (
+                                        <DenunciarPublicacion
+                                            publicacionId={publicacion.id}
+                                            miDenuncia={mi_denuncia}
+                                        />
+                                    ) : (
+                                        <BloqueVerificarEmail accion="denunciar una publicación" />
+                                    )}
                                 </div>
                             )}
                         </aside>
@@ -558,10 +575,12 @@ export default function Show({
                                         publicación. ¡Gracias por compartir tu
                                         experiencia!
                                     </p>
-                                ) : (
+                                ) : emailVerificado ? (
                                     <ResenaForm
                                         publicacionId={publicacion.id}
                                     />
+                                ) : (
+                                    <BloqueVerificarEmail accion="dejar una reseña" />
                                 )}
                             </div>
                         )}
