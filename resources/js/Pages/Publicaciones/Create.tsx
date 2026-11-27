@@ -13,13 +13,24 @@ export default function Create({
     categorias: Pick<Categoria, 'id' | 'nombre'>[];
     limites_fotos: LimitesFotos;
 }>) {
+    // Se puede llegar con datos precargados en la URL, por ejemplo desde el
+    // bloque del Plan Nutrir del Inicio (KAN-341):
+    // /publicaciones/crear?categoria_id=1&titulo=Zapallo&unidad=kg
+    const precarga = new URLSearchParams(window.location.search);
+    const categoriaPrecargada = precarga.get('categoria_id') ?? '';
+
     const { data, setData, post, processing, errors } =
         useForm<PublicacionFormData>({
-            categoria_id: '',
-            titulo: '',
+            // Solo si es una categoría que existe.
+            categoria_id: categorias.some(
+                (c) => String(c.id) === categoriaPrecargada,
+            )
+                ? categoriaPrecargada
+                : '',
+            titulo: (precarga.get('titulo') ?? '').slice(0, 255),
             descripcion: '',
             precio: '',
-            unidad: '',
+            unidad: (precarga.get('unidad') ?? '').slice(0, 50),
             stock: '',
             fotos: [],
             fotos_eliminar: [],

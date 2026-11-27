@@ -2,6 +2,9 @@ import BuscadorPublicaciones from '@/Components/BuscadorPublicaciones';
 import BannerBienvenida from '@/Components/Inicio/BannerBienvenida';
 import BannersInformativos from '@/Components/Inicio/BannersInformativos';
 import CategoriasDestacadas from '@/Components/Inicio/CategoriasDestacadas';
+import DemandaPlanNutrir, {
+    DemandaProducto,
+} from '@/Components/Inicio/DemandaPlanNutrir';
 import OrdenCercania from '@/Components/OrdenCercania';
 import Paginacion from '@/Components/Paginacion';
 import PublicacionCard, {
@@ -26,7 +29,10 @@ export default function Index({
     filtros,
     lat,
     lng,
+    demanda_plan_nutrir,
 }: PageProps<{
+    // Solo para productores (KAN-338); null para el resto.
+    demanda_plan_nutrir?: DemandaProducto[] | null;
     publicaciones: Paginado<PublicacionResumen>;
     categorias: Required<
         Pick<Categoria, 'id' | 'nombre' | 'publicaciones_count'>
@@ -88,6 +94,9 @@ export default function Index({
                             irAlListado({ categoria_id: id })
                         }
                     />
+
+                    {/* Solo productores y solo si hay demanda cargada (KAN-341). */}
+                    <DemandaPlanNutrir demanda={demanda_plan_nutrir} />
 
                     {/* No aparece si no hay sugeridas. */}
                     <SugeridosParaVos />
