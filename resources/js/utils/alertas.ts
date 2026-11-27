@@ -71,7 +71,14 @@ export function actualizarContador() {
     router.reload({ only: ['alertas_no_leidas', 'flash'], async: true });
 }
 
-async function marcarLeida(id: number) {
+// Marca varias de una (KAN-323). El backend todavía no tiene un "marcar todas":
+// se marcan de a una, en paralelo (suelen ser pocas). Cuando exista el endpoint,
+// alcanza con cambiar esta función.
+export async function marcarTodasLeidas(ids: number[]) {
+    await Promise.all(ids.map((id) => marcarLeida(id)));
+}
+
+export async function marcarLeida(id: number) {
     try {
         await fetch(route('alertas.marcar-leida', id), {
             method: 'PATCH',
