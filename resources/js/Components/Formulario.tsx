@@ -8,6 +8,19 @@ import { ButtonHTMLAttributes, ReactNode } from 'react';
 export const CLASES_CAMPO =
     'mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-sky-600 focus:ring-sky-600 disabled:bg-slate-100 disabled:text-slate-500';
 
+// Mismo campo con el estado de la validación en vivo (KAN-313): borde verde
+// o rojo. El color de borde va por estado y no sumado a CLASES_CAMPO, porque
+// dos colores de borde se pisan y no gana el último.
+export function clasesCampo(estado: 'ok' | 'error' | null): string {
+    const borde =
+        estado === 'ok'
+            ? 'border-green-500 focus:border-green-600 focus:ring-green-600'
+            : estado === 'error'
+              ? 'border-red-500 focus:border-red-600 focus:ring-red-600'
+              : 'border-slate-300 focus:border-sky-600 focus:ring-sky-600';
+    return `mt-1 block w-full rounded-lg text-sm shadow-sm transition-colors duration-150 motion-reduce:transition-none disabled:bg-slate-100 disabled:text-slate-500 ${borde}`;
+}
+
 // Tarjeta con ícono, título y descripción. "peligro" la pinta de rojo
 // (ej. eliminar la cuenta).
 export function Bloque({
@@ -83,7 +96,8 @@ export function Campo({
             </label>
             {children}
             {ayuda && <p className="mt-1 text-xs text-slate-500">{ayuda}</p>}
-            <InputError message={error} className="mt-1" />
+            {/* El id permite asociarlo al input con aria-describedby (KAN-313). */}
+            <InputError id={`${id}-error`} message={error} className="mt-1" />
         </div>
     );
 }

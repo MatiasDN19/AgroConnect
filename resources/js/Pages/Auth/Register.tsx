@@ -5,7 +5,15 @@ import {
 } from '@/Components/Auth/CampoAuth';
 import RedesProximamente from '@/Components/Auth/RedesProximamente';
 import InputError from '@/Components/InputError';
+import ReglasContrasena from '@/Components/ReglasContrasena';
 import GuestLayout, { PRECARGA } from '@/Layouts/GuestLayout';
+import {
+    contrasenaValida,
+    emailValido,
+    MENSAJES,
+    nombreValido,
+    useValidacion,
+} from '@/utils/validaciones';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { LucideIcon, Mail, ShoppingBasket, Sprout, User } from 'lucide-react';
 import { FormEventHandler, ReactNode } from 'react';
@@ -33,16 +41,66 @@ const ROLES: {
 ];
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-        rol: '',
-    });
+    const { data, setData, post, processing, errors, reset, clearErrors } =
+        useForm({
+            name: '',
+            email: '',
+            password: '',
+            password_confirmation: '',
+            rol: '',
+        });
+
+    // Validación en vivo (KAN-313): verde mientras se escribe, rojo al salir
+    // del campo o al enviar. El error del backend manda.
+    type Campo =
+        'rol' | 'name' | 'email' | 'password' | 'password_confirmation';
+    const { estado, error, tocar, todoValido } = useValidacion<Campo>(
+        {
+            rol: {
+                valor: data.rol,
+                valido: data.rol !== '',
+                mensaje: 'Elegí si sos productor o comprador.',
+            },
+            name: {
+                valor: data.name,
+                valido: nombreValido(data.name),
+                mensaje: MENSAJES.nombre,
+            },
+            email: {
+                valor: data.email,
+                valido: emailValido(data.email),
+                mensaje: MENSAJES.email,
+            },
+            password: {
+                valor: data.password,
+                valido: contrasenaValida(data.password),
+                mensaje: MENSAJES.contrasena,
+            },
+            password_confirmation: {
+                valor: data.password_confirmation,
+                valido:
+                    data.password_confirmation !== '' &&
+                    data.password_confirmation === data.password,
+                mensaje:
+                    data.password_confirmation === ''
+                        ? MENSAJES.repetir
+                        : MENSAJES.confirmacion,
+            },
+        },
+        errors,
+    );
+    // Al escribir se borra el error del backend de ese campo (ya no aplica).
+    const cambiar = (campo: Campo, valor: string) => {
+        setData(campo, valor);
+        if (errors[campo]) clearErrors(campo);
+    };
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+
+        // Si algo no cumple, se marca todo y no se envía: el backend igual
+        // valida, pero así se ve al toque qué falta.
+        if (!todoValido()) return;
 
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
@@ -60,7 +118,7 @@ export default function Register() {
                 Es gratis y te lleva un minuto.
             </p>
 
-            <form onSubmit={submit} className="mt-5 space-y-3.5">
+            <form onSubmit={submit} noValidate className="mt-5 space-y-3.5">
                 <fieldset>
                     <legend className="mb-1.5 block text-sm font-medium text-slate-700">
                         Quiero registrarme como
@@ -84,7 +142,7 @@ export default function Register() {
                                         name="rol"
                                         value={value}
                                         checked={elegido}
-                                        onChange={() => setData('rol', value)}
+                                        onChange={() => cambiar('rol', value)}
                                         className="sr-only"
                                         required
                                     />
@@ -109,7 +167,7 @@ export default function Register() {
                         })}
                     </div>
 
-                    <InputError message={errors.rol} className="mt-1.5" />
+                    <InputError message={error('rol')} className="mt-1.5" />
                 </fieldset>
 
                 <CampoAuth
@@ -120,8 +178,10 @@ export default function Register() {
                     autoComplete="name"
                     placeholder="Ej: Juana Pérez"
                     icono={User}
-                    error={errors.name}
-                    onChange={(e) => setData('name', e.target.value)}
+                    estado={estado('name')}
+                    error={error('name')}
+                    onChange={(e) => cambiar('name', e.target.value)}
+                    onBlur={() => tocar('name')}
                     required
                 />
 
@@ -134,8 +194,10 @@ export default function Register() {
                     autoComplete="username"
                     placeholder="tucorreo@ejemplo.com"
                     icono={Mail}
-                    error={errors.email}
-                    onChange={(e) => setData('email', e.target.value)}
+                    estado={estado('email')}
+                    error={error('email')}
+                    onChange={(e) => cambiar('email', e.target.value)}
+                    onBlur={() => tocar('email')}
                     required
                 />
 
@@ -146,8 +208,11 @@ export default function Register() {
                         name="password"
                         value={data.password}
                         autoComplete="new-password"
-                        error={errors.password}
-                        onChange={(e) => setData('password', e.target.value)}
+                        estado={estado('password')}
+                        error={error('password')}
+                        onChange={(e) => cambiar('password', e.target.value)}
+                        onBlur={() => tocar('password')}
+                        aria-describedby="reglas-contrasena"
                         required
                     />
 
@@ -157,12 +222,19 @@ export default function Register() {
                         name="password_confirmation"
                         value={data.password_confirmation}
                         autoComplete="new-password"
-                        error={errors.password_confirmation}
+                        estado={estado('password_confirmation')}
+                        error={error('password_confirmation')}
                         onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
+                            cambiar('password_confirmation', e.target.value)
                         }
+                        onBlur={() => tocar('password_confirmation')}
                         required
                     />
+                </div>
+
+                {/* Debajo de los dos campos, a todo el ancho (KAN-313). */}
+                <div id="reglas-contrasena">
+                    <ReglasContrasena contrasena={data.password} />
                 </div>
 
                 <div className="pt-2">

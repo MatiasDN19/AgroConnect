@@ -6,6 +6,7 @@ import {
 import RedesProximamente from '@/Components/Auth/RedesProximamente';
 import Checkbox from '@/Components/Checkbox';
 import GuestLayout, { PRECARGA } from '@/Layouts/GuestLayout';
+import { emailValido, MENSAJES, useValidacion } from '@/utils/validaciones';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { FormEventHandler, ReactNode } from 'react';
@@ -17,14 +18,29 @@ export default function Login({
     status?: string;
     canResetPassword: boolean;
 }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
-        password: '',
-        remember: false as boolean,
-    });
+    const { data, setData, post, processing, errors, reset, clearErrors } =
+        useForm({
+            email: '',
+            password: '',
+            remember: false as boolean,
+        });
+
+    // En el login solo se valida el formato del correo (KAN-313): la
+    // contraseña ya existe, no tiene sentido medir su fortaleza acá.
+    const { estado, error, tocar, todoValido } = useValidacion<'email'>(
+        {
+            email: {
+                valor: data.email,
+                valido: emailValido(data.email),
+                mensaje: MENSAJES.email,
+            },
+        },
+        errors,
+    );
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!todoValido()) return;
 
         post(route('login'), {
             onFinish: () => reset('password'),
@@ -51,7 +67,7 @@ export default function Login({
                 </div>
             )}
 
-            <form onSubmit={submit} className="mt-6 space-y-4">
+            <form onSubmit={submit} noValidate className="mt-6 space-y-4">
                 <CampoAuth
                     id="email"
                     etiqueta="Correo electrónico"
@@ -62,8 +78,13 @@ export default function Login({
                     placeholder="tucorreo@ejemplo.com"
                     icono={Mail}
                     enfocar
-                    error={errors.email}
-                    onChange={(e) => setData('email', e.target.value)}
+                    estado={estado('email')}
+                    error={error('email')}
+                    onChange={(e) => {
+                        setData('email', e.target.value);
+                        if (errors.email) clearErrors('email');
+                    }}
+                    onBlur={() => tocar('email')}
                     required
                 />
 

@@ -3,7 +3,14 @@ import {
     CampoAuth,
     CampoContrasena,
 } from '@/Components/Auth/CampoAuth';
+import ReglasContrasena from '@/Components/ReglasContrasena';
 import GuestLayout from '@/Layouts/GuestLayout';
+import {
+    contrasenaValida,
+    emailValido,
+    MENSAJES,
+    useValidacion,
+} from '@/utils/validaciones';
 import { Head, useForm } from '@inertiajs/react';
 import { Mail } from 'lucide-react';
 import { FormEventHandler, ReactNode } from 'react';
@@ -15,15 +22,49 @@ export default function ResetPassword({
     token: string;
     email: string;
 }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        token: token,
-        email: email,
-        password: '',
-        password_confirmation: '',
-    });
+    const { data, setData, post, processing, errors, reset, clearErrors } =
+        useForm({
+            token: token,
+            email: email,
+            password: '',
+            password_confirmation: '',
+        });
+
+    // Validación en vivo (KAN-313).
+    type Campo = 'email' | 'password' | 'password_confirmation';
+    const { estado, error, tocar, todoValido } = useValidacion<Campo>(
+        {
+            email: {
+                valor: data.email,
+                valido: emailValido(data.email),
+                mensaje: MENSAJES.email,
+            },
+            password: {
+                valor: data.password,
+                valido: contrasenaValida(data.password),
+                mensaje: MENSAJES.contrasena,
+            },
+            password_confirmation: {
+                valor: data.password_confirmation,
+                valido:
+                    data.password_confirmation !== '' &&
+                    data.password_confirmation === data.password,
+                mensaje:
+                    data.password_confirmation === ''
+                        ? MENSAJES.repetir
+                        : MENSAJES.confirmacion,
+            },
+        },
+        errors,
+    );
+    const cambiar = (campo: Campo, valor: string) => {
+        setData(campo, valor);
+        if (errors[campo]) clearErrors(campo);
+    };
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!todoValido()) return;
 
         post(route('password.store'), {
             onFinish: () => reset('password', 'password_confirmation'),
@@ -41,7 +82,7 @@ export default function ResetPassword({
                 Después vas a poder ingresar con ella.
             </p>
 
-            <form onSubmit={submit} className="mt-6 space-y-4">
+            <form onSubmit={submit} noValidate className="mt-6 space-y-4">
                 <CampoAuth
                     id="email"
                     etiqueta="Correo electrónico"
@@ -50,8 +91,10 @@ export default function ResetPassword({
                     value={data.email}
                     autoComplete="username"
                     icono={Mail}
-                    error={errors.email}
-                    onChange={(e) => setData('email', e.target.value)}
+                    estado={estado('email')}
+                    error={error('email')}
+                    onChange={(e) => cambiar('email', e.target.value)}
+                    onBlur={() => tocar('email')}
                     required
                 />
 
@@ -62,8 +105,11 @@ export default function ResetPassword({
                     value={data.password}
                     autoComplete="new-password"
                     enfocar
-                    error={errors.password}
-                    onChange={(e) => setData('password', e.target.value)}
+                    estado={estado('password')}
+                    error={error('password')}
+                    onChange={(e) => cambiar('password', e.target.value)}
+                    onBlur={() => tocar('password')}
+                    ayuda={<ReglasContrasena contrasena={data.password} />}
                     required
                 />
 
@@ -73,10 +119,12 @@ export default function ResetPassword({
                     name="password_confirmation"
                     value={data.password_confirmation}
                     autoComplete="new-password"
-                    error={errors.password_confirmation}
+                    estado={estado('password_confirmation')}
+                    error={error('password_confirmation')}
                     onChange={(e) =>
-                        setData('password_confirmation', e.target.value)
+                        cambiar('password_confirmation', e.target.value)
                     }
+                    onBlur={() => tocar('password_confirmation')}
                     required
                 />
 
