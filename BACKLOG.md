@@ -2206,6 +2206,29 @@ Depende de: KAN-343. Versión web: KAN-344.
 
 </details>
 
+<details>
+<summary>**KAN-348** [backend] — Backend: marcar todas las alertas como leídas de una vez</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/AlertaController.php` — método nuevo `marcarTodasLeidas()`.
+* `app/Http/Controllers/Api/AlertaController.php` — lo mismo para la app.
+* `routes/web.php` y `routes/api.php` — `PATCH /alertas/leidas` (nombre web: `alertas.marcar-todas`). Conviene dejarla junto a `PATCH /alertas/{alerta}/leida`.
+* `tests/Feature/AlertaTest.php` — agregar casos.
+
+Guía:
+
+1. Hoy solo existe `PATCH /alertas/{alerta}/leida` (de a una). La página de notificaciones (KAN-323) tiene un botón "Marcar todas como leídas" que, mientras tanto, manda un pedido por cada alerta sin leer.
+2. El endpoint nuevo marca como leídas **todas las alertas sin leer del usuario logueado** con un solo `update` (`$request->user()->alertas()->where('leida', false)->update(['leida' => true])`) y devuelve cuántas marcó.
+3. Respuesta: si pide JSON (`wantsJson`), `{ "marcadas": N }`; si no, `back()->with('success', 'Marcamos N notificaciones como leídas.')`. Mismo patrón que `marcarLeida()`.
+4. Tests: marca solo las del usuario logueado (las de otro usuario quedan sin leer); devuelve la cantidad correcta; con 0 sin leer no falla y devuelve 0; un invitado no puede usarlo.
+
+Cuando entre, en el frontend se cambia solo la función `marcarTodasLeidas()` de `resources/js/utils/alertas.ts`.
+
+Relacionada: KAN-323 (página de notificaciones), KAN-80 (panel de la campanita).
+
+</details>
+
 ---
 
 ## Epic: KAN-82 — API REST para la app móvil (Sanctum)
