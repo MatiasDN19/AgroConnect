@@ -1,3 +1,4 @@
+import BotonExportar from '@/Components/Admin/BotonExportar';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
 
@@ -24,7 +25,22 @@ interface Props {
 
 export default function Index({ usuarios, filtros }: Props) {
     return (
-        <AdminLayout titulo="Gestión de Usuarios">
+        <AdminLayout
+            titulo="Gestión de Usuarios"
+            acciones={
+                // Exporta con los mismos filtros que la pantalla (KAN-318).
+                // El listado en sí es KAN-119.
+                <BotonExportar
+                    href={route('admin.exportar.usuarios', {
+                        ...(filtros.q ? { q: filtros.q } : {}),
+                        ...(filtros.rol ? { rol: filtros.rol } : {}),
+                        ...(filtros.inhabilitado
+                            ? { inhabilitado: filtros.inhabilitado }
+                            : {}),
+                    })}
+                />
+            }
+        >
             <Head title="Gestión de Usuarios - Admin" />
 
             <div className="py-12">
