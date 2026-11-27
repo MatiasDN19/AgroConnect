@@ -269,3 +269,128 @@ test('el listado de alertas en json web y api exponen publicacion_id', function 
         'publicacion_id' => $publicacion->id,
     ]);
 });
+
+test('un usuario puede marcar todas sus alertas como leidas via web con redirect', function () {
+    $usuario = User::factory()->create();
+    $otroUsuario = User::factory()->create();
+
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta 1',
+        'leida' => false,
+    ]);
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta 2',
+        'leida' => false,
+    ]);
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta 3 ya leida',
+        'leida' => true,
+    ]);
+    Alerta::create([
+        'usuario_id' => $otroUsuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta de otro usuario',
+        'leida' => false,
+    ]);
+
+    $response = $this->actingAs($usuario)->patch(route('alertas.marcar-todas'));
+
+    $response->assertSessionHasNoErrors();
+    $response->assertSessionHas('success', 'Marcamos 2 notificaciones como leídas.');
+
+    expect(Alerta::where('usuario_id', $usuario->id)->where('leida', true)->count())->toBe(3);
+    expect(Alerta::where('usuario_id', $usuario->id)->where('leida', false)->count())->toBe(0);
+    // La alerta del otro usuario no se toca
+    expect(Alerta::where('usuario_id', $otroUsuario->id)->where('leida', false)->count())->toBe(1);
+});
+
+test('un usuario puede marcar todas sus alertas como leidas via web pidiendo json', function () {
+    $usuario = User::factory()->create();
+
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta 1',
+        'leida' => false,
+    ]);
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta 2',
+        'leida' => false,
+    ]);
+
+    $response = $this->actingAs($usuario)->patchJson(route('alertas.marcar-todas'));
+
+    $response->assertOk();
+    $response->assertJson([
+        'marcadas' => 2,
+    ]);
+
+    expect(Alerta::where('usuario_id', $usuario->id)->where('leida', false)->count())->toBe(0);
+});
+
+test('marcar todas como leidas cuando no hay alertas no leidas devuelve 0 y no falla', function () {
+    $usuario = User::factory()->create();
+
+    $response = $this->actingAs($usuario)->patchJson(route('alertas.marcar-todas'));
+
+    $response->assertOk();
+    $response->assertJson([
+        'marcadas' => 0,
+    ]);
+});
+
+test('un invitado no puede marcar todas las alertas como leidas via web', function () {
+    $response = $this->patch(route('alertas.marcar-todas'));
+
+    $response->assertRedirect(route('login'));
+});
+
+test('un usuario puede marcar todas sus alertas como leidas via api sanctum', function () {
+    $usuario = User::factory()->create();
+    $otroUsuario = User::factory()->create();
+
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta API 1',
+        'leida' => false,
+    ]);
+    Alerta::create([
+        'usuario_id' => $usuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta API 2',
+        'leida' => false,
+    ]);
+    Alerta::create([
+        'usuario_id' => $otroUsuario->id,
+        'tipo' => 'nueva_resena',
+        'mensaje' => 'Alerta otro API',
+        'leida' => false,
+    ]);
+
+    Sanctum::actingAs($usuario);
+
+    $response = $this->patchJson('/api/alertas/leidas');
+
+    $response->assertOk();
+    $response->assertJson([
+        'marcadas' => 2,
+    ]);
+
+    expect(Alerta::where('usuario_id', $usuario->id)->where('leida', false)->count())->toBe(0);
+    expect(Alerta::where('usuario_id', $otroUsuario->id)->where('leida', false)->count())->toBe(1);
+});
+
+test('un invitado no autenticado no puede marcar alertas via api sanctum', function () {
+    $response = $this->patchJson('/api/alertas/leidas');
+
+    $response->assertUnauthorized();
+});

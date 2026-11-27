@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'index']);
 
     Route::get('/alertas', [AlertaController::class, 'index']);
+    Route::patch('/alertas/leidas', [AlertaController::class, 'marcarTodasLeidas']);
     Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida']);
 
     Route::post('/push-token', [PushTokenController::class, 'store']);

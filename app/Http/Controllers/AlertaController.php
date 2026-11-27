@@ -52,4 +52,25 @@ class AlertaController extends Controller
 
         return back()->with('success', 'Alerta marcada como leída.');
     }
+
+    /**
+     * Marcar todas las alertas no leídas del usuario como leídas.
+     */
+    public function marcarTodasLeidas(Request $request): RedirectResponse|JsonResponse
+    {
+        $marcadas = $request->user()
+            ->alertas()
+            ->where('leida', false)
+            ->update([
+                'leida' => true,
+            ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'marcadas' => $marcadas,
+            ]);
+        }
+
+        return back()->with('success', "Marcamos {$marcadas} notificaciones como leídas.");
+    }
 }

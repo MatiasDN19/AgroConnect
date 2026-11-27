@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');
 
     Route::get('/alertas', [AlertaController::class, 'index'])->name('alertas.index');
+    Route::patch('/alertas/leidas', [AlertaController::class, 'marcarTodasLeidas'])->name('alertas.marcar-todas');
     Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida'])->name('alertas.marcar-leida');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
