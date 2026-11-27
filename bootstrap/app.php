@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AsegurarCuentaHabilitada;
+use App\Http\Middleware\AsegurarEmailVerificado;
 use App\Http\Middleware\CabecerasSeguridad;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'verified' => AsegurarEmailVerificado::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
