@@ -1,3 +1,4 @@
+import BotonExportar from '@/Components/Admin/BotonExportar';
 import Contador from '@/Components/Landing/Contador';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { PageProps } from '@/types';
@@ -12,7 +13,7 @@ import {
     Package,
     Users,
 } from 'lucide-react';
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 
 // Resumen del panel admin (KAN-159), con el diseño "reel" acordado: saludo, una
 // tarjeta destacada con lo que hay que atender (denuncias pendientes), tarjetas
@@ -208,8 +209,67 @@ export default function Index({
                         </Link>
                     </section>
                 </div>
+
+                <ExportarSolicitudes />
             </div>
         </AdminLayout>
+    );
+}
+
+// Exportar las solicitudes de compra (KAN-318). No hay una pantalla de
+// solicitudes en el panel, así que va acá, con el filtro por estado.
+const ESTADOS_SOLICITUD = [
+    { valor: '', etiqueta: 'Todas' },
+    { valor: 'pendiente', etiqueta: 'Pendientes' },
+    { valor: 'aceptada', etiqueta: 'Aceptadas' },
+    { valor: 'rechazada', etiqueta: 'Rechazadas' },
+];
+
+function ExportarSolicitudes() {
+    const [estado, setEstado] = useState('');
+
+    return (
+        <section
+            className="aparecer flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between"
+            style={orden(4)}
+            aria-labelledby="titulo-exportar"
+        >
+            <div>
+                <h2
+                    id="titulo-exportar"
+                    className="font-display text-lg font-bold text-marca-tinta"
+                >
+                    Exportar solicitudes de compra
+                </h2>
+                <p className="text-sm text-slate-500">
+                    Bajá una planilla (CSV) para abrirla en Excel o Google
+                    Sheets.
+                </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor="estado-exportar" className="sr-only">
+                    Estado de las solicitudes
+                </label>
+                <select
+                    id="estado-exportar"
+                    value={estado}
+                    onChange={(e) => setEstado(e.target.value)}
+                    className="rounded-lg border-slate-300 text-sm shadow-sm focus:border-sky-600 focus:ring-sky-600"
+                >
+                    {ESTADOS_SOLICITUD.map(({ valor, etiqueta }) => (
+                        <option key={valor} value={valor}>
+                            {etiqueta}
+                        </option>
+                    ))}
+                </select>
+                <BotonExportar
+                    href={route(
+                        'admin.exportar.solicitudes',
+                        estado ? { estado } : {},
+                    )}
+                />
+            </div>
+        </section>
     );
 }
 

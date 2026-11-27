@@ -1,3 +1,4 @@
+import BotonExportar from '@/Components/Admin/BotonExportar';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -56,7 +57,16 @@ export default function Index({
     };
 
     return (
-        <AdminLayout titulo="Socios del Consorcio">
+        <AdminLayout
+            titulo="Socios del Consorcio"
+            acciones={
+                // Baja los socios ya validados (KAN-318).
+                <BotonExportar
+                    href={route('admin.exportar.socios')}
+                    etiqueta="Exportar socios"
+                />
+            }
+        >
             <div className="mx-auto max-w-7xl space-y-6">
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
                     <div className="border-b border-slate-200 px-5 py-4">
