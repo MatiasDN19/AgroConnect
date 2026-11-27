@@ -1,4 +1,5 @@
 import BotonExportar from '@/Components/Admin/BotonExportar';
+import Desplegable from '@/Components/Desplegable';
 import Contador from '@/Components/Landing/Contador';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { PageProps } from '@/types';
@@ -247,21 +248,14 @@ function ExportarSolicitudes() {
                 </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor="estado-exportar" className="sr-only">
-                    Estado de las solicitudes
-                </label>
-                <select
+                <Desplegable
                     id="estado-exportar"
-                    value={estado}
-                    onChange={(e) => setEstado(e.target.value)}
-                    className="rounded-lg border-slate-300 text-sm shadow-sm focus:border-sky-600 focus:ring-sky-600"
-                >
-                    {ESTADOS_SOLICITUD.map(({ valor, etiqueta }) => (
-                        <option key={valor} value={valor}>
-                            {etiqueta}
-                        </option>
-                    ))}
-                </select>
+                    etiqueta="Estado de las solicitudes"
+                    className="sm:w-52"
+                    valor={estado}
+                    onChange={setEstado}
+                    opciones={ESTADOS_SOLICITUD}
+                />
                 <BotonExportar
                     href={route(
                         'admin.exportar.solicitudes',

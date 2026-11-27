@@ -2,6 +2,7 @@ import {
     ModalBloquear,
     ModalEliminar,
 } from '@/Components/Admin/ModalesModeracion';
+import Desplegable, { opcionesCategorias } from '@/Components/Desplegable';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Categoria, EstadoPublicacion, Publicacion, User } from '@/types';
 import { Link, router } from '@inertiajs/react';
@@ -142,41 +143,32 @@ export default function Index({
                         />
                     </label>
 
-                    <label>
-                        <span className="sr-only">Filtrar por estado</span>
-                        <select
-                            value={filtros.estado ?? ''}
-                            onChange={(e) =>
-                                filtrar({ estado: e.target.value })
-                            }
-                            className={CLASES_CAMPO}
-                        >
-                            <option value="">Todos los estados</option>
-                            {ESTADOS.map((e) => (
-                                <option key={e.valor} value={e.valor}>
-                                    {e.texto}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <Desplegable
+                        id="filtro-estado"
+                        etiqueta="Filtrar por estado"
+                        className="mt-1"
+                        valor={filtros.estado ?? ''}
+                        onChange={(v) => filtrar({ estado: v })}
+                        opciones={[
+                            { valor: '', etiqueta: 'Todos los estados' },
+                            ...ESTADOS.map((e) => ({
+                                valor: e.valor,
+                                etiqueta: e.texto,
+                            })),
+                        ]}
+                    />
 
-                    <label>
-                        <span className="sr-only">Filtrar por categoría</span>
-                        <select
-                            value={filtros.categoria_id ?? ''}
-                            onChange={(e) =>
-                                filtrar({ categoria_id: e.target.value })
-                            }
-                            className={CLASES_CAMPO}
-                        >
-                            <option value="">Todas las categorías</option>
-                            {categorias.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <Desplegable
+                        id="filtro-categoria"
+                        etiqueta="Filtrar por categoría"
+                        className="mt-1"
+                        valor={filtros.categoria_id ?? ''}
+                        onChange={(v) => filtrar({ categoria_id: v })}
+                        opciones={[
+                            { valor: '', etiqueta: 'Todas las categorías' },
+                            ...opcionesCategorias(categorias),
+                        ]}
+                    />
                 </div>
 
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">

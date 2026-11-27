@@ -1,4 +1,5 @@
 import DangerButton from '@/Components/DangerButton';
+import Desplegable from '@/Components/Desplegable';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
@@ -20,7 +21,7 @@ const MOTIVOS = [
 const MOTIVO_OTRO = 'Otro';
 const MAX_DESCRIPCION = 2000;
 
-// Mismas clases que TextInput, para el <select> y el <textarea>.
+// Mismas clases que TextInput, para el <textarea>.
 const CLASES_CAMPO =
     'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500';
 
@@ -147,22 +148,19 @@ export default function DenunciarPublicacion({
 
                     <div>
                         <InputLabel htmlFor="motivo" value="Motivo" />
-                        <select
+                        <Desplegable
                             id="motivo"
-                            className={CLASES_CAMPO}
-                            value={data.motivo}
-                            onChange={(e) => setData('motivo', e.target.value)}
-                            required
-                        >
-                            <option value="" disabled>
-                                Elegí un motivo
-                            </option>
-                            {MOTIVOS.map((motivo) => (
-                                <option key={motivo} value={motivo}>
-                                    {motivo}
-                                </option>
-                            ))}
-                        </select>
+                            etiqueta="Motivo"
+                            className="mt-1"
+                            valor={data.motivo}
+                            onChange={(v) => setData('motivo', v)}
+                            opciones={MOTIVOS.map((m) => ({
+                                valor: m,
+                                etiqueta: m,
+                            }))}
+                            placeholder="Elegí un motivo"
+                            invalido={Boolean(errors.motivo)}
+                        />
                         <InputError message={errors.motivo} className="mt-2" />
                     </div>
 

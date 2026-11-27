@@ -1,4 +1,5 @@
 import { avisar } from '@/Components/Avisos/avisos';
+import Desplegable, { opcionesCategorias } from '@/Components/Desplegable';
 import {
     BotonGuardar,
     BotonPeligro,
@@ -552,25 +553,18 @@ function FilaEditable({
                 </CampoFila>
 
                 <CampoFila etiqueta="Categoría" id="ref-categoria">
-                    <select
+                    <Desplegable
                         id="ref-categoria"
-                        value={data.categoria_id}
-                        onChange={(e) =>
-                            setData(
-                                'categoria_id',
-                                e.target.value ? Number(e.target.value) : '',
-                            )
+                        etiqueta="Categoría"
+                        className="mt-1 md:mt-0"
+                        valor={data.categoria_id}
+                        onChange={(v) =>
+                            setData('categoria_id', v ? Number(v) : '')
                         }
-                        required
-                        className={`${CLASES_CAMPO} md:mt-0`}
-                    >
-                        <option value="">Elegí…</option>
-                        {categorias.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.nombre}
-                            </option>
-                        ))}
-                    </select>
+                        opciones={opcionesCategorias(categorias)}
+                        placeholder="Elegí…"
+                        invalido={Boolean(errors.categoria_id)}
+                    />
                 </CampoFila>
 
                 <CampoFila etiqueta="Unidad" id="ref-unidad">
