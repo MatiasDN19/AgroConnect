@@ -389,9 +389,16 @@ export default function Show({
                             <h3 className="text-sm font-medium text-gray-500">
                                 Productor
                             </h3>
-                            <p className="text-lg font-semibold text-gray-900">
+                            {/* Perfil público del productor (KAN-262). */}
+                            <Link
+                                href={route(
+                                    'productores.show',
+                                    publicacion.usuario.id,
+                                )}
+                                className="block w-fit rounded text-lg font-semibold text-gray-900 underline-offset-2 transition-colors duration-150 hover:text-marca-azul hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
+                            >
                                 {publicacion.usuario.name}
-                            </p>
+                            </Link>
                             {publicacion.usuario.socio_validado && (
                                 <SocioBadge />
                             )}
@@ -399,6 +406,15 @@ export default function Show({
                                 localidad={publicacion.usuario.localidad}
                                 distanciaKm={esDueno ? null : distancia_km}
                             />
+                            <Link
+                                href={route(
+                                    'productores.show',
+                                    publicacion.usuario.id,
+                                )}
+                                className="inline-block rounded text-sm font-medium text-marca-azul underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
+                            >
+                                Ver perfil y otras publicaciones →
+                            </Link>
 
                             {publicacion.usuario.telefono ? (
                                 <a

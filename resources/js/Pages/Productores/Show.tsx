@@ -1,3 +1,4 @@
+import Avatar from '@/Components/Avatar';
 import Estrellas from '@/Components/Estrellas';
 import Paginacion from '@/Components/Paginacion';
 import PublicacionCard, {
@@ -6,8 +7,13 @@ import PublicacionCard, {
 import SocioBadge from '@/Components/SocioBadge';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps, Paginado } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Calendar, MapPin, Store } from 'lucide-react';
+
+// Perfil público del productor (KAN-260/261 backend y primera versión de la
+// página: Iván; estilo y links desde las publicaciones: KAN-262).
+// Muestra quién es y sus publicaciones activas. Nunca la ubicación exacta:
+// solo la localidad.
 
 export interface ProductorPublico {
     id: number;
@@ -25,24 +31,15 @@ interface Props extends PageProps {
     cantidad_resenas: number;
 }
 
-function iniciales(nombre: string): string {
-    return nombre
-        .split(' ')
-        .map((p) => p[0])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
+const formatoAlta = new Intl.DateTimeFormat('es-AR', {
+    month: 'long',
+    year: 'numeric',
+});
 
-function formatearFechaRegistro(fechaIso?: string | null): string {
+function fechaDeAlta(fechaIso?: string | null): string {
     if (!fechaIso) return '';
     const fecha = new Date(fechaIso);
-    if (isNaN(fecha.getTime())) return '';
-    return fecha.toLocaleDateString('es-AR', {
-        month: 'long',
-        year: 'numeric',
-    });
+    return isNaN(fecha.getTime()) ? '' : formatoAlta.format(fecha);
 }
 
 export default function Show({
@@ -53,135 +50,128 @@ export default function Show({
     cantidad_resenas,
 }: Props) {
     const promedio = puntuacion_promedio ?? promedio_resenas ?? null;
-    const fechaRegistro = formatearFechaRegistro(productor.created_at);
+    const alta = fechaDeAlta(productor.created_at);
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
-                    Perfil del productor
-                </h1>
-            }
-        >
-            <Head title={`Perfil de ${productor.name}`} />
+        <AuthenticatedLayout>
+            <Head title={productor.name} />
 
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {/* Cabecera del perfil */}
-                <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70 sm:p-8">
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                            {/* Avatar con iniciales */}
-                            <div
-                                aria-hidden="true"
-                                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-xl font-bold text-white shadow-sm ring-2 ring-emerald-500/20 sm:h-20 sm:w-20 sm:text-2xl"
-                            >
-                                {iniciales(productor.name)}
+            <div className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+                {/* Cabecera: misma línea que el perfil propio (KAN-322). */}
+                <header className="flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+                    <div className="flex items-center gap-4 sm:gap-5">
+                        <Avatar nombre={productor.name} tamano="grande" />
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="break-words font-display text-2xl font-bold leading-tight text-marca-tinta sm:text-3xl">
+                                    {productor.name}
+                                </h1>
+                                {productor.socio_validado && <SocioBadge />}
                             </div>
 
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-2xl font-bold text-gray-900">
-                                        {productor.name}
-                                    </h2>
-                                    {productor.socio_validado && <SocioBadge />}
-                                </div>
+                            <p className="mt-1 text-sm font-medium text-slate-700">
+                                Productor
+                            </p>
 
-                                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                    {productor.localidad && (
-                                        <div className="flex items-center gap-1.5">
-                                            <MapPin
-                                                className="h-4 w-4 text-gray-400"
-                                                aria-hidden="true"
-                                            />
-                                            <span>{productor.localidad}</span>
-                                        </div>
-                                    )}
-
-                                    {fechaRegistro && (
-                                        <div className="flex items-center gap-1.5">
-                                            <Calendar
-                                                className="h-4 w-4 text-gray-400"
-                                                aria-hidden="true"
-                                            />
-                                            <span>
-                                                En AgroConnect desde{' '}
-                                                {fechaRegistro}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Puntuación y reseñas */}
-                        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100 sm:self-center">
-                            {promedio !== null ? (
-                                <div className="flex flex-col items-center sm:items-end">
-                                    <div className="flex items-center gap-2">
-                                        <Estrellas valor={promedio} />
-                                        <span className="font-bold text-gray-900">
-                                            {promedio.toFixed(1)}
-                                        </span>
-                                    </div>
-                                    <span className="mt-1 text-xs text-gray-500">
-                                        {cantidad_resenas}{' '}
-                                        {cantidad_resenas === 1
-                                            ? 'reseña'
-                                            : 'reseñas'}
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                                {productor.localidad && (
+                                    <span className="flex items-center gap-1.5">
+                                        <MapPin
+                                            className="h-4 w-4 text-marca-azul"
+                                            aria-hidden="true"
+                                        />
+                                        {productor.localidad}
                                     </span>
-                                </div>
-                            ) : (
-                                <span className="text-sm text-gray-500">
-                                    Sin reseñas todavía
-                                </span>
-                            )}
+                                )}
+                                {alta && (
+                                    <span className="flex items-center gap-1.5">
+                                        <Calendar
+                                            className="h-4 w-4 text-slate-400"
+                                            aria-hidden="true"
+                                        />
+                                        En AgroConnect desde {alta}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Sección de publicaciones activas */}
-                <div>
-                    <div className="mb-6 flex items-center justify-between">
-                        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                            <Store
-                                className="h-5 w-5 text-emerald-600"
-                                aria-hidden="true"
-                            />
-                            Publicaciones activas
-                            <span className="ml-1 text-sm font-normal text-gray-500">
-                                ({publicaciones.total})
+                    {/* Reseñas */}
+                    <div className="flex shrink-0 flex-col items-start rounded-xl bg-slate-50 px-5 py-4 ring-1 ring-slate-100 sm:items-end">
+                        {promedio !== null ? (
+                            <>
+                                <span className="flex items-center gap-2">
+                                    <Estrellas valor={promedio} />
+                                    <span className="font-display text-xl font-bold text-marca-tinta">
+                                        {promedio.toFixed(1)}
+                                    </span>
+                                </span>
+                                <span className="mt-0.5 text-xs text-slate-500">
+                                    {cantidad_resenas}{' '}
+                                    {cantidad_resenas === 1
+                                        ? 'reseña'
+                                        : 'reseñas'}{' '}
+                                    en sus publicaciones
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-sm text-slate-500">
+                                Sin reseñas todavía
                             </span>
-                        </h3>
+                        )}
+                    </div>
+                </header>
+
+                {/* Publicaciones activas */}
+                <section aria-labelledby="titulo-publicaciones">
+                    <div className="mb-5 flex items-baseline gap-2">
+                        <h2
+                            id="titulo-publicaciones"
+                            className="font-display text-2xl font-bold text-marca-tinta"
+                        >
+                            Publicaciones activas
+                        </h2>
+                        <span className="text-sm text-slate-500">
+                            ({publicaciones.total})
+                        </span>
                     </div>
 
                     {publicaciones.data.length > 0 ? (
                         <>
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                {publicaciones.data.map((pub) => (
-                                    <PublicacionCard
-                                        key={pub.id}
-                                        publicacion={pub}
-                                    />
+                            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {publicaciones.data.map((publicacion) => (
+                                    <li key={publicacion.id}>
+                                        {/* Ya estamos en su perfil: el nombre no es link. */}
+                                        <PublicacionCard
+                                            publicacion={publicacion}
+                                            enlaceProductor={false}
+                                        />
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
 
                             <div className="mt-8">
                                 <Paginacion paginado={publicaciones} />
                             </div>
                         </>
                     ) : (
-                        <div className="rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
-                            <Store className="mx-auto h-12 w-12 text-gray-400" />
-                            <h4 className="mt-3 text-base font-medium text-gray-900">
-                                Sin publicaciones activas
-                            </h4>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Este productor no tiene publicaciones activas en
-                                este momento.
+                        <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-14 text-center shadow-sm ring-1 ring-slate-200">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                                <Store className="h-6 w-6" aria-hidden="true" />
+                            </span>
+                            <p className="font-medium text-slate-700">
+                                {productor.name} no tiene publicaciones activas
+                                en este momento.
                             </p>
+                            <Link
+                                href={route('publicaciones.index')}
+                                className="text-sm font-medium text-marca-azul underline-offset-2 hover:underline"
+                            >
+                                Ver todo el marketplace →
+                            </Link>
                         </div>
                     )}
-                </div>
+                </section>
             </div>
         </AuthenticatedLayout>
     );
