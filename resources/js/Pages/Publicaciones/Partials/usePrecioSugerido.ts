@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 
-// Referencia de precios de la categoría para la misma unidad (KAN-132).
-// GET /categorias/{id}/precio-sugerido?unidad=kg. El backend devuelve null en los
-// precios si hay menos de 3 publicaciones activas comparables: ahí no se muestra nada.
+// Referencias de precio al publicar.
+// GET /categorias/{id}/precio-sugerido?unidad=kg&titulo=...
+// - referencias (KAN-338/340): las que carga cada mes el Consorcio (mesa
+//   administrativa) para esa categoría y unidad. "coincide" = el producto
+//   aparece en el título. Es el dato principal.
+// - mercado (KAN-132): mediana y rango de lo que se publica en AgroConnect.
+//   El backend devuelve null si hay menos de 3 publicaciones comparables.
+//   Pasa a ser el dato secundario.
+
 export type ReferenciaPrecio = {
     mediana: number;
     minimo: number;
@@ -10,31 +16,50 @@ export type ReferenciaPrecio = {
     cantidad: number;
 };
 
+export type ReferenciaOficial = {
+    id: number;
+    producto: string;
+    unidad: string;
+    precio: number;
+    coincide: boolean;
+};
+
+export type PreciosSugeridos = {
+    mercado: ReferenciaPrecio | null;
+    referencias: ReferenciaOficial[];
+};
+
 type Respuesta = {
     precio_mediana: number | null;
     precio_minimo: number | null;
     precio_maximo: number | null;
     cantidad: number;
+    referencias?: ReferenciaOficial[];
 };
 
-// La unidad se escribe letra por letra: se espera a que deje de tipear
-// para no hacer un pedido por cada tecla.
+const VACIO: PreciosSugeridos = { mercado: null, referencias: [] };
+
+// La unidad y el título se escriben letra por letra: se espera a que deje de
+// tipear para no hacer un pedido por cada tecla.
 const ESPERA_MS = 400;
 
 export default function usePrecioSugerido(
     categoriaId: string,
     unidad: string,
-): ReferenciaPrecio | null {
-    const [referencia, setReferencia] = useState<ReferenciaPrecio | null>(null);
+    titulo: string,
+): PreciosSugeridos {
+    const [precios, setPrecios] = useState<PreciosSugeridos>(VACIO);
 
     useEffect(() => {
-        setReferencia(null);
-
         const unidadLimpia = unidad.trim();
-        if (!categoriaId || !unidadLimpia) return;
+        const tituloLimpio = titulo.trim();
+        if (!categoriaId || !unidadLimpia) {
+            setPrecios(VACIO);
+            return;
+        }
 
-        // Si cambia la categoría o la unidad antes de que llegue la respuesta, se
-        // cancela el pedido anterior: nunca se muestra la referencia de otra combinación.
+        // Si cambia algo antes de que llegue la respuesta, se cancela el pedido
+        // anterior: nunca se muestran las referencias de otra combinación.
         const controlador = new AbortController();
 
         const espera = setTimeout(() => {
@@ -42,6 +67,7 @@ export default function usePrecioSugerido(
                 route('categorias.precio-sugerido', {
                     categoria: categoriaId,
                     unidad: unidadLimpia,
+                    ...(tituloLimpio ? { titulo: tituloLimpio } : {}),
                 }),
                 {
                     headers: { Accept: 'application/json' },
@@ -50,18 +76,20 @@ export default function usePrecioSugerido(
             )
                 .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
                 .then((datos: Respuesta | null) =>
-                    setReferencia(
-                        datos && datos.precio_mediana !== null
-                            ? {
-                                  mediana: datos.precio_mediana,
-                                  minimo: datos.precio_minimo ?? 0,
-                                  maximo: datos.precio_maximo ?? 0,
-                                  cantidad: datos.cantidad,
-                              }
-                            : null,
-                    ),
+                    setPrecios({
+                        mercado:
+                            datos && datos.precio_mediana !== null
+                                ? {
+                                      mediana: datos.precio_mediana,
+                                      minimo: datos.precio_minimo ?? 0,
+                                      maximo: datos.precio_maximo ?? 0,
+                                      cantidad: datos.cantidad,
+                                  }
+                                : null,
+                        referencias: datos?.referencias ?? [],
+                    }),
                 )
-                // Es solo una referencia: si falla, simplemente no se muestra.
+                // Es solo una ayuda: si falla, simplemente no se muestra.
                 .catch(() => {});
         }, ESPERA_MS);
 
@@ -69,7 +97,7 @@ export default function usePrecioSugerido(
             clearTimeout(espera);
             controlador.abort();
         };
-    }, [categoriaId, unidad]);
+    }, [categoriaId, unidad, titulo]);
 
-    return referencia;
+    return precios;
 }
