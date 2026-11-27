@@ -27,8 +27,12 @@ export type PublicacionResumen = Pick<
 // Las coordenadas viajan redondeadas (~1 km), así que no mostramos decimales.
 export default function PublicacionCard({
     publicacion,
+    enlaceProductor = true,
 }: {
     publicacion: PublicacionResumen;
+    // En el perfil público del productor va en false: sería un link a la
+    // misma página (KAN-262).
+    enlaceProductor?: boolean;
 }) {
     const promedio =
         publicacion.puntuacion_promedio === null
@@ -41,11 +45,11 @@ export default function PublicacionCard({
         publicacion.distancia == null ? null : Number(publicacion.distancia);
 
     return (
-        // Toda la tarjeta es un link al detalle.
-        <Link
-            href={route('publicaciones.show', publicacion.id)}
-            className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-900/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul active:scale-[0.99] motion-reduce:hover:translate-y-0"
-        >
+        // "Link estirado" (KAN-262): el link al detalle es el título, y su
+        // ::after cubre toda la tarjeta, así tocar en cualquier lado lleva al
+        // detalle. El nombre del productor es otro link que queda por encima
+        // (relative + z-10). Un <a> no puede ir dentro de otro <a>.
+        <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70 transition-[box-shadow,transform] duration-200 ease-out focus-within:ring-2 focus-within:ring-marca-azul hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-900/10 active:scale-[0.99] motion-reduce:hover:translate-y-0">
             {/* Portada con proporción fija: todas las tarjetas quedan del mismo alto
                 aunque las fotos tengan tamaños distintos (KAN-205). */}
             {portada ? (
@@ -80,7 +84,12 @@ export default function PublicacionCard({
                 </div>
 
                 <h3 className="line-clamp-2 text-lg font-semibold text-gray-900">
-                    {publicacion.titulo}
+                    <Link
+                        href={route('publicaciones.show', publicacion.id)}
+                        className="after:absolute after:inset-0 after:content-[''] focus:outline-none"
+                    >
+                        {publicacion.titulo}
+                    </Link>
                 </h3>
 
                 <p className="text-gray-900">
@@ -96,9 +105,21 @@ export default function PublicacionCard({
                 <div className="mt-auto flex items-center justify-between gap-2 border-t border-gray-100 pt-3 text-sm">
                     {/* min-w-0 deja que el nombre se corte con "…" y la insignia nunca se esconda */}
                     <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-gray-600">
-                            {publicacion.usuario.name}
-                        </span>
+                        {enlaceProductor ? (
+                            <Link
+                                href={route(
+                                    'productores.show',
+                                    publicacion.usuario.id,
+                                )}
+                                className="relative z-10 truncate rounded text-gray-600 underline-offset-2 transition-colors duration-150 hover:text-marca-azul hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul"
+                            >
+                                {publicacion.usuario.name}
+                            </Link>
+                        ) : (
+                            <span className="truncate text-gray-600">
+                                {publicacion.usuario.name}
+                            </span>
+                        )}
                         {publicacion.usuario.socio_validado && (
                             <SocioBadge compacta />
                         )}
@@ -116,6 +137,6 @@ export default function PublicacionCard({
                     )}
                 </div>
             </div>
-        </Link>
+        </article>
     );
 }
