@@ -1,3 +1,4 @@
+import Desplegable, { opcionesCategorias } from '@/Components/Desplegable';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -24,7 +25,7 @@ export type PublicacionFormData = {
     fotos_eliminar: number[]; // ids de fotos guardadas a quitar (solo en Edit)
 };
 
-// Mismas clases que TextInput, para el <select> y el <textarea>.
+// Mismas clases que TextInput, para el <textarea>.
 const CLASES_CAMPO =
     'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500';
 
@@ -78,22 +79,16 @@ export default function PublicacionForm({
             <div>
                 <InputLabel htmlFor="categoria_id" value="Categoría" />
 
-                <select
+                <Desplegable
                     id="categoria_id"
-                    className={CLASES_CAMPO}
-                    value={data.categoria_id}
-                    onChange={(e) => setData('categoria_id', e.target.value)}
-                    required
-                >
-                    <option value="" disabled>
-                        Elegí una categoría
-                    </option>
-                    {categorias.map((categoria) => (
-                        <option key={categoria.id} value={categoria.id}>
-                            {categoria.nombre}
-                        </option>
-                    ))}
-                </select>
+                    etiqueta="Categoría"
+                    className="mt-1"
+                    valor={data.categoria_id}
+                    onChange={(v) => setData('categoria_id', v)}
+                    opciones={opcionesCategorias(categorias)}
+                    placeholder="Elegí una categoría"
+                    invalido={Boolean(errors.categoria_id)}
+                />
 
                 <InputError className="mt-2" message={errors.categoria_id} />
             </div>

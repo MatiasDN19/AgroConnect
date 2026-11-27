@@ -1,5 +1,6 @@
 import BotonExportar from '@/Components/Admin/BotonExportar';
 import Avatar from '@/Components/Avatar';
+import Desplegable from '@/Components/Desplegable';
 import {
     BotonGuardar,
     BotonPeligro,
@@ -186,36 +187,33 @@ export default function Index({
                         />
                     </label>
 
-                    <label>
-                        <span className="sr-only">Filtrar por rol</span>
-                        <select
-                            value={filtros.rol ?? ''}
-                            onChange={(e) => filtrar({ rol: e.target.value })}
-                            className={CLASES_CAMPO}
-                        >
-                            <option value="">Todos los roles</option>
-                            {ROLES.map((r) => (
-                                <option key={r.valor} value={r.valor}>
-                                    {r.texto}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <Desplegable
+                        id="filtro-rol"
+                        etiqueta="Filtrar por rol"
+                        className="mt-1"
+                        valor={filtros.rol ?? ''}
+                        onChange={(v) => filtrar({ rol: v })}
+                        opciones={[
+                            { valor: '', etiqueta: 'Todos los roles' },
+                            ...ROLES.map((r) => ({
+                                valor: r.valor,
+                                etiqueta: r.texto,
+                            })),
+                        ]}
+                    />
 
-                    <label>
-                        <span className="sr-only">Filtrar por estado</span>
-                        <select
-                            value={filtros.inhabilitado ?? ''}
-                            onChange={(e) =>
-                                filtrar({ inhabilitado: e.target.value })
-                            }
-                            className={CLASES_CAMPO}
-                        >
-                            <option value="">Todos los estados</option>
-                            <option value="0">Activos</option>
-                            <option value="1">Inhabilitados</option>
-                        </select>
-                    </label>
+                    <Desplegable
+                        id="filtro-estado"
+                        etiqueta="Filtrar por estado"
+                        className="mt-1"
+                        valor={filtros.inhabilitado ?? ''}
+                        onChange={(v) => filtrar({ inhabilitado: v })}
+                        opciones={[
+                            { valor: '', etiqueta: 'Todos los estados' },
+                            { valor: '0', etiqueta: 'Activos' },
+                            { valor: '1', etiqueta: 'Inhabilitados' },
+                        ]}
+                    />
                 </div>
 
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">

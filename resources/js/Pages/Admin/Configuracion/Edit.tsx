@@ -1,3 +1,4 @@
+import Desplegable from '@/Components/Desplegable';
 import { Bloque, Campo, CLASES_CAMPO } from '@/Components/Formulario';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Configuracion } from '@/types';
@@ -206,31 +207,28 @@ export default function Edit({
                         error={errors.fotos_tamano_max_kb}
                         ayuda="Desde la web las fotos se achican solas antes de subirse (quedan en unos cientos de KB), así que este límite protege sobre todo a la app y la API."
                     >
-                        <select
+                        <Desplegable
                             id="fotos_tamano_max_kb"
-                            value={data.fotos_tamano_max_kb}
-                            onChange={(e) =>
-                                setData('fotos_tamano_max_kb', e.target.value)
-                            }
-                            className={`${CLASES_CAMPO} sm:max-w-[10rem]`}
-                        >
-                            {/* Si quedó guardado un valor que no está en la lista, se muestra igual. */}
-                            {!TAMANOS_KB.includes(
-                                Number(data.fotos_tamano_max_kb),
-                            ) &&
-                                data.fotos_tamano_max_kb && (
-                                    <option value={data.fotos_tamano_max_kb}>
-                                        {textoMb(
-                                            Number(data.fotos_tamano_max_kb),
-                                        )}
-                                    </option>
-                                )}
-                            {TAMANOS_KB.map((kb) => (
-                                <option key={kb} value={kb}>
-                                    {textoMb(kb)}
-                                </option>
-                            ))}
-                        </select>
+                            etiqueta="Tamaño máximo por foto"
+                            className="mt-1 sm:max-w-[10rem]"
+                            valor={data.fotos_tamano_max_kb}
+                            onChange={(v) => setData('fotos_tamano_max_kb', v)}
+                            opciones={[
+                                // Si quedó guardado un valor que no está en la
+                                // lista, se muestra igual.
+                                ...(!TAMANOS_KB.includes(
+                                    Number(data.fotos_tamano_max_kb),
+                                ) && data.fotos_tamano_max_kb
+                                    ? [Number(data.fotos_tamano_max_kb)]
+                                    : []),
+                                ...TAMANOS_KB,
+                            ].map((kb) => ({
+                                valor: String(kb),
+                                etiqueta: textoMb(kb),
+                            }))}
+                            invalido={Boolean(errors.fotos_tamano_max_kb)}
+                            aria-describedby="fotos_tamano_max_kb-error"
+                        />
                     </Campo>
                 </Bloque>
 
