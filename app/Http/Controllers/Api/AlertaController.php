@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AlertaResource;
 use App\Models\Alerta;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -35,5 +36,22 @@ class AlertaController extends Controller
         ]);
 
         return new AlertaResource($alerta);
+    }
+
+    /**
+     * Marcar todas las alertas no leídas del usuario como leídas.
+     */
+    public function marcarTodasLeidas(Request $request): JsonResponse
+    {
+        $marcadas = $request->user()
+            ->alertas()
+            ->where('leida', false)
+            ->update([
+                'leida' => true,
+            ]);
+
+        return response()->json([
+            'marcadas' => $marcadas,
+        ]);
     }
 }
