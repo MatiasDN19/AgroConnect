@@ -59,7 +59,7 @@ export default function ComoFunciona() {
                                     </span>
                                     <div>
                                         <h3 className="font-display text-lg font-bold text-marca-tinta">
-                                            <span className="text-marca-azul">
+                                            <span className="text-marca-azul-profundo">
                                                 {i + 1}.
                                             </span>{' '}
                                             {paso.titulo}

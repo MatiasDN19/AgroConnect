@@ -98,13 +98,13 @@ function Circulo({
             <span
                 className={`line-clamp-2 text-sm leading-tight ${
                     activo
-                        ? 'font-semibold text-marca-azul'
+                        ? 'font-semibold text-marca-azul-profundo'
                         : 'font-medium text-slate-700'
                 }`}
             >
                 {nombre}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-600">
                 {cantidad === 1 ? '1 producto' : `${cantidad} productos`}
             </span>
         </button>

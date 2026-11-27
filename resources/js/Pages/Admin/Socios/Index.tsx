@@ -192,7 +192,7 @@ export default function Index({
                 </div>
 
                 {solicitudes.length > 0 && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-600">
                         {solicitudes.length}{' '}
                         {solicitudes.length === 1
                             ? 'solicitud pendiente'

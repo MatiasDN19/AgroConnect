@@ -81,7 +81,7 @@ export default function Index({
         <AdminLayout titulo="Resumen">
             <div className="mx-auto max-w-7xl space-y-6">
                 <div className="aparecer" style={orden(0)}>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-600">
                         {/* Solo la primera letra en mayúscula ("Martes, 24 de noviembre"). */}
                         {fechaDeHoy()}
                     </p>

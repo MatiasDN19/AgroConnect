@@ -262,7 +262,7 @@ export default function Index({
 
                 {publicaciones.total > 0 && (
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-600">
                             {publicaciones.from}–{publicaciones.to} de{' '}
                             {publicaciones.total}{' '}
                             {publicaciones.total === 1

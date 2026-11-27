@@ -33,7 +33,10 @@ export default {
                     'azul-profundo': '#0B6AAE',
                     ambar: '#F0A73C',
                     dorado: '#B7791F',
-                    fondo: '#F4F8FC',
+                    // Gris azulado (KAN-349): con el casi blanco anterior
+                    // (#F4F8FC) las tarjetas blancas no se separaban del fondo.
+                    // Si se cambia, cambiarlo también en app.blade.php.
+                    fondo: '#E8EEF5',
                     tinta: '#0F2540',
                 },
             },

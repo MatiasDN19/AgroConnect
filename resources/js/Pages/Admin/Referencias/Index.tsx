@@ -236,7 +236,7 @@ export default function Index({
                         </BotonMes>
                     </div>
                     {referencias.length > 0 && (
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-slate-600">
                             {referencias.length}{' '}
                             {referencias.length === 1
                                 ? 'producto'

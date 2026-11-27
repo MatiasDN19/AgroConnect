@@ -312,7 +312,7 @@ export default function Index({
 
                 {usuarios.total > 0 && (
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-600">
                             {usuarios.from}–{usuarios.to} de {usuarios.total}{' '}
                             {usuarios.total === 1 ? 'usuario' : 'usuarios'}
                         </p>
