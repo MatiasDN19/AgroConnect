@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PlanNutrirController;
 use App\Http\Controllers\Api\PublicacionController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ResenaController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,7 @@ Route::get('/plan-nutrir/demanda', [PlanNutrirController::class, 'demanda']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])->middleware('throttle:6,1');
 
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -26,15 +28,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/publicaciones', [PublicacionController::class, 'index']);
     Route::get('/publicaciones/sugeridas', [PublicacionController::class, 'sugeridas']);
     Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show']);
-    Route::post('/publicaciones', [PublicacionController::class, 'store']);
-    Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update']);
-    Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado']);
+
+    Route::middleware('verified')->group(function () {
+        Route::post('/publicaciones', [PublicacionController::class, 'store']);
+        Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update']);
+        Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado']);
+
+        Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->middleware('throttle:envios');
+
+        Route::post('/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
+        Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
+    });
 
     Route::get('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'index']);
-    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->middleware('throttle:envios');
-
-    Route::post('/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
-    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
 
     Route::get('/alertas', [AlertaController::class, 'index']);
     Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida']);

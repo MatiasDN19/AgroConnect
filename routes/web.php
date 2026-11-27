@@ -34,24 +34,30 @@ Route::middleware('auth')->group(function () {
         ->can('create', Publicacion::class)
         ->name('publicaciones.mias');
     // Tiene que ir antes de /publicaciones/{publicacion}, si no "crear" se toma como id.
-    Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
-        ->can('create', Publicacion::class)
-        ->name('publicaciones.create');
-    Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
+    Route::middleware('verified')->group(function () {
+        Route::get('/publicaciones/crear', [PublicacionController::class, 'create'])
+            ->can('create', Publicacion::class)
+            ->name('publicaciones.create');
+        Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
+        Route::get('/publicaciones/{publicacion}/editar', [PublicacionController::class, 'edit'])
+            ->can('update', 'publicacion')
+            ->name('publicaciones.edit');
+        Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
+        Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
+        Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])
+            ->middleware('throttle:envios')
+            ->name('publicaciones.resenas.store');
+        Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])
+            ->middleware('throttle:envios')
+            ->name('publicaciones.denuncias.store');
+        Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])
+            ->middleware('throttle:envios')
+            ->name('solicitudes-compra.store');
+    });
+
     Route::get('/publicaciones/{publicacion}', [PublicacionController::class, 'show'])
         ->can('view', 'publicacion')
         ->name('publicaciones.show');
-    Route::get('/publicaciones/{publicacion}/editar', [PublicacionController::class, 'edit'])
-        ->can('update', 'publicacion')
-        ->name('publicaciones.edit');
-    Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
-    Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
-    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])
-        ->middleware('throttle:envios')
-        ->name('publicaciones.resenas.store');
-    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])
-        ->middleware('throttle:envios')
-        ->name('publicaciones.denuncias.store');
 
     Route::get('/favoritos', [FavoritoController::class, 'index'])->name('favoritos.index');
     Route::post('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'store'])->name('favoritos.store');
@@ -59,9 +65,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/productores/{usuario}', [ProductorController::class, 'show'])->name('productores.show');
 
-    Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])
-        ->middleware('throttle:envios')
-        ->name('solicitudes-compra.store');
     Route::get('/solicitudes-compra', [SolicitudCompraController::class, 'index'])->name('solicitudes-compra.index');
     Route::get('/mis-solicitudes', [SolicitudCompraController::class, 'enviadas'])->name('solicitudes-compra.enviadas');
     Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');

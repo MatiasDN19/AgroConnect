@@ -65,6 +65,10 @@ class SocialController extends Controller
             $user = User::where('email', $email)->first();
 
             if ($user) {
+                if (! $user->hasVerifiedEmail()) {
+                    $user->forceFill(['email_verified_at' => now()])->save();
+                }
+
                 $user->cuentasSociales()->create([
                     'proveedor' => $proveedor,
                     'proveedor_id' => $socialUser->getId(),
