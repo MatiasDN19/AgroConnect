@@ -4,6 +4,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Categoria, LimitesFotos, PublicacionFoto } from '@/types';
 import { formatearPrecio } from '@/utils/formato';
+import { UNIDADES_SUGERIDAS } from '@/utils/unidades';
 import { FormEventHandler } from 'react';
 import CampoFotos from './CampoFotos';
 import usePrecioSugerido from './usePrecioSugerido';
@@ -22,18 +23,6 @@ export type PublicacionFormData = {
     fotos: File[]; // fotos nuevas, ya achicadas (KAN-205)
     fotos_eliminar: number[]; // ids de fotos guardadas a quitar (solo en Edit)
 };
-
-// Sugerencias para el campo unidad (se puede escribir otra).
-const UNIDADES_SUGERIDAS = [
-    'kg',
-    'unidad',
-    'docena',
-    'bulto',
-    'litro',
-    'atado',
-    'frasco',
-    'cajón',
-];
 
 // Mismas clases que TextInput, para el <select> y el <textarea>.
 const CLASES_CAMPO =

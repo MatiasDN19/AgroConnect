@@ -1,5 +1,6 @@
 import {
     BarChart3,
+    CircleDollarSign,
     FileText,
     Flag,
     LucideIcon,
@@ -57,6 +58,13 @@ export const SECCIONES_ADMIN: SeccionAdmin[] = [
         ruta: 'categorias.index',
         activo: 'categorias.*',
         icono: Tags,
+    },
+    {
+        // Precios de referencia y demanda del Plan Nutrir (KAN-339).
+        nombre: 'Referencias del mes',
+        ruta: 'admin.referencias.index',
+        activo: 'admin.referencias.*',
+        icono: CircleDollarSign,
     },
     {
         nombre: 'Configuración',
