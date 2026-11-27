@@ -46,8 +46,12 @@ Route::middleware('auth')->group(function () {
         ->name('publicaciones.edit');
     Route::match(['put', 'patch'], '/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
     Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado'])->name('publicaciones.estado');
-    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->name('publicaciones.resenas.store');
-    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->name('publicaciones.denuncias.store');
+    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])
+        ->middleware('throttle:envios')
+        ->name('publicaciones.resenas.store');
+    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])
+        ->middleware('throttle:envios')
+        ->name('publicaciones.denuncias.store');
 
     Route::get('/favoritos', [FavoritoController::class, 'index'])->name('favoritos.index');
     Route::post('/publicaciones/{publicacion}/favorito', [FavoritoController::class, 'store'])->name('favoritos.store');
@@ -55,7 +59,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/productores/{usuario}', [ProductorController::class, 'show'])->name('productores.show');
 
-    Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])->name('solicitudes-compra.store');
+    Route::post('/publicaciones/{publicacion}/solicitudes-compra', [SolicitudCompraController::class, 'store'])
+        ->middleware('throttle:envios')
+        ->name('solicitudes-compra.store');
     Route::get('/solicitudes-compra', [SolicitudCompraController::class, 'index'])->name('solicitudes-compra.index');
     Route::get('/mis-solicitudes', [SolicitudCompraController::class, 'enviadas'])->name('solicitudes-compra.enviadas');
     Route::patch('/solicitudes-compra/{solicitud}', [SolicitudCompraController::class, 'resolve'])->name('solicitudes-compra.resolve');

@@ -11,8 +11,8 @@ use App\Http\Controllers\Api\ResenaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:api-login');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:api-register');
 Route::get('/categorias', [CategoriaController::class, 'index']);
 Route::get('/plan-nutrir/demanda', [PlanNutrirController::class, 'demanda']);
 
@@ -31,10 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/publicaciones/{publicacion}/estado', [PublicacionController::class, 'cambiarEstado']);
 
     Route::get('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'index']);
-    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store']);
+    Route::post('/publicaciones/{publicacion}/resenas', [ResenaController::class, 'store'])->middleware('throttle:envios');
 
-    Route::post('/denuncias', [DenunciaController::class, 'store']);
-    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store']);
+    Route::post('/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
+    Route::post('/publicaciones/{publicacion}/denuncias', [DenunciaController::class, 'store'])->middleware('throttle:envios');
 
     Route::get('/alertas', [AlertaController::class, 'index']);
     Route::patch('/alertas/{alerta}/leida', [AlertaController::class, 'marcarLeida']);
