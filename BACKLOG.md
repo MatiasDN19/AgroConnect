@@ -3105,6 +3105,30 @@ Relacionada: KAN-188 (botón de favorito en el detalle y página "Mis favoritos"
 
 </details>
 
+<details>
+<summary>**KAN-347** [backend] — Backend: portada, reseñas y socio en el listado de favoritos</summary>
+
+Archivos a crear/modificar:
+
+* `app/Http/Controllers/FavoritoController.php` — método `index()`.
+* `tests/Feature/...` (el test de favoritos) — agregar casos.
+
+Guía:
+
+1. Hoy `index()` carga `publicacion.categoria:id,nombre` y `publicacion.usuario:id,name`. La página "Mis favoritos" (KAN-188) usa la misma tarjeta del marketplace, que necesita además la foto de portada, el promedio de reseñas y si el productor es socio. Sin eso muestra el ícono de la categoría en vez de la foto y no puede mostrar las estrellas ni la insignia de socio.
+2. Cargar lo mismo que `PublicacionController::index()` para cada publicación:
+    * la portada: `publicacion.fotos` limitada a la primera (como hace el listado, KAN-204);
+    * `publicacion.usuario:id,name,socio_validado`;
+    * el promedio de reseñas (`withAvg('resenas as puntuacion_promedio', 'puntuacion')` sobre la publicación).
+3. Mantener el orden (los más recientes primero) y que lleguen también las publicaciones pausadas, vendidas o bloqueadas: el frontend las muestra con la etiqueta "Ya no disponible".
+4. Tests: la respuesta de `/favoritos` trae `fotos` (solo la portada), `usuario.socio_validado` y `puntuacion_promedio` de cada publicación; solo aparecen los favoritos del usuario logueado.
+
+No hace falta tocar el frontend: cuando lleguen los datos, la tarjeta los muestra sola.
+
+Relacionada: KAN-188 (página "Mis favoritos"), KAN-247 (es_favorito).
+
+</details>
+
 ---
 
 ## Epic: KAN-84 — Socios del Consorcio
