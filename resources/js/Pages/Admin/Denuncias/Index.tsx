@@ -294,7 +294,7 @@ export default function Index({
                 </div>
 
                 {denuncias.length > 0 && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-600">
                         {denuncias.length}{' '}
                         {denuncias.length === 1 ? 'denuncia' : 'denuncias'}
                     </p>

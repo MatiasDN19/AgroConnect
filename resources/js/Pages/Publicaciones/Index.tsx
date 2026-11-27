@@ -119,7 +119,7 @@ export default function Index({
                                         ? categoriaElegida.nombre
                                         : 'Todas las publicaciones'}
                                 </h2>
-                                <p className="text-sm text-slate-500">
+                                <p className="text-sm text-slate-600">
                                     {publicaciones.total === 1
                                         ? '1 publicación'
                                         : `${publicaciones.total} publicaciones`}

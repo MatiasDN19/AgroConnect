@@ -19,7 +19,7 @@ export default function TituloSeccion({
             className={`max-w-2xl space-y-3 ${centrado ? 'mx-auto text-center' : ''}`}
         >
             <p
-                className={`text-xs font-bold uppercase tracking-[0.18em] ${claro ? 'text-marca-ambar' : 'text-marca-azul'}`}
+                className={`text-xs font-bold uppercase tracking-[0.18em] ${claro ? 'text-marca-ambar' : 'text-marca-azul-profundo'}`}
             >
                 {etiqueta}
             </p>

@@ -82,7 +82,7 @@ export default function SugeridosParaVos() {
                         />
                         Sugeridos para vos
                     </h2>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-600">
                         Elegidas a partir de lo que te interesa.
                     </p>
                 </div>

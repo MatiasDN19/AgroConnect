@@ -94,7 +94,7 @@ export default function Index({
                         <h1 className="font-display text-3xl font-bold text-marca-tinta">
                             Notificaciones
                         </h1>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-slate-600">
                             {noLeidas.length === 0
                                 ? 'Estás al día.'
                                 : noLeidas.length === 1
@@ -186,7 +186,7 @@ export default function Index({
                     <div className="space-y-6">
                         {grupos.map(({ titulo, items }) => (
                             <section key={titulo} aria-label={titulo}>
-                                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-slate-600">
                                     {titulo}
                                 </h2>
                                 <ul className="space-y-1 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200">

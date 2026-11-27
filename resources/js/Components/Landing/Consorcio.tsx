@@ -38,7 +38,7 @@ export default function Consorcio() {
                     </p>
 
                     <div className="space-y-3">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-600">
                             Con el apoyo de
                         </p>
                         <div className="flex flex-wrap items-center gap-6 rounded-2xl bg-white px-6 py-4 shadow-sm ring-1 ring-slate-200">

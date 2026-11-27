@@ -150,7 +150,7 @@ function Cabecera({ user }: { user: User }) {
                     </h1>
                     {user.socio_validado && <SocioBadge />}
                 </div>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-600">
                     <span className="font-medium text-slate-700">
                         {ROLES[user.rol]}
                     </span>
@@ -243,7 +243,7 @@ function Navegacion({
                                         ? 'bg-red-50 text-red-700'
                                         : 'bg-white text-marca-azul-profundo shadow-sm ring-1 ring-slate-200'
                                     : peligro
-                                      ? 'text-red-600 hover:bg-red-50'
+                                      ? 'text-red-700 hover:bg-red-50'
                                       : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
                             } ${peligro ? 'lg:mt-4' : ''}`}
                         >

@@ -91,7 +91,7 @@ export default function MapaZona() {
                         </li>
                     </ul>
 
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-600">
                         Mapa ilustrativo de la provincia de Formosa. Por
                         privacidad, no mostramos la ubicación de ningún
                         productor.

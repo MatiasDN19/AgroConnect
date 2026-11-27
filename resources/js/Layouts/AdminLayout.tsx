@@ -35,7 +35,7 @@ export default function AdminLayout({
     const pendientes = admin?.denuncias_pendientes ?? 0;
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-marca-fondo">
             <Head title={`${titulo} · Panel admin`} />
 
             {/* Fondo oscuro detrás de la sidebar en mobile */}
