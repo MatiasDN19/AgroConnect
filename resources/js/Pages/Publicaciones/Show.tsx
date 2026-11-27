@@ -24,7 +24,7 @@ import { textoDistancia } from '@/utils/distancia';
 import { formatearPrecio } from '@/utils/formato';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Ban, LockOpen, MapPin, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
 type PublicacionDetalle = Publicacion & {
@@ -66,6 +66,18 @@ export default function Show({
     mi_solicitud: MiSolicitud | null;
 }>) {
     const { auth } = usePage().props;
+
+    // Si se llega con #resenas (alerta de reseña nueva, KAN-344), bajar hasta
+    // las reseñas: Inertia no hace scroll al ancla al navegar.
+    useEffect(() => {
+        if (window.location.hash !== '#resenas') return;
+        const reducido = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+        ).matches;
+        document
+            .getElementById('resenas')
+            ?.scrollIntoView({ behavior: reducido ? 'auto' : 'smooth' });
+    }, []);
 
     // Misma regla que PublicacionPolicy::update. Es solo para mostrar el botón:
     // si alguien entra a /editar sin permiso, la ruta igual responde 403.
@@ -437,8 +449,12 @@ export default function Show({
                         </aside>
                     </div>
 
-                    {/* Reseñas */}
-                    <section className="bg-white p-6 shadow-sm sm:rounded-lg">
+                    {/* Reseñas. El id lo usa la alerta de reseña nueva (KAN-344) para
+                        bajar directo hasta acá; scroll-mt deja lugar al navbar fijo. */}
+                    <section
+                        id="resenas"
+                        className="scroll-mt-24 bg-white p-6 shadow-sm sm:rounded-lg"
+                    >
                         <div className="flex flex-wrap items-center gap-3">
                             <h3 className="text-lg font-medium text-gray-900">
                                 Reseñas

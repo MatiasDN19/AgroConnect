@@ -1,5 +1,6 @@
+import { abrirAlerta, Alerta } from '@/utils/alertas';
 import { haceCuanto } from '@/utils/fecha';
-import { Link, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     Bell,
     CircleCheck,
@@ -14,14 +15,6 @@ import { useCallback, useEffect, useState } from 'react';
 // Panel desplegable de la campanita con las últimas notificaciones (KAN-80).
 // Se monta recién al abrir el panel, así que cada vez que se abre pide la
 // lista actualizada.
-
-interface Alerta {
-    id: number;
-    tipo: string;
-    mensaje: string;
-    leida: boolean;
-    created_at: string;
-}
 
 // Cuántas se muestran en el panel; el resto está en "Ver todas".
 const CANTIDAD_EN_PANEL = 8;
@@ -46,35 +39,8 @@ const ESTILO_TIPO: Record<string, { Icono: LucideIcon; color: string }> = {
 };
 const ESTILO_GENERICO = { Icono: Bell, color: 'bg-sky-50 text-marca-azul' };
 
-// A qué sección lleva cada tipo. Las alertas no guardan la publicación o la
-// solicitud puntual, así que lleva a la sección; las denuncias no llevan a
-// ningún lado (solo se marcan como leídas).
-function destino(tipo: string): string | null {
-    switch (tipo) {
-        case 'nueva_solicitud_compra':
-            return route('solicitudes-compra.index');
-        case 'solicitud_compra_aceptada':
-        case 'solicitud_compra_rechazada':
-            return route('solicitudes-compra.enviadas');
-        case 'nueva_resena':
-            return route('publicaciones.mias');
-        default:
-            return null;
-    }
-}
-
-// Laravel deja el token CSRF en la cookie XSRF-TOKEN; fetch no lo manda solo.
-function tokenXsrf(): string {
-    const cookie = document.cookie
-        .split('; ')
-        .find((c) => c.startsWith('XSRF-TOKEN='));
-    return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
-}
-
-// Pide solo el número del globito (y el flash fresco, ver Campanita).
-export function actualizarContador() {
-    router.reload({ only: ['alertas_no_leidas', 'flash'], async: true });
-}
+// El destino de cada alerta y cómo se abre están en utils/alertas (KAN-344),
+// compartidos con la página /alertas.
 
 export default function PanelAlertas({
     noLeidas,
@@ -105,37 +71,17 @@ export default function PanelAlertas({
         return () => controlador.abort();
     }, [cargar]);
 
-    const abrir = async (alerta: Alerta) => {
-        const ir = destino(alerta.tipo);
-
-        if (!alerta.leida) {
-            // Se marca enseguida en pantalla y después se avisa al servidor.
-            setAlertas(
-                (lista) =>
-                    lista?.map((a) =>
-                        a.id === alerta.id ? { ...a, leida: true } : a,
-                    ) ?? null,
-            );
-            try {
-                await fetch(route('alertas.marcar-leida', alerta.id), {
-                    method: 'PATCH',
-                    headers: {
-                        Accept: 'application/json',
-                        'X-XSRF-TOKEN': tokenXsrf(),
-                    },
-                });
-            } catch {
-                // Si falla no es grave: queda sin leer y se reintenta otra vez.
-            }
-            // Si navegamos, la página nueva ya trae el número actualizado.
-            if (!ir) actualizarContador();
-        }
-
-        if (ir) {
-            cerrar();
-            router.visit(ir);
-        }
-    };
+    const abrir = (alerta: Alerta) =>
+        abrirAlerta(alerta, {
+            alMarcarLeida: () =>
+                setAlertas(
+                    (lista) =>
+                        lista?.map((a) =>
+                            a.id === alerta.id ? { ...a, leida: true } : a,
+                        ) ?? null,
+                ),
+            antesDeNavegar: cerrar,
+        });
 
     const visibles = alertas?.slice(0, CANTIDAD_EN_PANEL) ?? [];
 

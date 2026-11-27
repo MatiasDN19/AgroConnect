@@ -1,6 +1,7 @@
 import { clasesBotonIcono } from '@/Components/BotonIcono';
-import PanelAlertas, { actualizarContador } from '@/Components/PanelAlertas';
+import PanelAlertas from '@/Components/PanelAlertas';
 import { PageProps } from '@/types';
+import { actualizarContador } from '@/utils/alertas';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { usePage } from '@inertiajs/react';
 import { Bell } from 'lucide-react';
