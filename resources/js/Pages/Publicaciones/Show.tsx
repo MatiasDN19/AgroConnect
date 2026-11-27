@@ -22,8 +22,16 @@ import {
 } from '@/types';
 import { textoDistancia } from '@/utils/distancia';
 import { formatearPrecio } from '@/utils/formato';
+import { numeroWhatsapp } from '@/utils/whatsapp';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Ban, LockOpen, MapPin, ShieldAlert, ShieldCheck } from 'lucide-react';
+import {
+    Ban,
+    LockOpen,
+    MapPin,
+    Phone,
+    ShieldAlert,
+    ShieldCheck,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Lo que manda PublicacionController::show() (con las relaciones cargadas).
@@ -416,26 +424,38 @@ export default function Show({
                                 Ver perfil y otras publicaciones →
                             </Link>
 
-                            {publicacion.usuario.telefono ? (
-                                <a
-                                    href={`tel:${publicacion.usuario.telefono}`}
-                                    className="block text-indigo-600 hover:underline"
-                                >
-                                    {publicacion.usuario.telefono}
-                                </a>
-                            ) : (
+                            {/* Contacto (KAN-271): un solo camino, sin repetir el número.
+                                - Celular válido: solo el botón de WhatsApp (KAN-178).
+                                - Fijo o mal cargado: "Llamar al …".
+                                - El dueño ve su número, sin botones. */}
+                            {!publicacion.usuario.telefono ? (
                                 <p className="text-sm text-gray-500">
                                     No cargó un teléfono de contacto.
                                 </p>
-                            )}
-                            {/* WhatsApp (KAN-178): no aparece si el teléfono no se puede
-                                convertir a un número válido; queda el teléfono de arriba. */}
-                            {!esDueno && (
+                            ) : esDueno ? (
+                                <p className="text-sm text-gray-600">
+                                    Tu teléfono de contacto:{' '}
+                                    <span className="font-medium text-gray-900">
+                                        {publicacion.usuario.telefono}
+                                    </span>
+                                </p>
+                            ) : numeroWhatsapp(publicacion.usuario.telefono) ? (
                                 <WhatsappButton
                                     telefono={publicacion.usuario.telefono}
                                     mensaje={`¡Hola ${publicacion.usuario.name}! Vi tu publicación "${publicacion.titulo}" en AgroConnect y quería hacerte una consulta.`}
                                     className="w-full"
                                 />
+                            ) : (
+                                <a
+                                    href={`tel:${publicacion.usuario.telefono.replace(/[^\d+]/g, '')}`}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-300 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul focus-visible:ring-offset-2"
+                                >
+                                    <Phone
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                    Llamar al {publicacion.usuario.telefono}
+                                </a>
                             )}
 
                             {/* Con la publicación pausada o vendida no se puede pedir,
