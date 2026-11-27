@@ -5020,6 +5020,48 @@ Hacerla al final, cuando el resto de la historia esté terminada.
 
 </details>
 
+<details>
+<summary>**KAN-349** [frontend] — Frontend Web: bajar el brillo del fondo y evitar el fogonazo blanco al cargar</summary>
+
+Archivos a crear/modificar:
+
+* `tailwind.config.js` — tono del token `marca.fondo`.
+* `resources/views/app.blade.php` — fondo del `<body>`.
+* Pantallas que lo necesiten, si alguna tarjeta o sección pierde contraste con el fondo nuevo.
+
+Guía:
+
+1. Hoy el fondo (`marca.fondo`, `#F4F8FC`) es casi blanco y encima van tarjetas `bg-white`, navbar blanco y hero claro: la pantalla se ve como una sola superficie blanca y cansa la vista. Oscurecer un poco el token (un gris azulado, por ejemplo `#E8EEF5`) para que las tarjetas se recorten y baje el brillo general. Elegir el tono comparando 2 o 3 opciones en la app.
+2. Cambiar el token y no cada pantalla: así se aplica en toda la web desde un solo lugar, sin tocar la paleta ni el logo.
+3. El `<body>` no tiene color: mientras React monta la página se ve blanco puro (fogonazo al entrar). Darle el mismo fondo desde `app.blade.php`.
+4. Revisar landing, login/registro, Inicio, detalle, perfil, notificaciones y panel admin: que las tarjetas, los inputs y los bordes sigan teniendo buen contraste (textos grises sobre el fondo nuevo, mínimo 4.5:1).
+
+Relacionada: KAN-350 (modo oscuro).
+
+</details>
+
+<details>
+<summary>**KAN-350** [frontend] — Frontend Web: modo oscuro</summary>
+
+Archivos a crear/modificar:
+
+* `tailwind.config.js` — `darkMode: 'class'`.
+* `resources/views/app.blade.php` — aplicar el tema antes de que cargue React (sin fogonazo).
+* Un botón para elegir tema (Claro / Oscuro / Como el sistema) en el menú del usuario o el perfil.
+* Todas las pantallas, layouts y componentes compartidos: variantes `dark:` de fondos, textos, bordes y sombras.
+
+Guía:
+
+1. Por defecto, seguir la configuración del sistema (`prefers-color-scheme`); si el usuario elige un tema, guardarlo en `localStorage` y respetarlo.
+2. Un script chico en `app.blade.php` pone la clase `dark` en `<html>` antes de pintar, para que no aparezca un fogonazo claro al entrar.
+3. Empezar por los componentes compartidos (layouts, navbar, `Formulario.tsx`, `CampoAuth`, tarjetas, avisos flotantes, modales) y después página por página.
+4. Fondo oscuro azulado (no negro puro), tarjetas un poco más claras que el fondo, textos con contraste de 4.5:1 o más; revisar el logo, las fotos y los colores de estado (verde, rojo, ámbar) sobre fondo oscuro.
+5. Hacerla después de KAN-349 y sin pisarse con otros rediseños en curso, porque toca casi todos los archivos del frontend.
+
+Relacionada: KAN-349 (bajar el brillo del fondo).
+
+</details>
+
 ---
 
 ## Epic: KAN-277 — Seguridad y cuentas
