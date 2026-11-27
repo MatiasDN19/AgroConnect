@@ -1,15 +1,7 @@
+import ItemAlerta from '@/Components/ItemAlerta';
 import { abrirAlerta, Alerta } from '@/utils/alertas';
-import { haceCuanto } from '@/utils/fecha';
 import { Link } from '@inertiajs/react';
-import {
-    Bell,
-    CircleCheck,
-    CircleX,
-    Flag,
-    LucideIcon,
-    ShoppingBag,
-    Star,
-} from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 // Panel desplegable de la campanita con las últimas notificaciones (KAN-80).
@@ -18,26 +10,6 @@ import { useCallback, useEffect, useState } from 'react';
 
 // Cuántas se muestran en el panel; el resto está en "Ver todas".
 const CANTIDAD_EN_PANEL = 8;
-
-// Ícono y color según el tipo. Los tipos salen de los controladores que crean
-// alertas (solicitudes, reseñas y denuncias).
-const ESTILO_TIPO: Record<string, { Icono: LucideIcon; color: string }> = {
-    nueva_solicitud_compra: {
-        Icono: ShoppingBag,
-        color: 'bg-sky-50 text-marca-azul',
-    },
-    solicitud_compra_aceptada: {
-        Icono: CircleCheck,
-        color: 'bg-green-50 text-green-600',
-    },
-    solicitud_compra_rechazada: {
-        Icono: CircleX,
-        color: 'bg-red-50 text-red-600',
-    },
-    nueva_resena: { Icono: Star, color: 'bg-amber-50 text-amber-600' },
-    denuncia_resuelta: { Icono: Flag, color: 'bg-slate-100 text-slate-600' },
-};
-const ESTILO_GENERICO = { Icono: Bell, color: 'bg-sky-50 text-marca-azul' };
 
 // El destino de cada alerta y cómo se abre están en utils/alertas (KAN-344),
 // compartidos con la página /alertas.
@@ -127,52 +99,14 @@ export default function PanelAlertas({
                     </div>
                 ) : (
                     <ul className="space-y-0.5">
-                        {visibles.map((alerta) => {
-                            const { Icono, color } =
-                                ESTILO_TIPO[alerta.tipo] ?? ESTILO_GENERICO;
-
-                            return (
-                                <li key={alerta.id}>
-                                    <button
-                                        type="button"
-                                        onClick={() => abrir(alerta)}
-                                        className={`flex w-full items-start gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors duration-150 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-azul ${
-                                            alerta.leida ? '' : 'bg-sky-50/60'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${color}`}
-                                        >
-                                            <Icono
-                                                className="h-[1.125rem] w-[1.125rem]"
-                                                aria-hidden="true"
-                                            />
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span
-                                                className={`block text-sm leading-snug ${
-                                                    alerta.leida
-                                                        ? 'text-slate-600'
-                                                        : 'font-medium text-marca-tinta'
-                                                }`}
-                                            >
-                                                {alerta.mensaje}
-                                            </span>
-                                            <span className="mt-0.5 block text-xs text-slate-400">
-                                                {haceCuanto(alerta.created_at)}
-                                            </span>
-                                        </span>
-                                        {!alerta.leida && (
-                                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-marca-azul">
-                                                <span className="sr-only">
-                                                    Sin leer
-                                                </span>
-                                            </span>
-                                        )}
-                                    </button>
-                                </li>
-                            );
-                        })}
+                        {visibles.map((alerta) => (
+                            <li key={alerta.id}>
+                                <ItemAlerta
+                                    alerta={alerta}
+                                    onClick={() => abrir(alerta)}
+                                />
+                            </li>
+                        ))}
                     </ul>
                 )}
             </div>
